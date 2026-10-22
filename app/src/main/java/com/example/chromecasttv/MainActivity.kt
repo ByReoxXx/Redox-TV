@@ -280,7 +280,7 @@ fun RedBullEmblemBox(
     }
 }
 
-enum class StreamType { HLS }
+enum class StreamType { HLS, DASH, PROGRESSIVE }
 
 @Immutable
 data class StreamSource(
@@ -3879,7 +3879,7 @@ fun RedoXLandingScreen(
                         onClick = onToggleAutoStart
                     )
                     Text(
-                        text = "Chromecast 4K • RedoX TV v1.5.1 Release",
+                        text = "Chromecast 4K • RedoX TV v1.5.2 Release",
                         color = TvThemeColors.BullRedBright,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold

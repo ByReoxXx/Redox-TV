@@ -351,7 +351,7 @@ data class TrackOption(
 )
 
 enum class MainNavTab(val title: String, val subtitle: String, val icon: ImageVector) {
-    ALL_CHANNELS("Canlı TV", "224 Yerleşik Kanal", Icons.Rounded.LiveTv),
+    ALL_CHANNELS("Canlı TV", "297 Kanal • 900+ Yedek Akış", Icons.Rounded.LiveTv),
     FAVORITES("Favorilerim", "Sıralanabilir Liste", Icons.Rounded.Star),
     CUSTOM_M3U("Özel M3U Kanalları", "Eklenen Listelerim", Icons.Rounded.FolderOpen),
     MULTI_VIEW("Bölünmüş Ekran", "2'li & 4'lü Canlı İzle", Icons.Rounded.GridView),
@@ -981,199 +981,357 @@ class TvRepository(private val appContext: Context) {
         isCustomM3u = false
     )
 
-        fun getBuiltInChannels(): List<TvChannel> =
+    private val aciptvTurkishM3uUrl = "https://aciptv.acvid.site/m3ulist/testchannel.m3u"
+
+    fun getStaticBuiltInChannels(): List<TvChannel> =
         getBuiltInChannelsChunk1() +
         getBuiltInChannelsChunk2() +
         getBuiltInChannelsChunk3() +
         getBuiltInChannelsChunk4() +
         getBuiltInChannelsChunk5() +
-        getBuiltInChannelsChunk6()
+        getBuiltInChannelsChunk6() +
+        getBuiltInChannelsChunk7()
+
+    fun getBuiltInChannels(): List<TvChannel> {
+        val base = getStaticBuiltInChannels()
+        val cachedTrM3u = loadCachedAciptvTurkishM3u()
+        return if (cachedTrM3u.isNotBlank()) {
+            mergeTurkishM3uIntoBuiltIn(base, cachedTrM3u)
+        } else {
+            base
+        }
+    }
+
+    private fun loadCachedAciptvTurkishM3u(): String {
+        return try {
+            val f = File(appContext.filesDir, "aciptv_turkish_cached.m3u")
+            if (f.exists() && f.length() > 10L) f.readText() else ""
+        } catch (_: Exception) {
+            ""
+        }
+    }
+
+    private fun saveCachedAciptvTurkishM3u(content: String) {
+        try {
+            val f = File(appContext.filesDir, "aciptv_turkish_cached.m3u")
+            f.writeText(content)
+        } catch (_: Exception) {}
+    }
+
+    /**
+     * https://aciptv.acvid.site/m3ulist/testchannel.m3u adresinden yalnızca Türk kanallarını
+     * (group-title="Turkish", .tr tvg-id veya Türkçe grup başlıklarını) akıllıca süzer ve önbelleğe alır.
+     */
+    suspend fun fetchAndCacheAciptvTurkishM3u(): String = withContext(Dispatchers.IO) {
+        try {
+            val conn = (URL(aciptvTurkishM3uUrl).openConnection() as HttpURLConnection).apply {
+                connectTimeout = 9000
+                readTimeout = 12000
+                instanceFollowRedirects = true
+                setRequestProperty("User-Agent", "RedoXTV/1.4 (Android TV; Chromecast 4K)")
+            }
+            val sb = StringBuilder("#EXTM3U\n")
+            var matchedCount = 0
+            conn.inputStream.bufferedReader().useLines { lines ->
+                var pendingExtInf: String? = null
+                for (rawLine in lines) {
+                    val line = rawLine.trim()
+                    if (line.startsWith("#EXTINF", ignoreCase = true)) {
+                        val lower = line.lowercase(Locale.US)
+                        val isTurkish = lower.contains("group-title=\"turkish\"") ||
+                            lower.contains("group-title=\"tr") ||
+                            lower.contains("group-title=\"ulusal") ||
+                            lower.contains("group-title=\"haber") ||
+                            lower.contains("group-title=\"spor") ||
+                            lower.contains("group-title=\"yerel") ||
+                            lower.contains(".tr\"") ||
+                            lower.contains(".tr@")
+                        pendingExtInf = if (isTurkish) line else null
+                    } else if (line.isNotEmpty() && !line.startsWith("#")) {
+                        val ext = pendingExtInf
+                        if (ext != null && (line.startsWith("http://") || line.startsWith("https://"))) {
+                            sb.append(ext).append("\n").append(line).append("\n")
+                            matchedCount++
+                        }
+                        pendingExtInf = null
+                    }
+                }
+            }
+            val filtered = sb.toString()
+            if (matchedCount > 0) {
+                saveCachedAciptvTurkishM3u(filtered)
+                filtered
+            } else {
+                loadCachedAciptvTurkishM3u()
+            }
+        } catch (_: Exception) {
+            loadCachedAciptvTurkishM3u()
+        }
+    }
+
+    private fun normalizeChannelKey(name: String): String {
+        val cleaned = name
+            .replace(Regex("\\[.*?\\]|\\(.*?\\)"), " ")
+            .replace('İ', 'i').replace('I', 'i').replace('ı', 'i')
+            .lowercase(Locale.getDefault())
+            .replace('ş', 's').replace('ğ', 'g').replace('ü', 'u').replace('ö', 'o').replace('ç', 'c')
+            .replace(Regex("\\b(tv|hd|fhd|sd|tr|turkiye|turk|kanali|kanal|live|backup)\\b"), " ")
+            .replace(Regex("[^a-z0-9]"), "")
+        return cleaned
+    }
+
+    private fun inferTurkishCategory(channelName: String): String {
+        val lower = channelName.lowercase(Locale.getDefault())
+        return when {
+            lower.contains("spor") || lower.contains("tjk") || lower.contains("tay ") || lower.contains("fb ") || lower.contains("gs ") -> "Spor"
+            lower.contains("haber") || lower.contains("ntv") || lower.contains("cnn") || lower.contains("ulke") || lower.contains("ülke") || lower.contains("tele 1") || lower.contains("halk") || lower.contains("sözcü") || lower.contains("sozcu") || lower.contains("ekol") || lower.contains("tbmm") || lower.contains("meclis") || lower.contains("bloomberg") -> "Haber"
+            lower.contains("cocuk") || lower.contains("çocuk") || lower.contains("baby") || lower.contains("minika") || lower.contains("cartoon") || lower.contains("zarok") -> "Çocuk"
+            lower.contains("kral") || lower.contains("power") || lower.contains("nr1") || lower.contains("dream") || lower.contains("tatlises") || lower.contains("müzik") || lower.contains("muzik") || lower.contains("akustik") -> "Müzik"
+            lower.contains("belgesel") || lower.contains("tarih") || lower.contains("yaban") || lower.contains("çiftçi") || lower.contains("ciftci") || lower.contains("trt 2") -> "Belgesel"
+            lower.contains("diyanet") || lower.contains("semerkand") || lower.contains("lalegül") || lower.contains("lalegul") || lower.contains("kuran") || lower.contains("islam") || lower.contains("ilahi") || lower.contains("sat 7") || lower.contains("hayat") || lower.contains("mihrap") || lower.contains("kudüs") || lower.contains("kudus") -> "Dini"
+            lower.contains("kıbrıs") || lower.contains("kibris") || lower.contains("brt") || lower.contains("ada tv") || lower.contains("sim tv") -> "Kıbrıs"
+            lower.contains("trt ") || lower.contains("atv") || lower.contains("kanal d") || lower.contains("show") || lower.contains("star") || lower.contains("now") || lower.contains("tv8") || lower.contains("kanal 7") || lower.contains("beyaz") || lower.contains("360") || lower.contains("teve2") || lower.contains("tlc") || lower.contains("dmax") || lower.contains("cnbc") || lower.contains("a2") -> "Ulusal"
+            else -> "Yerel"
+        }
+    }
+
+    fun mergeTurkishM3uIntoBuiltIn(baseList: List<TvChannel>, rawTurkishM3u: String): List<TvChannel> {
+        if (rawTurkishM3u.isBlank()) return baseList
+        val parsedTr = M3uAndEpgParser.parseM3uContent(rawTurkishM3u, "ACIPTV TR", baseList.size + 1, false)
+        if (parsedTr.isEmpty()) return baseList
+
+        val mutableList = baseList.toMutableList()
+        val keyToIndex = HashMap<String, Int>(mutableList.size * 2)
+        mutableList.forEachIndexed { index, ch ->
+            val k = normalizeChannelKey(ch.name)
+            if (k.isNotEmpty() && !keyToIndex.containsKey(k)) {
+                keyToIndex[k] = index
+            }
+        }
+
+        for (trCh in parsedTr) {
+            val cleanTitle = trCh.name
+                .replace(Regex("\\s*(\\(\\d+p\\)|\\[Not 24/7\\]|\\[Geo-blocked\\])\\s*", RegexOption.IGNORE_CASE), "")
+                .trim()
+                .ifBlank { trCh.name }
+            val normKey = normalizeChannelKey(cleanTitle)
+            val existingIdx = if (normKey.isNotEmpty()) keyToIndex[normKey] else null
+
+            if (existingIdx != null) {
+                val existing = mutableList[existingIdx]
+                val existingUrls = existing.sources.map { it.url }.toSet()
+                val newSources = trCh.sources.filterNot { existingUrls.contains(it.url) }.mapIndexed { i, src ->
+                    src.copy(label = "ACIPTV Akışı (${existing.sources.size + i + 1})")
+                }
+                val mergedLogo = existing.logoUrl.ifBlank { trCh.logoUrl }
+                if (newSources.isNotEmpty() || mergedLogo != existing.logoUrl) {
+                    mutableList[existingIdx] = existing.copy(
+                        logoUrl = mergedLogo,
+                        sources = existing.sources + newSources
+                    )
+                }
+            } else {
+                val nextNum = mutableList.size + 1
+                val inferredCat = inferTurkishCategory(cleanTitle)
+                val added = trCh.copy(
+                    id = "ch_aciptv_${nextNum}_${normKey.take(14)}",
+                    number = nextNum,
+                    name = cleanTitle,
+                    category = inferredCat,
+                    isCustomM3u = false
+                )
+                keyToIndex[normKey] = mutableList.size
+                mutableList.add(added)
+            }
+        }
+        return mutableList
+    }
 
     private fun getBuiltInChannelsChunk1(): List<TvChannel> = listOf(
         ch(
             id = "ch_1_360_tv", number = 1, name = "360 TV", logoText = "360",
             c1 = 0xFF1E3A8AL, c2 = 0xFF3B82F6L, cat = "Ulusal", badge = "HD", logoUrl = "https://i.imgur.com/agn47sQ.png",
-            sources = listOf(StreamSource("HD 720p", "https://turkmedya-live.ercdn.net/tv360/tv360.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://turkmedya-live.ercdn.net/tv360/tv360_1080p.m3u8", StreamType.HLS), StreamSource("HD 720p", "https://turkmedya-live.ercdn.net/tv360/tv360.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "https://turkmedya-live.ercdn.net/tv360/tv360_720p.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 4", "https://tv.ensonhaber.com/tv360/tv360.m3u8", StreamType.HLS), StreamSource("SD 480p Yedek Akış", "https://turkmedya-live.ercdn.net/tv360/tv360_480p.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_2_a2_tv", number = 2, name = "A2 TV", logoText = "A2",
             c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Ulusal", badge = "FHD", logoUrl = "https://iatv.tmgrup.com.tr/site/v2/a2tv/i/a2tv-logo.png",
-            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/a2tv/a2tv.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/a2tv/a2tv_1080p.m3u8", StreamType.HLS), StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/a2tv/a2tv.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/a2tv/a2tv_720p.m3u8", StreamType.HLS), StreamSource("SD 480p Yedek Akış", "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/a2tv/a2tv_480p.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_3_atv", number = 3, name = "ATV", logoText = "ATV",
             c1 = 0xFF6B21A8L, c2 = 0xFFA855F7L, cat = "Ulusal", badge = "FHD", logoUrl = "https://i.imgur.com/HyVUwFC.png",
-            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/atv/atv_1080p.m3u8", StreamType.HLS), StreamSource("Yedek Akış", "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/atv/atv.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/atv/atv_1080p.m3u8", StreamType.HLS), StreamSource("Yedek Akış", "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/atv/atv.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "http://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/atv/atv_360p.m3u8", StreamType.HLS), StreamSource("HD 720p Hızlı Akış", "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/atv/atv_720p.m3u8", StreamType.HLS), StreamSource("SD 480p Yedek Akış", "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/atv/atv_480p.m3u8", StreamType.HLS), StreamSource("FHD 1080p Akış", "http://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/atv/atv_1080p.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_4_beyaz_tv", number = 4, name = "Beyaz TV", logoText = "BEYAZ",
             c1 = 0xFFC2410CL, c2 = 0xFFF97316L, cat = "Ulusal", badge = "FHD", logoUrl = "https://i.imgur.com/uykIdML.png",
-            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://beyaztv-live.daioncdn.net/beyaztv/beyaztv_1080p.m3u8", StreamType.HLS), StreamSource("Yedek Akış", "https://beyaztv-live.daioncdn.net/beyaztv/beyaztv.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://beyaztv-live.daioncdn.net/beyaztv/beyaztv_1080p.m3u8", StreamType.HLS), StreamSource("Yedek Akış", "https://beyaztv-live.daioncdn.net/beyaztv/beyaztv.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "https://beyaztv-live.daioncdn.net/beyaztv/beyaztv_720p.m3u8", StreamType.HLS), StreamSource("SD 480p Yedek Akış", "https://beyaztv-live.daioncdn.net/beyaztv/beyaztv_480p.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_5_cem_tv", number = 5, name = "Cem TV", logoText = "CEM",
             c1 = 0xFF0E7490L, c2 = 0xFF06B6D4L, cat = "Ulusal", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://panel.5gtvhosting.com/hls/cemtv/cemtv.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://panel.5gtvhosting.com/hls/cemtv/cemtv.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "http://panel.5gtvhosting.com/hls/cemtv/cemtv.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_6_cine1_tv", number = 6, name = "Cine1 TV", logoText = "CINE1",
             c1 = 0xFFBE185DL, c2 = 0xFFF472B6L, cat = "Ulusal", badge = "HD", logoUrl = "https://i.ibb.co/zhxTBMR/cine1.png",
-            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_cine1/cine1/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış", "https://canliyayin.cine1.com.tr/memfs/cbaef080-a742-4644-9e9e-2b9f6a5103c3.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://canliyayin.cine1.com.tr/memfs/cbaef080-a742-4644-9e9e-2b9f6a5103c3.m3u8", StreamType.HLS), StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_cine1/cine1/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "http://canliyayin.cine1.com.tr/memfs/cbaef080-a742-4644-9e9e-2b9f6a5103c3.m3u8", StreamType.HLS), StreamSource("Hızlı Doğrudan Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_cine1/cine1/chunks.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_7_cine5_tv", number = 7, name = "Cine5 TV", logoText = "CINE5",
             c1 = 0xFF1F2937L, c2 = 0xFF64748BL, cat = "Ulusal", badge = "HD", logoUrl = "https://i.ibb.co/7vNbSyP/cine5.png",
-            sources = listOf(StreamSource("Standart Akış", "https://cdn-cine5tv.yayin.com.tr/cine5tv/cine5tv/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış", "https://host.onlineradyotv.net:8081/cine5tv/index.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://cdn-cine5tv.yayin.com.tr/cine5tv/cine5tv/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış", "https://host.onlineradyotv.net:8081/cine5tv/index.m3u8", StreamType.HLS), StreamSource("Hızlı Chunks Akışı", "https://cdn-cine5tv.yayin.com.tr/cine5tv/cine5tv/chunks.m3u8", StreamType.HLS), StreamSource("Mono Doğrudan Akış", "https://cdn-cine5tv.yayin.com.tr/cine5tv/cine5tv/tracks-v1a1/mono.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_8_cnbc_e", number = 8, name = "CNBC-e", logoText = "CNBC-E",
             c1 = 0xFFB45309L, c2 = 0xFFFACC15L, cat = "Ulusal", badge = "FHD", logoUrl = "https://s.cnbce.com/dist/images/logo-nav.png",
-            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://hnpsechtsc.turknet.ercdn.net/xpnvudnlsv/cnbc-e/cnbc-e.m3u8?tv=1", StreamType.HLS))
+            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://hnpsechtsc.turknet.ercdn.net/xpnvudnlsv/cnbc-e/cnbc-e.m3u8?tv=1", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://hnpsechtsc.turknet.ercdn.net/xpnvudnlsv/cnbc-e/cnbc-e.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "https://hnpsechtsc.turknet.ercdn.net/xpnvudnlsv/cnbc-e/cnbc-e_1080p.m3u8", StreamType.HLS), StreamSource("FHD 1080p Akış", "https://hnpsechtsc.turknet.ercdn.net/xpnvudnlsv/cnbc-e/cnbc-e_1080p.m3u8?tv=1", StreamType.HLS), StreamSource("HD 720p Hızlı Akış", "https://hnpsechtsc.turknet.ercdn.net/xpnvudnlsv/cnbc-e/cnbc-e_720p.m3u8?tv=1", StreamType.HLS), StreamSource("SD 480p Yedek Akış", "https://hnpsechtsc.turknet.ercdn.net/xpnvudnlsv/cnbc-e/cnbc-e_480p.m3u8?tv=1", StreamType.HLS))
         ),
         ch(
             id = "ch_9_dizi_tv", number = 9, name = "Dizi TV", logoText = "DIZI",
             c1 = 0xFFB91C1CL, c2 = 0xFFEF4444L, cat = "Ulusal", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/dizi-tv/playlist/0.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/dizi-tv/playlist/0.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "http://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/dizi-tv/playlist/0.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_10_dmax", number = 10, name = "DMAX", logoText = "DMAX",
             c1 = 0xFF1E3A8AL, c2 = 0xFF3B82F6L, cat = "Ulusal", badge = "HD", logoUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/9/98/DMAX_BLACK.svg/512px-DMAX_BLACK.svg.png",
-            sources = listOf(StreamSource("HD 720p", "https://dogus-live.daioncdn.net/dmax/dmax_720p.m3u8", StreamType.HLS), StreamSource("Yedek Akış", "http://dygvideo.dygdigital.com/live/hls/dmaxdai?m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("HD 720p", "https://dogus-live.daioncdn.net/dmax/dmax_720p.m3u8", StreamType.HLS), StreamSource("Yedek Akış", "http://dygvideo.dygdigital.com/live/hls/dmaxdai?m3u8", StreamType.HLS), StreamSource("FHD 1080p Akış", "https://dogus-live.daioncdn.net/dmax/dmax_1080p.m3u8", StreamType.HLS), StreamSource("Adaptif Ana Akış", "https://dogus-live.daioncdn.net/dmax/dmax.m3u8", StreamType.HLS), StreamSource("SD 480p Yedek Akış", "https://dogus-live.daioncdn.net/dmax/dmax_480p.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_11_euro_d", number = 11, name = "Euro D", logoText = "EURO\nD",
             c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Ulusal", badge = "HD", logoUrl = "https://i.ibb.co/jMQTJmh/euro-d.png",
-            sources = listOf(StreamSource("HD 720p", "https://live.duhnet.tv/S2/HLS_LIVE/eurodnp/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("HD 720p", "https://live.duhnet.tv/S2/HLS_LIVE/eurodnp/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://live.duhnet.tv/S2/HLS_LIVE/eurodnp/track_4_1000/playlist.m3u8", StreamType.HLS), StreamSource("Duhnet Hızlı (Track 2)", "https://live.duhnet.tv/S2/HLS_LIVE/eurodnp/track_2_550/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://live.duhnet.tv/S2/HLS_LIVE/eurodnp/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://live.duhnet.tv/S2/HLS_LIVE/eurodnp/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_12_euro_star", number = 12, name = "Euro Star", logoText = "EURO\nSTAR",
             c1 = 0xFF6B21A8L, c2 = 0xFFA855F7L, cat = "Ulusal", badge = "HD", logoUrl = "https://i.ibb.co/CbdPSX6/euro-star.png",
-            sources = listOf(StreamSource("HD 720p", "https://xrklj56s.rocketcdn.com/eurostar.smil/chunklist.sltur.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("HD 720p", "https://xrklj56s.rocketcdn.com/eurostar.smil/chunklist.sltur.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "http://xrklj56s.rocketcdn.com/eurostar.smil/chunklist.sltur.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_13_flash_tv", number = 13, name = "Flash TV", logoText = "FLASH",
             c1 = 0xFFC2410CL, c2 = 0xFFF97316L, cat = "Ulusal", badge = "HD", logoUrl = "https://i.imgur.com/L0NHKBM.png",
-            sources = listOf(StreamSource("HD 720p", "https://mn-nl.mncdn.com/blutv_flashtv/live.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("HD 720p", "https://mn-nl.mncdn.com/blutv_flashtv/live.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://flashhaber-live.ercdn.net/flashhaber/flashhaber_720p.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "http://mn-nl.mncdn.com/blutv_flashtv/live.m3u8", StreamType.HLS), StreamSource("FHD 1080p Akış", "https://flashhaber-live.ercdn.net/flashhaber/flashhaber_1080p.m3u8", StreamType.HLS), StreamSource("Adaptif Ana Akış", "https://flashhaber-live.ercdn.net/flashhaber/flashhaber.m3u8", StreamType.HLS), StreamSource("SD 480p Yedek Akış", "https://flashhaber-live.ercdn.net/flashhaber/flashhaber_480p.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_14_kanal_7", number = 14, name = "Kanal 7", logoText = "KANAL\n7",
             c1 = 0xFF0E7490L, c2 = 0xFF06B6D4L, cat = "Ulusal", badge = "FHD", logoUrl = "https://i.imgur.com/0gq9xOm.png",
-            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://kanal7-live.daioncdn.net/kanal7/kanal7.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://kanal7-live.daioncdn.net/kanal7/kanal7_1080p.m3u8", StreamType.HLS), StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://kanal7-live.daioncdn.net/kanal7/kanal7.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "https://kanal7.daioncdn.net/kanal7/kanal7.m3u8?app=f99587ad-1637-494d-8255-da35b09d17a1", StreamType.HLS), StreamSource("HD 720p Hızlı Akış", "https://kanal7-live.daioncdn.net/kanal7/kanal7_720p.m3u8", StreamType.HLS), StreamSource("SD 480p Yedek Akış", "https://kanal7-live.daioncdn.net/kanal7/kanal7_480p.m3u8", StreamType.HLS), StreamSource("FHD 1080p Akış", "https://kanal7.daioncdn.net/kanal7/kanal7_1080p.m3u8?app=f99587ad-1637-494d-8255-da35b09d17a1", StreamType.HLS))
         ),
         ch(
             id = "ch_15_kanal_7_avrupa", number = 15, name = "Kanal 7 Avrupa", logoText = "KANAL\n7",
             c1 = 0xFFBE185DL, c2 = 0xFFF472B6L, cat = "Ulusal", badge = "HD", logoUrl = "https://i.ibb.co/F4P8ddm/kanal-7-avrupa.png",
-            sources = listOf(StreamSource("HD 720p", "https://livetv.radyotvonline.net/kanal7live/kanal7avr/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("HD 720p", "https://livetv.radyotvonline.net/kanal7live/kanal7avr/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://livetv.radyotvonline.net/kanal7live/kanal7avr/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://livetv.radyotvonline.net/kanal7live/kanal7avr/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_16_kanal_d", number = 16, name = "Kanal D", logoText = "KANAL\nD",
             c1 = 0xFF1F2937L, c2 = 0xFF64748BL, cat = "Ulusal", badge = "FHD", logoUrl = "https://i.imgur.com/9o1atM6.png",
-            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://demiroren.daioncdn.net/kanald/kanald.m3u8?app=kanald_web&ce=3", StreamType.HLS))
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://ackaxsqacw.turknet.ercdn.net/ozfkfbbjba/kanald/kanald_1080p.m3u8", StreamType.HLS), StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://demiroren.daioncdn.net/kanald/kanald.m3u8?app=kanald_web&ce=3", StreamType.HLS), StreamSource("Alternatif Akış 3", "https://demiroren.daioncdn.net/kanald/kanald.m3u8?app=da2109ea-5dfe-4107-89ab-23593336ed61", StreamType.HLS), StreamSource("Alternatif Akış 4", "https://live.duhnet.tv/S2/HLS_LIVE/kanalddainp/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 5", "https://demiroren.daioncdn.net/kanald/kanald.m3u8?app=kanald_web", StreamType.HLS), StreamSource("Alternatif Akış 6", "https://ackaxsqacw.turknet.ercdn.net/ozfkfbbjba/kanald/kanald.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_17_meltem_tv", number = 17, name = "Meltem TV", logoText = "MELTEM",
             c1 = 0xFFB45309L, c2 = 0xFFFACC15L, cat = "Ulusal", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://vhxyrsly.rocketcdn.com/meltemtv/chunklist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://vhxyrsly.rocketcdn.com/meltemtv/chunklist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://vhxyrsly.rocketcdn.com/meltemtv/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://vhxyrsly.rocketcdn.com/meltemtv/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_18_now_tv", number = 18, name = "NOW TV", logoText = "NOW",
             c1 = 0xFFB91C1CL, c2 = 0xFFEF4444L, cat = "Ulusal", badge = "HD", logoUrl = "https://i.imgur.com/5EYjWK7.png",
-            sources = listOf(StreamSource("HD 720p", "https://uycyyuuzyh.turknet.ercdn.net/nphindgytw/nowtv/nowtv.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://uycyyuuzyh.turknet.ercdn.net/nphindgytw/nowtv/nowtv_720p.m3u8", StreamType.HLS), StreamSource("HD 720p", "https://uycyyuuzyh.turknet.ercdn.net/nphindgytw/nowtv/nowtv.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "http://uycyyuuzyh.turknet.ercdn.net/nphindgytw/nowtv/nowtv.m3u8", StreamType.HLS), StreamSource("FHD 1080p Akış", "https://uycyyuuzyh.turknet.ercdn.net/nphindgytw/nowtv/nowtv_1080p.m3u8", StreamType.HLS), StreamSource("SD 480p Yedek Akış", "https://uycyyuuzyh.turknet.ercdn.net/nphindgytw/nowtv/nowtv_480p.m3u8", StreamType.HLS), StreamSource("FHD 1080p Akış", "http://uycyyuuzyh.turknet.ercdn.net/nphindgytw/nowtv/nowtv_1080p.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_19_show_max", number = 19, name = "Show Max", logoText = "SHOW\nMAX",
             c1 = 0xFF1E3A8AL, c2 = 0xFF3B82F6L, cat = "Ulusal", badge = "HD", logoUrl = "https://i.ibb.co/qJnvXJQ/show-max.png",
-            sources = listOf(StreamSource("Standart Akış", "http://rmtftbjlne.turknet.ercdn.net/bpeytmnqyp/showmax/showmax.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "http://rmtftbjlne.turknet.ercdn.net/bpeytmnqyp/showmax/showmax.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://rmtftbjlne.turknet.ercdn.net/bpeytmnqyp/showmax/showmax.m3u8", StreamType.HLS), StreamSource("FHD 1080p Akış", "http://rmtftbjlne.turknet.ercdn.net/bpeytmnqyp/showmax/showmax_1080p.m3u8", StreamType.HLS), StreamSource("HD 720p Hızlı Akış", "http://rmtftbjlne.turknet.ercdn.net/bpeytmnqyp/showmax/showmax_720p.m3u8", StreamType.HLS), StreamSource("SD 480p Yedek Akış", "http://rmtftbjlne.turknet.ercdn.net/bpeytmnqyp/showmax/showmax_480p.m3u8", StreamType.HLS), StreamSource("FHD 1080p Akış", "https://rmtftbjlne.turknet.ercdn.net/bpeytmnqyp/showmax/showmax_1080p.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_20_show_tv", number = 20, name = "Show TV", logoText = "SHOW",
             c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Ulusal", badge = "FHD", logoUrl = "https://i.ibb.co/Rv0rWhZ/show.png",
-            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://ciner-live.daioncdn.net/showtv/showtv_1080p.m3u8", StreamType.HLS), StreamSource("Yedek Akış", "http://ciner.daioncdn.net/showtv/showtv.m3u8?app=showtv_web", StreamType.HLS))
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://rmtftbjlne.turknet.ercdn.net/bpeytmnqyp/showtv/showtv_1080p.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://rmtftbjlne.turknet.ercdn.net:443/bpeytmnqyp/showtv/showtv_1080p.m3u8", StreamType.HLS), StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://ciner-live.daioncdn.net/showtv/showtv_1080p.m3u8", StreamType.HLS), StreamSource("Yedek Akış", "http://ciner.daioncdn.net/showtv/showtv.m3u8?app=showtv_web", StreamType.HLS), StreamSource("Alternatif Akış 5", "https://ciner.daioncdn.net/showtv/showtv_1080p.m3u8?ex=1664766175&st=RBzhSuGauna0OGld-DJUVA&tv=1&sid=88iye2ldl2ew&app=4bc856ef-4c68-4a94-bc87-37dfaaa66558&ce=3", StreamType.HLS), StreamSource("Alternatif Akış 6", "https://rmtftbjlne.turknet.ercdn.net/bpeytmnqyp/showtv/showtv.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_21_star_tv", number = 21, name = "Star TV", logoText = "STAR",
             c1 = 0xFF6B21A8L, c2 = 0xFFA855F7L, cat = "Ulusal", badge = "HD", logoUrl = "https://i.imgur.com/9O3DHRB.png",
-            sources = listOf(StreamSource("HD 720p", "https://dogus.daioncdn.net/startv/startv_720p.m3u8?&sid=8l4w3lst4co5&app=a20ac41e-bdc3-4aa1-934d-26b484480ac9&ce=3", StreamType.HLS), StreamSource("Yedek Akış", "https://dygvideo.dygdigital.com/live/hls/startv4puhu", StreamType.HLS))
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://dogus.daioncdn.net/startv/startv.m3u8?ce=3&app=1740db13-3ee9-4858-8d2c-b1a9cfaa3718", StreamType.HLS), StreamSource("HD 720p", "https://dogus.daioncdn.net/startv/startv_720p.m3u8?&sid=8l4w3lst4co5&app=a20ac41e-bdc3-4aa1-934d-26b484480ac9&ce=3", StreamType.HLS), StreamSource("Yedek Akış", "https://dygvideo.dygdigital.com/live/hls/startv4puhu", StreamType.HLS), StreamSource("Alternatif Akış 4", "http://176.65.153.66:6001/play/a01u/index.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 5", "http://dygvideo.dygdigital.com/live/hls/stardai?m3u8", StreamType.HLS), StreamSource("Alternatif Akış 6", "https://dogus.daioncdn.net/startv/startv.m3u8?app=a20ac41e-bdc3-4aa1-934d-26b484480ac9", StreamType.HLS))
         ),
         ch(
             id = "ch_22_tabii_tv", number = 22, name = "Tabii TV", logoText = "TABII",
             c1 = 0xFFC2410CL, c2 = 0xFFF97316L, cat = "Ulusal", badge = "FHD", logoUrl = "",
-            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://ceokzokgtd.fdc.ercdn.net/giuqlxwlrl/tabiitv/tabiitv.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://ceokzokgtd.erbvr.com/tabiitv/tabiitv_1080p.m3u8", StreamType.HLS), StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://ceokzokgtd.fdc.ercdn.net/giuqlxwlrl/tabiitv/tabiitv.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "http://ceokzokgtd.erbvr.com/tabiitv/tabiitv_1080p.m3u8", StreamType.HLS), StreamSource("FHD 1080p Akış", "https://ceokzokgtd.fdc.ercdn.net/giuqlxwlrl/tabiitv/tabiitv_1080p.m3u8", StreamType.HLS), StreamSource("HD 720p Hızlı Akış", "https://ceokzokgtd.fdc.ercdn.net/giuqlxwlrl/tabiitv/tabiitv_720p.m3u8", StreamType.HLS), StreamSource("SD 480p Yedek Akış", "https://ceokzokgtd.fdc.ercdn.net/giuqlxwlrl/tabiitv/tabiitv_480p.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_23_teve2", number = 23, name = "Teve2", logoText = "TEVE2",
             c1 = 0xFF0E7490L, c2 = 0xFF06B6D4L, cat = "Ulusal", badge = "FHD", logoUrl = "https://i.imgur.com/rsoSLih.png",
-            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://demiroren-live.daioncdn.net/teve2/teve2.m3u8", StreamType.HLS), StreamSource("Yedek Akış", "https://ackaxsqacw.turknet.ercdn.net/ozfkfbbjba/teve2/teve2.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://ackaxsqacw.turknet.ercdn.net/ozfkfbbjba/teve2/teve2_1080p.m3u8", StreamType.HLS), StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://demiroren-live.daioncdn.net/teve2/teve2.m3u8", StreamType.HLS), StreamSource("Yedek Akış", "https://ackaxsqacw.turknet.ercdn.net/ozfkfbbjba/teve2/teve2.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 4", "https://live.duhnet.tv/S2/HLS_LIVE/teve2np/track_4_1000/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 5", "https://live.duhnet.tv/S2/HLS_LIVE/teve2np/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 6", "https://teve2.duhnet.tv/S2/HLS_LIVE/teve2np/playlist.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_24_tgrt_eu", number = 24, name = "TGRT EU", logoText = "TGRT\nEU",
             c1 = 0xFFBE185DL, c2 = 0xFFF472B6L, cat = "Ulusal", badge = "HD", logoUrl = "https://i.ibb.co/MCXCRcn/tgrteu1.png",
-            sources = listOf(StreamSource("Standart Akış", "https://tgrt-live.ercdn.net/tgrteu/tgrteu.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://tgrt-live.ercdn.net/tgrteu/tgrteu.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "http://umperisn.mywire.org/index.php?id=594199&token=DeaTHLesS", StreamType.HLS), StreamSource("FHD 1080p Akış", "https://tgrt-live.ercdn.net/tgrteu/tgrteu_1080p.m3u8", StreamType.HLS), StreamSource("HD 720p Hızlı Akış", "https://tgrt-live.ercdn.net/tgrteu/tgrteu_720p.m3u8", StreamType.HLS), StreamSource("SD 480p Yedek Akış", "https://tgrt-live.ercdn.net/tgrteu/tgrteu_480p.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_25_tivi_6", number = 25, name = "Tivi 6", logoText = "TIVI\n6",
             c1 = 0xFF1F2937L, c2 = 0xFF64748BL, cat = "Ulusal", badge = "HD", logoUrl = "https://i.ibb.co/9H3DMWz/tivi6.png",
-            sources = listOf(StreamSource("HD 720p", "https://live.artidijitalmedya.com/artidijital_tivi6/tivi6/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://live.artidijitalmedya.com/artidijital_tivi6/tivi6/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://live.artidijitalmedya.com/artidijital_tivi6/tivi6/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_tivi6/tivi6/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://live.artidijitalmedya.com/artidijital_tivi6/tivi6/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_26_tlc", number = 26, name = "TLC", logoText = "TLC",
             c1 = 0xFFB45309L, c2 = 0xFFFACC15L, cat = "Ulusal", badge = "HD", logoUrl = "https://i.imgur.com/8m3PMUf.png",
-            sources = listOf(StreamSource("HD 720p", "https://dogus-live.daioncdn.net/tlc/tlc.m3u8", StreamType.HLS), StreamSource("Yedek Akış", "http://dygvideo.dygdigital.com/live/hls/tlctvdai?m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("HD 720p", "https://dogus-live.daioncdn.net/tlc/tlc.m3u8", StreamType.HLS), StreamSource("Yedek Akış", "http://dygvideo.dygdigital.com/live/hls/tlctvdai?m3u8", StreamType.HLS), StreamSource("FHD 1080p Akış", "https://dogus-live.daioncdn.net/tlc/tlc_1080p.m3u8", StreamType.HLS), StreamSource("HD 720p Hızlı Akış", "https://dogus-live.daioncdn.net/tlc/tlc_720p.m3u8", StreamType.HLS), StreamSource("SD 480p Yedek Akış", "https://dogus-live.daioncdn.net/tlc/tlc_480p.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_27_trt_1", number = 27, name = "TRT 1", logoText = "TRT\n1",
             c1 = 0xFFB91C1CL, c2 = 0xFFEF4444L, cat = "Ulusal", badge = "FHD", logoUrl = "https://i.imgur.com/j786OLG.png",
-            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://tv-trt1.medya.trt.com.tr/master.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "http://89.187.191.41/TRT-1-HD-TR/video.m3u8", StreamType.HLS), StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://tv-trt1.medya.trt.com.tr/master.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "https://trt.daioncdn.net/trt-1/master.m3u8?app=e435840d-2653-45a3-afef-082d4ea998f3", StreamType.HLS), StreamSource("Alternatif Akış 4", "https://helga.iptv2022.com/sh/trt_1/index.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 5", "https://trt.daioncdn.net/trt-1/master_720p.m3u8?app=web", StreamType.HLS), StreamSource("Alternatif Akış 6", "https://trt.daioncdn.net/trt-1/master.m3u8?app=web", StreamType.HLS))
         ),
         ch(
             id = "ch_28_trt_2", number = 28, name = "TRT 2", logoText = "TRT\n2",
             c1 = 0xFF1E3A8AL, c2 = 0xFF3B82F6L, cat = "Ulusal", badge = "FHD", logoUrl = "https://i.imgur.com/lNWrOE2.png",
-            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://tv-trt2.medya.trt.com.tr/master.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://tv-trt2.medya.trt.com.tr/master_1080.m3u8", StreamType.HLS), StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://tv-trt2.medya.trt.com.tr/master.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "http://umperisn.mywire.org/index.php?id=1846&token=DeaTHLesS", StreamType.HLS), StreamSource("HD 720p (Hızlı Yedek)", "https://tv-trt2.medya.trt.com.tr/master_720.m3u8", StreamType.HLS), StreamSource("SD 480p (Kesintisiz Yedek)", "https://tv-trt2.medya.trt.com.tr/master_480.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_29_tv4", number = 29, name = "TV4", logoText = "TV4",
             c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Ulusal", badge = "HD", logoUrl = "https://i.imgur.com/UpsQsbd.png",
-            sources = listOf(StreamSource("HD 720p", "https://turkmedya-live.ercdn.net/tv4/tv4.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://turkmedya-live.ercdn.net/tv4/tv4_1080p.m3u8", StreamType.HLS), StreamSource("HD 720p", "https://turkmedya-live.ercdn.net/tv4/tv4.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "https://turkmedya-live.ercdn.net/tv4/tv4_720p.m3u8", StreamType.HLS), StreamSource("SD 480p Yedek Akış", "https://turkmedya-live.ercdn.net/tv4/tv4_480p.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_30_tv8", number = 30, name = "TV8", logoText = "TV8",
             c1 = 0xFF6B21A8L, c2 = 0xFFA855F7L, cat = "Ulusal", badge = "FHD", logoUrl = "https://upload.wikimedia.org/wikipedia/tr/thumb/6/68/Tv8_Yeni_Logo.png/960px-Tv8_Yeni_Logo.png",
-            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://tv8.daioncdn.net/tv8/tv8.m3u8?app=7ddc255a-ef47-4e81-ab14-c0e5f2949788&ce=3", StreamType.HLS))
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://tv8.daioncdn.net/tv8/tv8_1080p.m3u8?&sid=8sx8v82ropt3&app=7ddc255a-ef47-4e81-ab14-c0e5f2949788&ce=3", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://rkhubpaomb.turknet.ercdn.net/fwjkgpasof/tv8/tv8_1080p.m3u8", StreamType.HLS), StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://tv8.daioncdn.net/tv8/tv8.m3u8?app=7ddc255a-ef47-4e81-ab14-c0e5f2949788&ce=3", StreamType.HLS), StreamSource("Alternatif Akış 4", "https://tv8.daioncdn.net/tv8/tv8.m3u8?app=7ddc255a-ef47-4e81-ab14-c0e5f2949788", StreamType.HLS), StreamSource("Alternatif Akış 5", "https://tv8.daioncdn.net/tv8/tv8_1080p.m3u8?&sid=6q8954bl1bhp&app=7ddc255a-ef47-4e81-ab14-c0e5f2949788&ce=3", StreamType.HLS), StreamSource("Alternatif Akış 6", "https://rkhubpaomb.turknet.ercdn.net/fwjkgpasof/tv8/tv8.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_31_tv8_5", number = 31, name = "TV8.5", logoText = "TV8.5",
             c1 = 0xFFC2410CL, c2 = 0xFFF97316L, cat = "Ulusal", badge = "FHD", logoUrl = "https://i.ibb.co/6PRYHdW/tv85.png",
-            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://tv8.daioncdn.net/tv8bucuk/tv8bucuk_1080p.m3u8?app=tv8bucuk_web&ce=3", StreamType.HLS))
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://rkhubpaomb.turknet.ercdn.net/fwjkgpasof/tv8bucuk/tv8bucuk_1080p.m3u8", StreamType.HLS), StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://tv8.daioncdn.net/tv8bucuk/tv8bucuk_1080p.m3u8?app=tv8bucuk_web&ce=3", StreamType.HLS), StreamSource("Alternatif Akış 3", "https://rkhubpaomb.turknet.ercdn.net/fwjkgpasof/tv8bucuk/tv8bucuk.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 4", "https://tv8.daioncdn.net/tv8bucuk/tv8bucuk_1080p.m3u8?&sid=7tra76g4cefx&app=bf58ab52-4865-4c81-b223-26b41009801e&ce=3", StreamType.HLS), StreamSource("HD 720p Hızlı Akış", "https://rkhubpaomb.turknet.ercdn.net/fwjkgpasof/tv8bucuk/tv8bucuk_720p.m3u8", StreamType.HLS), StreamSource("SD 480p Yedek Akış", "https://rkhubpaomb.turknet.ercdn.net/fwjkgpasof/tv8bucuk/tv8bucuk_480p.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_32_woman_tv", number = 32, name = "Woman TV", logoText = "WOMAN",
             c1 = 0xFF0E7490L, c2 = 0xFF06B6D4L, cat = "Ulusal", badge = "FHD", logoUrl = "https://i.ibb.co/bHTjDyk/woman-tv.png",
-            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://s01.webcaster.cloud/wmtv/live_1080p.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://s01.webcaster.cloud/wmtv/live_1080p.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "http://s01.webcaster.cloud/wmtv/live_1080p.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_33_a_spor", number = 33, name = "A Spor", logoText = "A\nSPOR",
             c1 = 0xFFBE185DL, c2 = 0xFFF472B6L, cat = "Spor", badge = "FHD", logoUrl = "https://i.imgur.com/ZhkZzLf.png",
-            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/aspor/aspor.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/aspor/aspor_1080p.m3u8", StreamType.HLS), StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/aspor/aspor.m3u8", StreamType.HLS), StreamSource("HD 720p Hızlı Akış", "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/aspor/aspor_720p.m3u8", StreamType.HLS), StreamSource("SD 480p Yedek Akış", "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/aspor/aspor_480p.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_34_bein_sports", number = 34, name = "beIN SPORTS", logoText = "BEIN\nSPORT",
             c1 = 0xFF1F2937L, c2 = 0xFF64748BL, cat = "Spor", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://redbox-beinsports-xumo.amagi.tv/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://redbox-beinsports-xumo.amagi.tv/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://redbox-beinsports-xumo.amagi.tv/index.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://redbox-beinsports-xumo.amagi.tv/chunklist.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_35_bein_sports_xtra", number = 35, name = "beIN SPORTS XTRA", logoText = "BEIN\nSPORT",
             c1 = 0xFFB45309L, c2 = 0xFFFACC15L, cat = "Spor", badge = "FHD", logoUrl = "",
-            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://bein-xtra-bein.amagi.tv/playlist.m3u8", StreamType.HLS), StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://bein-xtra-roku-us.amagi.tv/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://bein-xtra-bein.amagi.tv/playlist.m3u8", StreamType.HLS), StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://bein-xtra-roku-us.amagi.tv/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://bein-xtra-bein.amagi.tv/index.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://bein-xtra-bein.amagi.tv/chunklist.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_36_cbc_sport_azerbaycan", number = 36, name = "CBC Sport Azerbaycan", logoText = "CBC\nSPORT",
             c1 = 0xFFB91C1CL, c2 = 0xFFEF4444L, cat = "Spor", badge = "FHD", logoUrl = "",
-            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://mn-nl.mncdn.com/cbcsports_live/cbcsports/chunklist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://mn-nl.mncdn.com/cbcsports_live/cbcsports/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Playlist)", "https://mn-nl.mncdn.com/cbcsports_live/cbcsports/playlist.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_37_fb_tv", number = 37, name = "FB TV", logoText = "FB",
             c1 = 0xFF1E3A8AL, c2 = 0xFF3B82F6L, cat = "Spor", badge = "HD", logoUrl = "https://i.ibb.co/315SYpK/fb-tv.png",
-            sources = listOf(StreamSource("Standart Akış", "https://fbtv.fenerbahce.org/fenerbahcetv.stream_720p/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış", "https://1hskrdto.rocketcdn.com/fenerbahcetv.smil/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://fbtv.fenerbahce.org/fenerbahcetv.stream_720p/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış", "https://1hskrdto.rocketcdn.com/fenerbahcetv.smil/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "http://1hskrdto.rocketcdn.com/fenerbahcetv.smil/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://fbtv.fenerbahce.org/fenerbahcetv.stream_720p/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://fbtv.fenerbahce.org/fenerbahcetv.stream_720p/index.m3u8", StreamType.HLS))
         )
     )
 
@@ -1181,192 +1339,192 @@ class TvRepository(private val appContext: Context) {
         ch(
             id = "ch_38_gs_tv", number = 38, name = "GS TV", logoText = "GS",
             c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Spor", badge = "HD", logoUrl = "https://i.ibb.co/6RqMpGT/gs-tv.png",
-            sources = listOf(StreamSource("Standart Akış", "https://owifavo5.rocketcdn.com/gstv/gstv.smil/chunklist_b1828000_sltur.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://owifavo5.rocketcdn.com/gstv/gstv.smil/chunklist_b1828000_sltur.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "http://owifavo5.rocketcdn.com/gstv/gstv.smil/chunklist_b1828000_sltur.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_39_ht_spor_tv", number = 39, name = "HT Spor TV", logoText = "HT\nSPOR",
             c1 = 0xFF6B21A8L, c2 = 0xFFA855F7L, cat = "Spor", badge = "FHD", logoUrl = "https://www.htspor.com/images/manifest/social-share-logo.png",
-            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://ciner.daioncdn.net/ht-spor/ht-spor.m3u8?app=web", StreamType.HLS), StreamSource("Yedek Akış", "https://ciner-live.ercdn.net/htspor/htspor.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://ciner.daioncdn.net/ht-spor/ht-spor.m3u8?app=web", StreamType.HLS), StreamSource("Yedek Akış", "https://ciner-live.ercdn.net/htspor/htspor.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "https://ciner.daioncdn.net/ht-spor/ht-spor.m3u8?app=web&dfp_paln=AQzzBGQEBm1BO0E2iVe9tLfcsqJ3gAOMJ63P8Ch&ppid=675956db19f9bb686edda21d15d911e8", StreamType.HLS), StreamSource("FHD 1080p Akış", "https://ciner.daioncdn.net/ht-spor/ht-spor_1080p.m3u8?app=web", StreamType.HLS), StreamSource("HD 720p Hızlı Akış", "https://ciner.daioncdn.net/ht-spor/ht-spor_720p.m3u8?app=web", StreamType.HLS), StreamSource("SD 480p Yedek Akış", "https://ciner.daioncdn.net/ht-spor/ht-spor_480p.m3u8?app=web", StreamType.HLS))
         ),
         ch(
             id = "ch_40_mma_tv", number = 40, name = "MMA TV", logoText = "MMA",
             c1 = 0xFFC2410CL, c2 = 0xFFF97316L, cat = "Spor", badge = "FHD", logoUrl = "",
-            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://alchimie-mmatv-samsung.amagi.tv/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://alchimie-mmatv-samsung.amagi.tv/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://alchimie-mmatv-samsung.amagi.tv/index.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://alchimie-mmatv-samsung.amagi.tv/chunklist.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_41_motosport_tv", number = 41, name = "MotoSport TV", logoText = "MOTOSP",
             c1 = 0xFF0E7490L, c2 = 0xFF06B6D4L, cat = "Spor", badge = "FHD", logoUrl = "",
-            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://alchimie-motosport-tv-rakuten.amagi.tv/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://alchimie-motosport-tv-rakuten.amagi.tv/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://alchimie-motosport-tv-rakuten.amagi.tv/index.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://alchimie-motosport-tv-rakuten.amagi.tv/chunklist.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_42_real_madrid_tv", number = 42, name = "Real Madrid TV", logoText = "REAL\nMADRI",
             c1 = 0xFFBE185DL, c2 = 0xFFF472B6L, cat = "Spor", badge = "FHD", logoUrl = "",
-            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://cinedigm-rmtv-lg.amagi.tv/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://cinedigm-rmtv-lg.amagi.tv/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://cinedigm-rmtv-lg.amagi.tv/index.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://cinedigm-rmtv-lg.amagi.tv/chunklist.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_43_sports_tv", number = 43, name = "Sports TV", logoText = "SPORTS",
             c1 = 0xFF1F2937L, c2 = 0xFF64748BL, cat = "Spor", badge = "FHD", logoUrl = "https://i.ibb.co/4Rm7Z6Z/sports22.png",
-            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://live.sportstv.com.tr/hls/low/sportstv_fhd/index.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://live.sportstv.com.tr/hls/low/sportstv_fhd/index.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Playlist)", "https://live.sportstv.com.tr/hls/low/sportstv_fhd/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Master)", "https://live.sportstv.com.tr/hls/low/sportstv_fhd/master.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_44_s_f_r_tv", number = 44, name = "Sıfır TV", logoText = "SIFIR",
             c1 = 0xFFB45309L, c2 = 0xFFFACC15L, cat = "Spor", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://ahr7chck.rocketcdn.com/sifirtv.stream/chunklist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://ahr7chck.rocketcdn.com/sifirtv.stream/chunklist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "http://umperisn.mywire.org/index.php?id=611874&token=DeaTHLesS", StreamType.HLS), StreamSource("Yedek Akış (Playlist)", "https://ahr7chck.rocketcdn.com/sifirtv.stream/playlist.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_45_tabii_spor_6", number = 45, name = "Tabii Spor 6", logoText = "TABII\nSPOR",
             c1 = 0xFFB91C1CL, c2 = 0xFFEF4444L, cat = "Spor", badge = "HD", logoUrl = "https://cms-tabii-public-image.tabii.com/int/w300/43020.jpeg",
-            sources = listOf(StreamSource("HD 720p", "https://vbtob9hyq58eiophct5qctxr2.medya.trt.com.tr/master.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("HD 720p", "https://vbtob9hyq58eiophct5qctxr2.medya.trt.com.tr/master.m3u8", StreamType.HLS), StreamSource("FHD 1080p (TRT CDN)", "https://vbtob9hyq58eiophct5qctxr2.medya.trt.com.tr/master_1080.m3u8", StreamType.HLS), StreamSource("HD 720p (Hızlı Yedek)", "https://vbtob9hyq58eiophct5qctxr2.medya.trt.com.tr/master_720.m3u8", StreamType.HLS), StreamSource("SD 480p (Kesintisiz Yedek)", "https://vbtob9hyq58eiophct5qctxr2.medya.trt.com.tr/master_480.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_46_tennis_channel_inter", number = 46, name = "Tennis Channel International", logoText = "TENNI\nCHANN",
             c1 = 0xFF1E3A8AL, c2 = 0xFF3B82F6L, cat = "Spor", badge = "FHD", logoUrl = "",
-            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://tennischannel-intl-samsung-uk.amagi.tv/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://tennischannel-intl-samsung-uk.amagi.tv/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://tennischannel-intl-samsung-uk.amagi.tv/index.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://tennischannel-intl-samsung-uk.amagi.tv/chunklist.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_47_tjk_tv", number = 47, name = "TJK TV", logoText = "TJK",
             c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Spor", badge = "FHD", logoUrl = "https://i.ibb.co/PrkXrRn/tjk-tv.png",
-            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://tjktv-live.tjk.org/tjktv_1080p.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://tjktv-live.tjk.org/tjktv_1080p.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://tjktv-live.tjk.org/tjktv.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "http://tjktv-live.tjk.org/tjktv_1080p.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 4", "http://tjktv-live.tjk.org/tjktv.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_48_tjk_tv_yurt_d___", number = 48, name = "TJK TV Yurt Dışı", logoText = "TJK\nYURT",
             c1 = 0xFF6B21A8L, c2 = 0xFFA855F7L, cat = "Spor", badge = "FHD", logoUrl = "https://i.ibb.co/PrkXrRn/tjk-tv.png",
-            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://tjktv-live.tjk.org/tjktv2/tjktv2_1080p.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://tjktv-live.tjk.org/tjktv2/tjktv2_1080p.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "http://tjktv-live.tjk.org/tjktv2/tjktv2_1080p.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_49_trace_sportstars", number = 49, name = "Trace SportStars", logoText = "TRACE\nSPORT",
             c1 = 0xFFC2410CL, c2 = 0xFFF97316L, cat = "Spor", badge = "FHD", logoUrl = "",
-            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://trace-sportstars-tcl.amagi.tv/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://trace-sportstars-tcl.amagi.tv/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://trace-sportstars-tcl.amagi.tv/index.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://trace-sportstars-tcl.amagi.tv/chunklist.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_50_trt_spor", number = 50, name = "TRT Spor", logoText = "TRT\nSPOR",
             c1 = 0xFF0E7490L, c2 = 0xFF06B6D4L, cat = "Spor", badge = "FHD", logoUrl = "https://i.imgur.com/N2wGZyf.png",
-            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://tv-trtspor1.medya.trt.com.tr/master.m3u8", StreamType.HLS), StreamSource("Yedek Akış", "https://trt.daioncdn.net/trtspor/master.m3u8?app=web", StreamType.HLS))
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://tv-trtspor1.medya.trt.com.tr/master_1080.m3u8", StreamType.HLS), StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://tv-trtspor1.medya.trt.com.tr/master.m3u8", StreamType.HLS), StreamSource("Yedek Akış", "https://trt.daioncdn.net/trtspor/master.m3u8?app=web", StreamType.HLS), StreamSource("Alternatif Akış 4", "http://umperisn.mywire.org/index.php?id=2016&token=DeaTHLesS", StreamType.HLS), StreamSource("HD 720p (Hızlı Yedek)", "https://tv-trtspor1.medya.trt.com.tr/master_720.m3u8", StreamType.HLS), StreamSource("SD 480p (Kesintisiz Yedek)", "https://tv-trtspor1.medya.trt.com.tr/master_480.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_51_trt_spor_y_ld_z", number = 51, name = "TRT Spor Yıldız", logoText = "TRT\nSPOR",
             c1 = 0xFFBE185DL, c2 = 0xFFF472B6L, cat = "Spor", badge = "FHD", logoUrl = "https://i.imgur.com/ysKteM8.png",
-            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://tv-trtspor2.medya.trt.com.tr/master.m3u8", StreamType.HLS), StreamSource("Yedek Akış", "https://trt.daioncdn.net/trtspor-yildiz/master.m3u8?app=web", StreamType.HLS))
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://tv-trtspor2.medya.trt.com.tr/master_1080p.m3u8", StreamType.HLS), StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://tv-trtspor2.medya.trt.com.tr/master.m3u8", StreamType.HLS), StreamSource("Yedek Akış", "https://trt.daioncdn.net/trtspor-yildiz/master.m3u8?app=web", StreamType.HLS), StreamSource("Alternatif Akış 4", "http://umperisn.mywire.org/index.php?id=2019&token=DeaTHLesS", StreamType.HLS), StreamSource("FHD 1080p (TRT CDN)", "https://tv-trtspor2.medya.trt.com.tr/master_1080.m3u8", StreamType.HLS), StreamSource("HD 720p (Hızlı Yedek)", "https://tv-trtspor2.medya.trt.com.tr/master_720.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_52_24_tv", number = 52, name = "24 TV", logoText = "24",
             c1 = 0xFF1F2937L, c2 = 0xFF64748BL, cat = "Haber", badge = "HD", logoUrl = "https://i.imgur.com/8FO41es.png",
-            sources = listOf(StreamSource("HD 720p", "https://turkmedya-live.ercdn.net/tv24/tv24_720p.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://turkmedya-live.ercdn.net/tv24/tv24_1080p.m3u8", StreamType.HLS), StreamSource("HD 720p", "https://turkmedya-live.ercdn.net/tv24/tv24_720p.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "https://tv.ensonhaber.com/tv24/tv24.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 4", "https://turkmedya-live.ercdn.net/tv24/tv24.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 5", "https://ensonhaber-live.ercdn.net/tv24/tv24.m3u8", StreamType.HLS), StreamSource("SD 480p Yedek Akış", "https://turkmedya-live.ercdn.net/tv24/tv24_480p.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_53_a_haber", number = 53, name = "A Haber", logoText = "A\nHABER",
             c1 = 0xFFB45309L, c2 = 0xFFFACC15L, cat = "Haber", badge = "FHD", logoUrl = "https://upload.wikimedia.org/wikipedia/commons/7/7c/Ahaber_Logo.png",
-            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/ahaber/ahaber.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/ahaber/ahaber_1080p.m3u8", StreamType.HLS), StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/ahaber/ahaber.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "https://trkvz-live.ercdn.net/ahaberhd/ahaberhd.m3u8", StreamType.HLS), StreamSource("HD 720p Hızlı Akış", "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/ahaber/ahaber_720p.m3u8", StreamType.HLS), StreamSource("SD 480p Yedek Akış", "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/ahaber/ahaber_480p.m3u8", StreamType.HLS), StreamSource("FHD 1080p Akış", "https://trkvz-live.ercdn.net/ahaberhd/ahaberhd_1080p.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_54_a_para_hd", number = 54, name = "A Para HD", logoText = "A\nPARA",
             c1 = 0xFFB91C1CL, c2 = 0xFFEF4444L, cat = "Haber", badge = "FHD", logoUrl = "https://i.ibb.co/KwXzY6B/apara.png",
-            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://trkvz-live.ercdn.net/aparahd/aparahd.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://trkvz-live.ercdn.net/aparahd/aparahd.m3u8", StreamType.HLS), StreamSource("FHD 1080p Akış", "https://trkvz-live.ercdn.net/aparahd/aparahd_1080p.m3u8", StreamType.HLS), StreamSource("HD 720p Hızlı Akış", "https://trkvz-live.ercdn.net/aparahd/aparahd_720p.m3u8", StreamType.HLS), StreamSource("SD 480p Yedek Akış", "https://trkvz-live.ercdn.net/aparahd/aparahd_480p.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_55_anadolu_ajans_", number = 55, name = "Anadolu Ajansı", logoText = "ANADO\nAJANS",
             c1 = 0xFF1E3A8AL, c2 = 0xFF3B82F6L, cat = "Haber", badge = "HD", logoUrl = "https://i.ibb.co/jLd8Fcb/aa.png",
-            sources = listOf(StreamSource("Standart Akış", "http://mtulqxgomrllive.mediatriple.net/mtulqxgomrllive/broadcast_59f9c0c785b88.smil/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "http://mtulqxgomrllive.mediatriple.net/mtulqxgomrllive/broadcast_59f9c0c785b88.smil/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "http://mtulqxgomrllive.mediatriple.net/mtulqxgomrllive/broadcast_59f9c0c785b88.smil/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "http://mtulqxgomrllive.mediatriple.net/mtulqxgomrllive/broadcast_59f9c0c785b88.smil/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_56_beng_t_rk_tv", number = 56, name = "Bengütürk TV", logoText = "BENGÜT",
             c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Haber", badge = "FHD", logoUrl = "https://i.ibb.co/CHWhMvQ/bengu-turk.png",
-            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://ensonhaber-live.ercdn.net/benguturk/benguturk.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://tv.ensonhaber.com/benguturk/benguturk_720p.m3u8", StreamType.HLS), StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://ensonhaber-live.ercdn.net/benguturk/benguturk.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "https://tv.ensonhaber.com/benguturk/benguturk.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 4", "http://tv.ensonhaber.com/benguturk/benguturk_720p.m3u8", StreamType.HLS), StreamSource("FHD 1080p Akış", "https://ensonhaber-live.ercdn.net/benguturk/benguturk_1080p.m3u8", StreamType.HLS), StreamSource("HD 720p Hızlı Akış", "https://ensonhaber-live.ercdn.net/benguturk/benguturk_720p.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_57_bloomberg_ht", number = 57, name = "Bloomberg HT", logoText = "BLOOM\nHT",
             c1 = 0xFF6B21A8L, c2 = 0xFFA855F7L, cat = "Haber", badge = "HD", logoUrl = "https://i.imgur.com/bmkXfIE.png",
-            sources = listOf(StreamSource("HD 720p", "https://ciner-live.daioncdn.net/bloomberght/bloomberght_720p.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://tv.ensonhaber.com/bloomberght/bloomberght_720p.m3u8", StreamType.HLS), StreamSource("HD 720p", "https://ciner-live.daioncdn.net/bloomberght/bloomberght_720p.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "https://tv.ensonhaber.com/bloomberght/bloomberght.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 4", "https://ensonhaber-live.ercdn.net/bloomberght/bloomberght.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 5", "https://ciner.daioncdn.net/bloomberght/bloomberght.m3u8", StreamType.HLS), StreamSource("FHD 1080p Akış", "https://ciner-live.daioncdn.net/bloomberght/bloomberght_1080p.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_58_dha", number = 58, name = "DHA", logoText = "DHA",
             c1 = 0xFFC2410CL, c2 = 0xFFF97316L, cat = "Haber", badge = "HD", logoUrl = "https://i.ibb.co/K6BKFqY/dha.png",
-            sources = listOf(StreamSource("Standart Akış", "https://603c568fccdf5.streamlock.net/live/dhaweb1_C5efC/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://603c568fccdf5.streamlock.net/live/dhaweb1_C5efC/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://603c568fccdf5.streamlock.net/live/dhaweb1_C5efC/chunklist_w630024058.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://603c568fccdf5.streamlock.net/live/dhaweb1_C5efC/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://603c568fccdf5.streamlock.net/live/dhaweb1_C5efC/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_59_ekol_tv", number = 59, name = "Ekol TV", logoText = "EKOL",
             c1 = 0xFF0E7490L, c2 = 0xFF06B6D4L, cat = "Haber", badge = "FHD", logoUrl = "https://i.ibb.co/Ln92Dj2/Ekoltv.png",
-            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://ekoltv-live.ercdn.net/ekoltv/ekoltv.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://ekoltv-live.ercdn.net/ekoltv/ekoltv_1080p.m3u8", StreamType.HLS), StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://ekoltv-live.ercdn.net/ekoltv/ekoltv.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "https://helga.iptv2022.com/sh/ekol_tv/index.m3u8", StreamType.HLS), StreamSource("HD 720p Hızlı Akış", "https://ekoltv-live.ercdn.net/ekoltv/ekoltv_720p.m3u8", StreamType.HLS), StreamSource("SD 480p Yedek Akış", "https://ekoltv-live.ercdn.net/ekoltv/ekoltv_480p.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_60_euronews_english", number = 60, name = "Euronews English", logoText = "EURON\nENGLI",
             c1 = 0xFFBE185DL, c2 = 0xFFF472B6L, cat = "Haber", badge = "FHD", logoUrl = "",
-            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://alchimie-euronews-uk-lg.amagi.tv/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://alchimie-euronews-uk-lg.amagi.tv/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://alchimie-euronews-uk-lg.amagi.tv/index.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://alchimie-euronews-uk-lg.amagi.tv/chunklist.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_61_haber_global", number = 61, name = "Haber Global", logoText = "HABER\nGLOBA",
             c1 = 0xFF1F2937L, c2 = 0xFF64748BL, cat = "Haber", badge = "HD", logoUrl = "https://i.ibb.co/4ZpZWkf/haber-global.png",
-            sources = listOf(StreamSource("HD 720p", "https://tv.ensonhaber.com/haberglobal/haberglobal_720p.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("HD 720p", "https://tv.ensonhaber.com/haberglobal/haberglobal_720p.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://ensonhaber-live.ercdn.net/haberglobal/haberglobal.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "https://tv.ensonhaber.com/haberglobal/haberglobal.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 4", "http://tv.ensonhaber.com/haberglobal/haberglobal_720p.m3u8", StreamType.HLS), StreamSource("FHD 1080p Akış", "https://ensonhaber-live.ercdn.net/haberglobal/haberglobal_1080p.m3u8", StreamType.HLS), StreamSource("HD 720p Hızlı Akış", "https://ensonhaber-live.ercdn.net/haberglobal/haberglobal_720p.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_62_habert_rk_tv", number = 62, name = "Habertürk TV", logoText = "HABERT",
             c1 = 0xFFB45309L, c2 = 0xFFFACC15L, cat = "Haber", badge = "FHD", logoUrl = "https://i.imgur.com/6Tw3rUp.png",
-            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://ciner-live.daioncdn.net/haberturktv/haberturktv_1080p.m3u8", StreamType.HLS), StreamSource("Yedek Akış", "https://rmtftbjlne.turknet.ercdn.net/bpeytmnqyp/haberturktv/haberturktv.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://rmtftbjlne.turknet.ercdn.net/bpeytmnqyp/haberturktv/haberturktv_1080p.m3u8", StreamType.HLS), StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://ciner-live.daioncdn.net/haberturktv/haberturktv_1080p.m3u8", StreamType.HLS), StreamSource("Yedek Akış", "https://rmtftbjlne.turknet.ercdn.net/bpeytmnqyp/haberturktv/haberturktv.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 4", "https://ciner.daioncdn.net/haberturktv/haberturktv.m3u8?app=c98ab0b0-50cc-495b-bb37-778e91f5ff5b", StreamType.HLS), StreamSource("Alternatif Akış 5", "https://tv.ensonhaber.com/haberturk/haberturk.m3u8", StreamType.HLS), StreamSource("HD 720p Hızlı Akış", "https://rmtftbjlne.turknet.ercdn.net/bpeytmnqyp/haberturktv/haberturktv_720p.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_63_halk_tv", number = 63, name = "Halk TV", logoText = "HALK",
             c1 = 0xFFB91C1CL, c2 = 0xFFEF4444L, cat = "Haber", badge = "FHD", logoUrl = "https://i.imgur.com/xM0HA30.png",
-            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://halktv-live.daioncdn.net/halktv/halktv_1080p.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://halktv-live.daioncdn.net/halktv/halktv_1080p.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://halktv-live.daioncdn.net/halktv/halktv.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "https://halktv.daioncdn.net/halktv/halktv.m3u8?app=c86957d3-74a7-44da-9ad2-dc358c769609", StreamType.HLS), StreamSource("Alternatif Akış 4", "https://halktv.daioncdn.net/halktv/halktv_1080p.m3u8?app=c86957d3-74a7-44da-9ad2-dc358c769609", StreamType.HLS), StreamSource("Alternatif Akış 5", "https://halktv-live.daioncdn.net/halktv/halktv_720p.m3u8", StreamType.HLS), StreamSource("SD 480p Yedek Akış", "https://halktv-live.daioncdn.net/halktv/halktv_480p.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_64_ntv", number = 64, name = "NTV", logoText = "NTV",
             c1 = 0xFF1E3A8AL, c2 = 0xFF3B82F6L, cat = "Haber", badge = "HD", logoUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0c/NTV_%28Turkey%29_logo.svg/960px-NTV_%28Turkey%29_logo.svg.png",
-            sources = listOf(StreamSource("HD 720p", "https://dogus.daioncdn.net/ntv/ntv.m3u8?app=ntv_web", StreamType.HLS))
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://dogus.daioncdn.net/ntv/ntv_1080p.m3u8", StreamType.HLS), StreamSource("HD 720p", "https://dogus.daioncdn.net/ntv/ntv.m3u8?app=ntv_web", StreamType.HLS), StreamSource("Alternatif Akış 3", "https://dogus.daioncdn.net/ntv/ntv.m3u8?ce=3", StreamType.HLS), StreamSource("Alternatif Akış 4", "https://tatatam.trt1sultanfatihss.workers.dev/http://dogus.daioncdn.net/ntv/ntv_1080p.m3u8?&sid=8chq5o7vxulf&app=7c4bb802-0c41-409e-8cd2-799984995694&ce=3", StreamType.HLS), StreamSource("Alternatif Akış 5", "https://dogus.daioncdn.net/ntv/ntv_720p.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 6", "https://dogus.daioncdn.net/ntv/ntv.m3u8?app=7c4bb802-0c41-409e-8cd2-799984995694", StreamType.HLS))
         ),
         ch(
             id = "ch_sozcu_tv", number = 65, name = "Sözcü TV", logoText = "SÖZCÜ\nTV",
             c1 = 0xFFB91C1CL, c2 = 0xFFEF4444L, cat = "Haber", badge = "FHD", logoUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/S%C3%B6zc%C3%BC_TV_logo.svg/960px-S%C3%B6zc%C3%BC_TV_logo.svg.png",
-            sources = listOf(StreamSource("FHD 1080p (Ana Yayın)", "http://45.88.139.156/yt1/szctv.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("FHD 1080p (Ana Yayın)", "http://45.88.139.156/yt1/szctv.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://45.88.139.156/yt1/szctv.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_65_tbmm_tv", number = 66, name = "TBMM TV", logoText = "TBMM",
             c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Haber", badge = "HD", logoUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/TBMM_TV_logo.svg/960px-TBMM_TV_logo.svg.png",
-            sources = listOf(StreamSource("HD 720p", "https://meclistv-live.ercdn.net/meclistv/meclistv.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("HD 720p", "https://meclistv-live.ercdn.net/meclistv/meclistv.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://meclistv-live.ercdn.net/meclistv/meclistv_720p.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "http://meclistv-live.ercdn.net/meclistv/meclistv.m3u8", StreamType.HLS), StreamSource("FHD 1080p Akış", "https://meclistv-live.ercdn.net/meclistv/meclistv_1080p.m3u8", StreamType.HLS), StreamSource("SD 480p Yedek Akış", "https://meclistv-live.ercdn.net/meclistv/meclistv_480p.m3u8", StreamType.HLS), StreamSource("FHD 1080p Akış", "http://meclistv-live.ercdn.net/meclistv/meclistv_1080p.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_66_tele_1", number = 67, name = "Tele 1", logoText = "TELE\n1",
             c1 = 0xFF6B21A8L, c2 = 0xFFA855F7L, cat = "Haber", badge = "FHD", logoUrl = "https://upload.wikimedia.org/wikipedia/tr/4/43/Tele1_logosu.png",
-            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://tele1-live.ercdn.net/tele1/tele1.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://tele1-live.ercdn.net/tele1/tele1.m3u8", StreamType.HLS), StreamSource("FHD 1080p Akış", "https://tele1-live.ercdn.net/tele1/tele1_1080p.m3u8", StreamType.HLS), StreamSource("HD 720p Hızlı Akış", "https://tele1-live.ercdn.net/tele1/tele1_720p.m3u8", StreamType.HLS), StreamSource("SD 480p Yedek Akış", "https://tele1-live.ercdn.net/tele1/tele1_480p.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_67_telenews", number = 68, name = "Telenews", logoText = "TELENE",
             c1 = 0xFFC2410CL, c2 = 0xFFF97316L, cat = "Haber", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://cdn-telenews.yayin.com.tr/telenews/index.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://cdn-telenews.yayin.com.tr/telenews/tracks-v1a1/mono.m3u8", StreamType.HLS), StreamSource("Standart Akış", "https://cdn-telenews.yayin.com.tr/telenews/index.m3u8", StreamType.HLS), StreamSource("Adaptif Playlist Akışı", "https://cdn-telenews.yayin.com.tr/telenews/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 4", "http://cdn-telenews.yayin.com.tr/telenews/tracks-v1a1/mono.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_68_tgrt_haber_hd", number = 69, name = "TGRT Haber HD", logoText = "TGRT\nHABER",
             c1 = 0xFF0E7490L, c2 = 0xFF06B6D4L, cat = "Haber", badge = "HD", logoUrl = "https://i.ibb.co/K5frjVY/tgrt-haber.png",
-            sources = listOf(StreamSource("Standart Akış", "https://tgrthaber-live.daioncdn.net/tgrthaber/tgrthaber.m3u8", StreamType.HLS), StreamSource("Yedek Akış", "https://canli.tgrthaber.com/tgrt.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://tgrthaber-live.daioncdn.net/tgrthaber/tgrthaber_1080p.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://canli.tgrthaber.com/tgrt.m3u8", StreamType.HLS), StreamSource("Standart Akış", "https://tgrthaber-live.daioncdn.net/tgrthaber/tgrthaber.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 4", "https://b01c02nl.mediatriple.net/videoonlylive/mtsxxkzwwuqtglive/broadcast_5fe4598be8e5d.smil/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 5", "https://tgrthaber-live.daioncdn.net/tgrthaber/tgrthaber_720p.m3u8", StreamType.HLS), StreamSource("SD 480p Yedek Akış", "https://tgrthaber-live.daioncdn.net/tgrthaber/tgrthaber_480p.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_69_th_t_rk_haber_tv", number = 70, name = "TH Türk Haber TV", logoText = "TH\nTÜRK",
             c1 = 0xFFBE185DL, c2 = 0xFFF472B6L, cat = "Haber", badge = "HD", logoUrl = "https://i.ibb.co/ySv65wg/turk-haber.png",
-            sources = listOf(StreamSource("Standart Akış", "https://edge1.socialsmart.tv/turkhaber/bant1/chunks.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://edge1.socialsmart.tv/turkhaber/bant1/chunks.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://edge1.socialsmart.tv/turkhaber/bant1/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Sunucu (Edge Chunks)", "https://edge.socialsmart.tv/turkhaber/bant1/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Sunucu (Edge Playlist)", "https://edge.socialsmart.tv/turkhaber/bant1/playlist.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_70_trt_haber", number = 71, name = "TRT Haber", logoText = "TRT\nHABER",
             c1 = 0xFF1F2937L, c2 = 0xFF64748BL, cat = "Haber", badge = "HD", logoUrl = "https://i.imgur.com/OVfo8Ab.png",
-            sources = listOf(StreamSource("HD 720p", "https://tv-trthaber.medya.trt.com.tr/master.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://tv-trthaber.medya.trt.com.tr/master_1080.m3u8", StreamType.HLS), StreamSource("HD 720p", "https://tv-trthaber.medya.trt.com.tr/master.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "https://tv-trthaber.medya.trt.com.tr/master_720.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 4", "https://tv.ensonhaber.com/trthaber/trthaber.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 5", "https://ensonhaber-live.ercdn.net/trthaber/trthaber.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 6", "http://tv-trthaber.medya.trt.com.tr/master.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_71_tvnet", number = 72, name = "TVNET", logoText = "TVNET",
             c1 = 0xFFB45309L, c2 = 0xFFFACC15L, cat = "Haber", badge = "FHD", logoUrl = "https://i.imgur.com/mQo8yWQ.png",
-            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://mn-nl.mncdn.com/tvnet/tvnet/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://mn-nl.mncdn.com/tvnet/tvnet/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://tvnet-live.lg.mncdn.com/tvnet/tvnet/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://mn-nl.mncdn.com/tvnet/tvnet/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://mn-nl.mncdn.com/tvnet/tvnet/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_72_tyt_t_rk", number = 73, name = "TYT Türk", logoText = "TYT\nTÜRK",
             c1 = 0xFFB91C1CL, c2 = 0xFFEF4444L, cat = "Haber", badge = "FHD", logoUrl = "",
-            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://tytturk-live.ercdn.net/tytturk/tytturk.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://tytturk-live.ercdn.net/tytturk/tytturk.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://tytturk-live.ercdn.net/tytturk/tytturk_1080p.m3u8", StreamType.HLS), StreamSource("HD 720p Hızlı Akış", "https://tytturk-live.ercdn.net/tytturk/tytturk_720p.m3u8", StreamType.HLS), StreamSource("SD 480p Yedek Akış", "https://tytturk-live.ercdn.net/tytturk/tytturk_480p.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_73__lke_tv", number = 74, name = "Ülke TV", logoText = "ÜLKE",
             c1 = 0xFF1E3A8AL, c2 = 0xFF3B82F6L, cat = "Haber", badge = "HD", logoUrl = "https://i.imgur.com/wdWR7Qk.png",
-            sources = listOf(StreamSource("HD 720p", "https://livetv.radyotvonline.net/kanal7live/ulketv/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://livetv.radyotvonline.net/kanal7live/ulketv/chunklist.m3u8", StreamType.HLS), StreamSource("HD 720p", "https://livetv.radyotvonline.net/kanal7live/ulketv/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "https://stream.ilketv.com.tr/hls/ilkecanli.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://livetv.radyotvonline.net/kanal7live/ulketv/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_74_agro_tv", number = 75, name = "Agro TV", logoText = "AGRO",
             c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Belgesel", badge = "HD", logoUrl = "https://i.ibb.co/1RnLJpf/agro.png",
-            sources = listOf(StreamSource("Standart Akış", "https://yayin30.haber100.com/live/agrotv/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://yayin30.haber100.com/live/agrotv/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://yayin30.haber100.com/live/agrotv/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://yayin30.haber100.com/live/agrotv/index.m3u8", StreamType.HLS))
         )
     )
 
@@ -1374,187 +1532,187 @@ class TvRepository(private val appContext: Context) {
         ch(
             id = "ch_75_bizimev_tv", number = 76, name = "Bizimev TV", logoText = "BIZIME",
             c1 = 0xFF6B21A8L, c2 = 0xFFA855F7L, cat = "Belgesel", badge = "HD", logoUrl = "https://i.imgur.com/eJa6sFY.png",
-            sources = listOf(StreamSource("HD 720p", "https://mn-nl.mncdn.com/blutv_bizimev/bizimev_sd.smil/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("HD 720p", "https://mn-nl.mncdn.com/blutv_bizimev/bizimev_sd.smil/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://mn-nl.mncdn.com/blutv_bizimev/bizimev_sd.smil/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://mn-nl.mncdn.com/blutv_bizimev/bizimev_sd.smil/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_76_cgtn_documentary", number = 77, name = "CGTN Documentary", logoText = "CGTN\nDOCUM",
             c1 = 0xFFC2410CL, c2 = 0xFFF97316L, cat = "Belgesel", badge = "HD", logoUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d6/CGTN_Documentary_logo.png/960px-CGTN_Documentary_logo.png",
-            sources = listOf(StreamSource("Standart Akış", "https://mn-nl.mncdn.com/dogusdyg_drone/cgtn/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://mn-nl.mncdn.com/dogusdyg_drone/cgtn/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://mn-nl.mncdn.com/dogusdyg_drone/cgtn/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://mn-nl.mncdn.com/dogusdyg_drone/cgtn/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_77_gzt_tv", number = 78, name = "GZT TV", logoText = "GZT",
             c1 = 0xFF0E7490L, c2 = 0xFF06B6D4L, cat = "Belgesel", badge = "FHD", logoUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ef/GZT_logo.svg/960px-GZT_logo.svg.png",
-            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://gzttv-live.lg.mncdn.com/gzttv-live/gzttv/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://gzttv-live.lg.mncdn.com/gzttv-live/gzttv/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://gzttv-live.lg.mncdn.com/gzttv-live/gzttv/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://gzttv-live.lg.mncdn.com/gzttv-live/gzttv/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_78_love_nature_hd", number = 79, name = "Love Nature HD", logoText = "LOVE\nNATUR",
             c1 = 0xFFBE185DL, c2 = 0xFFF472B6L, cat = "Belgesel", badge = "FHD", logoUrl = "",
-            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://lovenatureus-eng-plex.amagi.tv/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://lovenatureus-eng-plex.amagi.tv/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://lovenatureus-eng-plex.amagi.tv/index.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://lovenatureus-eng-plex.amagi.tv/chunklist.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_79_national_geographic", number = 80, name = "National Geographic", logoText = "NATIO\nGEOGR",
             c1 = 0xFF1F2937L, c2 = 0xFF64748BL, cat = "Belgesel", badge = "FHD", logoUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/Natgeologo.svg/960px-Natgeologo.svg.png",
-            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://saran-live.ercdn.net/natgeohd/index.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://saran-live.ercdn.net/natgeohd/index.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Playlist)", "https://saran-live.ercdn.net/natgeohd/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Master)", "https://saran-live.ercdn.net/natgeohd/master.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_80_national_geographic_", number = 81, name = "National Geographic Wild", logoText = "NATIO\nGEOGR",
             c1 = 0xFFB45309L, c2 = 0xFFFACC15L, cat = "Belgesel", badge = "FHD", logoUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/2/27/National_Geographic_Wild_logo.svg/960px-National_Geographic_Wild_logo.svg.png",
-            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://saran-live.ercdn.net/natgeowild/index.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://saran-live.ercdn.net/natgeowild/index.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Playlist)", "https://saran-live.ercdn.net/natgeowild/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Master)", "https://saran-live.ercdn.net/natgeowild/master.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_81_tgrt_belgesel", number = 82, name = "TGRT Belgesel", logoText = "TGRT\nBELGE",
             c1 = 0xFFB91C1CL, c2 = 0xFFEF4444L, cat = "Belgesel", badge = "HD", logoUrl = "https://i.ibb.co/JHH0xcX/tgrtbel22.png",
-            sources = listOf(StreamSource("Standart Akış", "https://tgrt-live.ercdn.net/tgrtbelgesel/tgrtbelgesel.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://tgrt-live.ercdn.net/tgrtbelgesel/tgrtbelgesel.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://b01c02nl.mediatriple.net/videoonlylive/mtsxxkzwwuqtglive/broadcast_5fe462afc6a0e.smil/playlist.m3u8", StreamType.HLS), StreamSource("FHD 1080p Akış", "https://tgrt-live.ercdn.net/tgrtbelgesel/tgrtbelgesel_1080p.m3u8", StreamType.HLS), StreamSource("HD 720p Hızlı Akış", "https://tgrt-live.ercdn.net/tgrtbelgesel/tgrtbelgesel_720p.m3u8", StreamType.HLS), StreamSource("SD 480p Yedek Akış", "https://tgrt-live.ercdn.net/tgrtbelgesel/tgrtbelgesel_480p.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_82_trt_belgesel", number = 83, name = "TRT Belgesel", logoText = "TRT\nBELGE",
             c1 = 0xFF1E3A8AL, c2 = 0xFF3B82F6L, cat = "Belgesel", badge = "FHD", logoUrl = "https://i.imgur.com/MGO87pe.png",
-            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://tv-trtbelgesel-dai.medya.trt.com.tr/master.m3u8", StreamType.HLS), StreamSource("Yedek Akış", "https://tv-trtbelgesel.medya.trt.com.tr/master.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://tv-trtbelgesel.medya.trt.com.tr/master_1080.m3u8", StreamType.HLS), StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://tv-trtbelgesel-dai.medya.trt.com.tr/master.m3u8", StreamType.HLS), StreamSource("Yedek Akış", "https://tv-trtbelgesel.medya.trt.com.tr/master.m3u8", StreamType.HLS), StreamSource("HD 720p (Hızlı Yedek)", "https://tv-trtbelgesel.medya.trt.com.tr/master_720.m3u8", StreamType.HLS), StreamSource("SD 480p (Kesintisiz Yedek)", "https://tv-trtbelgesel.medya.trt.com.tr/master_480.m3u8", StreamType.HLS), StreamSource("FHD 1080p (TRT CDN)", "https://tv-trtbelgesel-dai.medya.trt.com.tr/master_1080.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_83_wild_earth_tv", number = 84, name = "Wild Earth TV", logoText = "WILD\nEARTH",
             c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Belgesel", badge = "FHD", logoUrl = "",
-            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://wildearth-adsfree-ono.amagi.tv/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://wildearth-adsfree-ono.amagi.tv/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://wildearth-adsfree-ono.amagi.tv/index.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://wildearth-adsfree-ono.amagi.tv/chunklist.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_84_yaban_tv", number = 85, name = "Yaban TV", logoText = "YABAN",
             c1 = 0xFF6B21A8L, c2 = 0xFFA855F7L, cat = "Belgesel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("HD 720p", "https://59cba4d34b678.streamlock.net/live1/yabantv/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("HD 720p", "https://59cba4d34b678.streamlock.net/live1/yabantv/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "http://sewv654wfcsdwfi87fwvgbngh.siauliairsavlt.pw/iptv/9XRHZ7MZ9PNWS6/6868/index.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://59cba4d34b678.streamlock.net/live1/yabantv/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://59cba4d34b678.streamlock.net/live1/yabantv/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_85__ift_i_tv", number = 86, name = "Çiftçi TV", logoText = "ÇIFTÇI",
             c1 = 0xFFC2410CL, c2 = 0xFFF97316L, cat = "Belgesel", badge = "HD", logoUrl = "https://i.ibb.co/vHwMgx0/ciftci.png",
-            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_ciftcitv/ciftcitv/chunks.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://live.artidijitalmedya.com/artidijital_ciftcitv/ciftcitv/playlist.m3u8", StreamType.HLS), StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_ciftcitv/ciftcitv/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_ciftcitv/ciftcitv/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://live.artidijitalmedya.com/artidijital_ciftcitv/ciftcitv/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_86_dream_t_rk", number = 87, name = "Dream Türk", logoText = "DREAM\nTÜRK",
             c1 = 0xFF0E7490L, c2 = 0xFF06B6D4L, cat = "Müzik", badge = "HD", logoUrl = "https://i.ibb.co/fxRrKmB/dream-turk.png",
-            sources = listOf(StreamSource("HD 720p", "https://live.duhnet.tv/S2/HLS_LIVE/dreamturknp/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("HD 720p", "https://live.duhnet.tv/S2/HLS_LIVE/dreamturknp/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://live.duhnet.tv//S2/HLS_LIVE/dreamturknp/track_4_1250/playlist.m3u8", StreamType.HLS), StreamSource("Duhnet HD (Track 4)", "https://live.duhnet.tv/S2/HLS_LIVE/dreamturknp/track_4_1000/playlist.m3u8", StreamType.HLS), StreamSource("Duhnet Hızlı (Track 2)", "https://live.duhnet.tv/S2/HLS_LIVE/dreamturknp/track_2_550/playlist.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_87_kral_pop_tv", number = 88, name = "Kral Pop TV", logoText = "KRAL\nPOP",
             c1 = 0xFFBE185DL, c2 = 0xFFF472B6L, cat = "Müzik", badge = "HD", logoUrl = "https://i.imgur.com/ch365lh.png",
-            sources = listOf(StreamSource("Standart Akış", "https://dogus-live.daioncdn.net/kralpoptv/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış", "http://dygvideo.dygdigital.com/live/hls/kralpop", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://dogus-live.daioncdn.net/kralpoptv/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış", "http://dygvideo.dygdigital.com/live/hls/kralpop", StreamType.HLS), StreamSource("Alternatif Akış 3", "http://dygvideo.dygdigital.com/live/hls/puhukralpopdai?m3u8", StreamType.HLS), StreamSource("Alternatif Akış 4", "https://dogus.daioncdn.net/kralpoptv/kralpoptv.m3u8?app=f38a38b4-ce55-4040-8676-9826937d6128", StreamType.HLS), StreamSource("FHD 1080p Akış", "https://dogus.daioncdn.net/kralpoptv/kralpoptv_1080p.m3u8?app=f38a38b4-ce55-4040-8676-9826937d6128", StreamType.HLS), StreamSource("HD 720p Hızlı Akış", "https://dogus.daioncdn.net/kralpoptv/kralpoptv_720p.m3u8?app=f38a38b4-ce55-4040-8676-9826937d6128", StreamType.HLS))
         ),
         ch(
             id = "ch_88_number_1_a_k", number = 89, name = "Number 1 Aşk", logoText = "NUMBE\n1",
             c1 = 0xFF1F2937L, c2 = 0xFF64748BL, cat = "Müzik", badge = "HD", logoUrl = "https://i.ibb.co/5cJ0KtQ/nr1-ask.png",
-            sources = listOf(StreamSource("Standart Akış", "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/u_stream_5c9e18f9cea15_1/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/u_stream_5c9e18f9cea15_1/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "http://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/u_stream_5c9e18f9cea15_1/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/u_stream_5c9e18f9cea15_1/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/u_stream_5c9e18f9cea15_1/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_89_number_1_damar", number = 90, name = "Number 1 Damar", logoText = "NUMBE\n1",
             c1 = 0xFFB45309L, c2 = 0xFFFACC15L, cat = "Müzik", badge = "HD", logoUrl = "https://i.ibb.co/2yCF7ms/nr1-damar.png",
-            sources = listOf(StreamSource("Standart Akış", "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/u_stream_5c9e198784bdc_1/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/u_stream_5c9e198784bdc_1/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "http://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/u_stream_5c9e198784bdc_1/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/u_stream_5c9e198784bdc_1/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/u_stream_5c9e198784bdc_1/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_90_number_1_dance", number = 91, name = "Number 1 Dance", logoText = "NUMBE\n1",
             c1 = 0xFFB91C1CL, c2 = 0xFFEF4444L, cat = "Müzik", badge = "HD", logoUrl = "https://i.ibb.co/kXFSFTN/nr1-dance.png",
-            sources = listOf(StreamSource("Standart Akış", "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/u_stream_5c9e2aa8acf44_1/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/u_stream_5c9e2aa8acf44_1/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "http://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/u_stream_5c9e2aa8acf44_1/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/u_stream_5c9e2aa8acf44_1/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/u_stream_5c9e2aa8acf44_1/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_91_number_1_tv_hd", number = 92, name = "Number 1 TV HD", logoText = "NUMBE\n1",
             c1 = 0xFF1E3A8AL, c2 = 0xFF3B82F6L, cat = "Müzik", badge = "HD", logoUrl = "https://i.ibb.co/sybLTBG/nr1.png",
-            sources = listOf(StreamSource("Standart Akış", "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/u_stream_5c9e17cd6360b_1/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/u_stream_5c9e17cd6360b_1/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/broadcast_5c9e17cd59e8b.smil/chunklist_b400000.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/broadcast_5c9e187770143.smil/chunklist_b400000.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 4", "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/broadcast_5c9e17cd59e8b.smil/playlist.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_92_number_1_t_rk", number = 93, name = "Number 1 Türk", logoText = "NUMBE\n1",
             c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Müzik", badge = "HD", logoUrl = "https://i.imgur.com/18zjk3q.png",
-            sources = listOf(StreamSource("HD 720p", "https://mn-nl.mncdn.com/blutv_nr1turk2/live.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("HD 720p", "https://mn-nl.mncdn.com/blutv_nr1turk2/live.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/broadcast_5c9e17cd59e8b.smil/chunklist_b400000.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/broadcast_5c9e187770143.smil/chunklist_b400000.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 4", "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/broadcast_5c9e17cd59e8b.smil/playlist.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_93_power_dance", number = 94, name = "Power Dance", logoText = "POWER\nDANCE",
             c1 = 0xFF6B21A8L, c2 = 0xFFA855F7L, cat = "Müzik", badge = "HD", logoUrl = "https://i.ibb.co/5hwZ7xw/power-dance.png",
-            sources = listOf(StreamSource("Standart Akış", "https://listen.powerapp.com.tr/dance/dance.smil/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://listen.powerapp.com.tr/dance/dance.smil/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://livetv.powerapp.com.tr/dance/dance.smil/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://listen.powerapp.com.tr/dance/dance.smil/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://listen.powerapp.com.tr/dance/dance.smil/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_94_power_love", number = 95, name = "Power Love", logoText = "POWER\nLOVE",
             c1 = 0xFFC2410CL, c2 = 0xFFF97316L, cat = "Müzik", badge = "HD", logoUrl = "https://i.ibb.co/bJL1VnX/power-love.png",
-            sources = listOf(StreamSource("Standart Akış", "https://listen.powerapp.com.tr/plove/love.smil/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://listen.powerapp.com.tr/plove/love.smil/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://livetv.powerapp.com.tr/plove/love.smil/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://listen.powerapp.com.tr/plove/love.smil/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://listen.powerapp.com.tr/plove/love.smil/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_95_power_tv", number = 96, name = "Power TV", logoText = "POWER",
             c1 = 0xFF0E7490L, c2 = 0xFF06B6D4L, cat = "Müzik", badge = "HD", logoUrl = "https://i.ibb.co/JrXDQJy/power-tv.png",
-            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_powertv/powertv/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_powertv/powertv/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://livetv.powerapp.com.tr/powerTV/powerhd.smil/playlists.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "https://livetv.powerapp.com.tr/powerTV/powerhd.smil/playlist.m3u8", StreamType.HLS), StreamSource("Hızlı Doğrudan Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_powertv/powertv/chunks.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_96_power_tv_hd", number = 97, name = "Power TV HD", logoText = "POWER",
             c1 = 0xFFBE185DL, c2 = 0xFFF472B6L, cat = "Müzik", badge = "HD", logoUrl = "https://i.ibb.co/JrXDQJy/power-tv.png",
-            sources = listOf(StreamSource("Standart Akış", "https://livetv.powerapp.com.tr/powerTV/powerhd.smil/chunklist_b2650000_sltur.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://livetv.powerapp.com.tr/powerTV/powerhd.smil/chunklist_b2650000_sltur.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://live.artidijitalmedya.com/artidijital_powertv/powertv/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "https://livetv.powerapp.com.tr/powerTV/powerhd.smil/playlists.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 4", "https://livetv.powerapp.com.tr/powerTV/powerhd.smil/playlist.m3u8", StreamType.HLS), StreamSource("Hızlı Doğrudan Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_powertv/powertv/chunks.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_97_powert_rk_akustik", number = 98, name = "PowerTürk Akustik", logoText = "POWER\nAKUST",
             c1 = 0xFF1F2937L, c2 = 0xFF64748BL, cat = "Müzik", badge = "HD", logoUrl = "https://i.ibb.co/XFY7dCW/powerturk-akustik.png",
-            sources = listOf(StreamSource("Standart Akış", "https://listen.powerapp.com.tr/pturkakustik/akustik.smil/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://listen.powerapp.com.tr/pturkakustik/akustik.smil/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://listen.powerapp.com.tr/pturkakustik/akustik.smil/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://listen.powerapp.com.tr/pturkakustik/akustik.smil/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_98_powert_rk_slow", number = 99, name = "PowerTürk Slow", logoText = "POWER\nSLOW",
             c1 = 0xFFB45309L, c2 = 0xFFFACC15L, cat = "Müzik", badge = "HD", logoUrl = "https://i.ibb.co/R4pcKqK/powerturk-slow.png",
-            sources = listOf(StreamSource("Standart Akış", "https://listen.powerapp.com.tr/pturkslow/slow.smil/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://listen.powerapp.com.tr/pturkslow/slow.smil/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://listen.powerapp.com.tr/pturkslow/slow.smil/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://listen.powerapp.com.tr/pturkslow/slow.smil/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_99_powert_rk_taptaze", number = 100, name = "PowerTürk Taptaze", logoText = "POWER\nTAPTA",
             c1 = 0xFFB91C1CL, c2 = 0xFFEF4444L, cat = "Müzik", badge = "HD", logoUrl = "https://i.ibb.co/F5K5xs9/powerturk-taptaze.png",
-            sources = listOf(StreamSource("Standart Akış", "https://listen.powerapp.com.tr/pturktaptaze/taptaze.smil/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://livetv.powerapp.com.tr/pturktaptaze/taptaze.smil/playlist.m3u8", StreamType.HLS), StreamSource("Standart Akış", "https://listen.powerapp.com.tr/pturktaptaze/taptaze.smil/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "http://livetv.powerapp.com.tr/pturktaptaze/taptaze.smil/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://livetv.powerapp.com.tr/pturktaptaze/taptaze.smil/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://livetv.powerapp.com.tr/pturktaptaze/taptaze.smil/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_100_powert_rk_tv_hd", number = 101, name = "PowerTürk TV HD", logoText = "POWERT",
             c1 = 0xFF1E3A8AL, c2 = 0xFF3B82F6L, cat = "Müzik", badge = "FHD", logoUrl = "https://i.ibb.co/xXcBD2C/powerturk.png",
-            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://livetv.powerapp.com.tr/powerturkTV/powerturkhd.smil/playlists.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://live.artidijitalmedya.com/artidijital_powerturktv/powerturktv/playlist.m3u8", StreamType.HLS), StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://livetv.powerapp.com.tr/powerturkTV/powerturkhd.smil/playlists.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "https://livetv.powerapp.com.tr/powerturkTV/powerturkhd.smil/playlist.m3u8", StreamType.HLS), StreamSource("Hızlı Doğrudan Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_powerturktv/powerturktv/chunks.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_101_slow_karadeniz_tv", number = 102, name = "Slow Karadeniz TV", logoText = "SLOW\nKARAD",
             c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Müzik", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://yayin.slowkaradeniztv.com:3390/multi_web/play.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://yayin.slowkaradeniztv.com:3390/hybrid/play.m3u8", StreamType.HLS), StreamSource("Standart Akış", "https://yayin.slowkaradeniztv.com:3390/multi_web/play.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "https://yayin.slowkaradeniztv.com:3390/hybrid/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 4", "https://yayin.slowkaradeniztv.com:3390/hybrid/chunklist.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_102_tatl_ses_tv", number = 103, name = "Tatlıses TV", logoText = "TATLIS",
             c1 = 0xFF6B21A8L, c2 = 0xFFA855F7L, cat = "Müzik", badge = "HD", logoUrl = "https://i.ibb.co/yRy9zwt/tatlises-tv.png",
-            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_tatlisestv/tatlisestv/chunks.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_tatlisestv/tatlisestv/chunks.m3u8", StreamType.HLS), StreamSource("Adaptif Akış (Playlist)", "https://live.artidijitalmedya.com/artidijital_tatlisestv/tatlisestv/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "http://live.artidijitalmedya.com/artidijital_tatlisestv/tatlisestv/chunks.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_103_trt_m_zik", number = 104, name = "TRT Müzik", logoText = "TRT\nMÜZIK",
             c1 = 0xFFC2410CL, c2 = 0xFFF97316L, cat = "Müzik", badge = "HD", logoUrl = "https://i.imgur.com/fIVFCEd.png",
-            sources = listOf(StreamSource("HD 720p", "https://tv-trtmuzik.medya.trt.com.tr/master.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("HD 720p", "https://tv-trtmuzik.medya.trt.com.tr/master.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "http://tv-trtmuzik.medya.trt.com.tr/master.m3u8", StreamType.HLS), StreamSource("FHD 1080p (TRT CDN)", "https://tv-trtmuzik.medya.trt.com.tr/master_1080.m3u8", StreamType.HLS), StreamSource("HD 720p (Hızlı Yedek)", "https://tv-trtmuzik.medya.trt.com.tr/master_720.m3u8", StreamType.HLS), StreamSource("SD 480p (Kesintisiz Yedek)", "https://tv-trtmuzik.medya.trt.com.tr/master_480.m3u8", StreamType.HLS), StreamSource("FHD 1080p (TRT CDN)", "http://tv-trtmuzik.medya.trt.com.tr/master_1080.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_104_babytv_t_rkiye", number = 105, name = "BabyTV Türkiye", logoText = "BABYTV",
             c1 = 0xFF0E7490L, c2 = 0xFF06B6D4L, cat = "Çocuk", badge = "FHD", logoUrl = "https://i.imgur.com/4BDJ5FT.png",
-            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://saran-live.ercdn.net/babytv/index.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://saran-live.ercdn.net/babytv/index.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Playlist)", "https://saran-live.ercdn.net/babytv/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Master)", "https://saran-live.ercdn.net/babytv/master.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_105_disney_junior", number = 106, name = "Disney Junior", logoText = "DISNE\nJUNIO",
             c1 = 0xFFBE185DL, c2 = 0xFFF472B6L, cat = "Çocuk", badge = "FHD", logoUrl = "https://www.dsmart.com.tr/api/v1/public/images/kanallar/disneyjr.png",
-            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://saran-live.ercdn.net/disneyjunior/index.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://saran-live.ercdn.net/disneyjunior/index.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Playlist)", "https://saran-live.ercdn.net/disneyjunior/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Master)", "https://saran-live.ercdn.net/disneyjunior/master.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_106_minika_go", number = 107, name = "Minika Go", logoText = "MINIK\nGO",
             c1 = 0xFF1F2937L, c2 = 0xFF64748BL, cat = "Çocuk", badge = "HD", logoUrl = "https://i.imgur.com/qIoipDq.png",
-            sources = listOf(StreamSource("HD 720p", "http://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/minikago/minikago_720p.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/minikago/minikago_720p.m3u8", StreamType.HLS), StreamSource("HD 720p", "http://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/minikago/minikago_720p.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/minikago/minikago.m3u8", StreamType.HLS), StreamSource("FHD 1080p Akış", "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/minikago/minikago_1080p.m3u8", StreamType.HLS), StreamSource("SD 480p Yedek Akış", "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/minikago/minikago_480p.m3u8", StreamType.HLS), StreamSource("FHD 1080p Akış", "http://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/minikago/minikago_1080p.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_107_minika__ocuk", number = 108, name = "Minika Çocuk", logoText = "MINIK\nÇOCUK",
             c1 = 0xFFB45309L, c2 = 0xFFFACC15L, cat = "Çocuk", badge = "HD", logoUrl = "https://i.imgur.com/VCywMTv.png",
-            sources = listOf(StreamSource("HD 720p", "http://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/minikago_cocuk/minikago_cocuk_720p.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/minikago_cocuk/minikago_cocuk_720p.m3u8", StreamType.HLS), StreamSource("HD 720p", "http://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/minikago_cocuk/minikago_cocuk_720p.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/minikago_cocuk/minikago_cocuk.m3u8", StreamType.HLS), StreamSource("FHD 1080p Akış", "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/minikago_cocuk/minikago_cocuk_1080p.m3u8", StreamType.HLS), StreamSource("SD 480p Yedek Akış", "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/minikago_cocuk/minikago_cocuk_480p.m3u8", StreamType.HLS), StreamSource("FHD 1080p Akış", "http://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/minikago_cocuk/minikago_cocuk_1080p.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_108_trt_diyanet__ocuk", number = 109, name = "TRT Diyanet Çocuk", logoText = "TRT\nDIYAN",
             c1 = 0xFFB91C1CL, c2 = 0xFFEF4444L, cat = "Çocuk", badge = "HD", logoUrl = "https://i.imgur.com/8PmXz9t.png",
-            sources = listOf(StreamSource("HD 720p", "https://tv-trtdiyanetcocuk.medya.trt.com.tr/master.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://tv-trtdiyanetcocuk.medya.trt.com.tr/master_1080.m3u8", StreamType.HLS), StreamSource("HD 720p", "https://tv-trtdiyanetcocuk.medya.trt.com.tr/master.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "https://tv-trtdiyanetcocuk.medya.trt.com.tr/master_1440.m3u8", StreamType.HLS), StreamSource("HD 720p (Hızlı Yedek)", "https://tv-trtdiyanetcocuk.medya.trt.com.tr/master_720.m3u8", StreamType.HLS), StreamSource("SD 480p (Kesintisiz Yedek)", "https://tv-trtdiyanetcocuk.medya.trt.com.tr/master_480.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_109_trt_eba_i_lkokul", number = 110, name = "TRT EBA İlkokul", logoText = "TRT\nEBA",
             c1 = 0xFF1E3A8AL, c2 = 0xFF3B82F6L, cat = "Çocuk", badge = "HD", logoUrl = "https://i.imgur.com/wDvZfk8.png",
-            sources = listOf(StreamSource("HD 720p", "https://tv-e-okul00.medya.trt.com.tr/master.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("HD 720p", "https://tv-e-okul00.medya.trt.com.tr/master.m3u8", StreamType.HLS), StreamSource("FHD 1080p (TRT CDN)", "https://tv-e-okul00.medya.trt.com.tr/master_1080.m3u8", StreamType.HLS), StreamSource("HD 720p (Hızlı Yedek)", "https://tv-e-okul00.medya.trt.com.tr/master_720.m3u8", StreamType.HLS), StreamSource("SD 480p (Kesintisiz Yedek)", "https://tv-e-okul00.medya.trt.com.tr/master_480.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_110_trt_eba_lise", number = 111, name = "TRT EBA Lise", logoText = "TRT\nEBA",
             c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Çocuk", badge = "HD", logoUrl = "https://i.imgur.com/IebUZx1.png",
-            sources = listOf(StreamSource("HD 720p", "https://tv-e-okul02.medya.trt.com.tr/master.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("HD 720p", "https://tv-e-okul02.medya.trt.com.tr/master.m3u8", StreamType.HLS), StreamSource("FHD 1080p (TRT CDN)", "https://tv-e-okul02.medya.trt.com.tr/master_1080.m3u8", StreamType.HLS), StreamSource("HD 720p (Hızlı Yedek)", "https://tv-e-okul02.medya.trt.com.tr/master_720.m3u8", StreamType.HLS), StreamSource("SD 480p (Kesintisiz Yedek)", "https://tv-e-okul02.medya.trt.com.tr/master_480.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_111_trt_eba_ortaokul", number = 112, name = "TRT EBA Ortaokul", logoText = "TRT\nEBA",
             c1 = 0xFF6B21A8L, c2 = 0xFFA855F7L, cat = "Çocuk", badge = "HD", logoUrl = "https://i.imgur.com/yfPTvRx.png",
-            sources = listOf(StreamSource("HD 720p", "https://tv-e-okul01.medya.trt.com.tr/master.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("HD 720p", "https://tv-e-okul01.medya.trt.com.tr/master.m3u8", StreamType.HLS), StreamSource("FHD 1080p (TRT CDN)", "https://tv-e-okul01.medya.trt.com.tr/master_1080.m3u8", StreamType.HLS), StreamSource("HD 720p (Hızlı Yedek)", "https://tv-e-okul01.medya.trt.com.tr/master_720.m3u8", StreamType.HLS), StreamSource("SD 480p (Kesintisiz Yedek)", "https://tv-e-okul01.medya.trt.com.tr/master_480.m3u8", StreamType.HLS))
         )
     )
 
@@ -1562,187 +1720,187 @@ class TvRepository(private val appContext: Context) {
         ch(
             id = "ch_112_trt_gen_", number = 113, name = "TRT Genç", logoText = "TRT\nGENÇ",
             c1 = 0xFFC2410CL, c2 = 0xFFF97316L, cat = "Çocuk", badge = "FHD", logoUrl = "",
-            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://tv-trtgenc.medya.trt.com.tr/master.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://tv-trtgenc.medya.trt.com.tr/master_1080.m3u8", StreamType.HLS), StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://tv-trtgenc.medya.trt.com.tr/master.m3u8", StreamType.HLS), StreamSource("HD 720p (Hızlı Yedek)", "https://tv-trtgenc.medya.trt.com.tr/master_720.m3u8", StreamType.HLS), StreamSource("SD 480p (Kesintisiz Yedek)", "https://tv-trtgenc.medya.trt.com.tr/master_480.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_113_trt__ocuk", number = 114, name = "TRT Çocuk", logoText = "TRT\nÇOCUK",
             c1 = 0xFF0E7490L, c2 = 0xFF06B6D4L, cat = "Çocuk", badge = "HD", logoUrl = "https://i.imgur.com/QLFmD6d.png",
-            sources = listOf(StreamSource("HD 720p", "https://tv-trtcocuk.medya.trt.com.tr/master.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://tv-trtcocuk.medya.trt.com.tr/master_1080.m3u8", StreamType.HLS), StreamSource("HD 720p", "https://tv-trtcocuk.medya.trt.com.tr/master.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "https://tv-trtcocuk.medya.trt.com.tr/master_720.m3u8", StreamType.HLS), StreamSource("SD 480p (Kesintisiz Yedek)", "https://tv-trtcocuk.medya.trt.com.tr/master_480.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_114_brt_1_hd_k_br_s", number = 115, name = "BRT 1 HD Kıbrıs", logoText = "BRT\n1",
             c1 = 0xFFBE185DL, c2 = 0xFFF472B6L, cat = "Kıbrıs", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://edge.kuzeykibrissmart.tv/brt1hd/bant1/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://edge.kuzeykibrissmart.tv/brt1hd/bant1/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://edge.kuzeykibrissmart.tv/brt1hd/bant1/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://edge.kuzeykibrissmart.tv/brt1hd/bant1/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_115_brt_2_hd_k_br_s", number = 116, name = "BRT 2 HD Kıbrıs", logoText = "BRT\n2",
             c1 = 0xFF1F2937L, c2 = 0xFF64748BL, cat = "Kıbrıs", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://edge.kuzeykibrissmart.tv/brt2hd/bant1/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://edge.kuzeykibrissmart.tv/brt2hd/bant1/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://edge.kuzeykibrissmart.tv/brt2hd/bant1/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://edge.kuzeykibrissmart.tv/brt2hd/bant1/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_116_kanal_t_k_br_s", number = 117, name = "Kanal T Kıbrıs", logoText = "KANAL\nT",
             c1 = 0xFFB45309L, c2 = 0xFFFACC15L, cat = "Kıbrıs", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://edge.kuzeykibrissmart.tv/kanalt/bant1/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://edge.kuzeykibrissmart.tv/kanalt/bant1/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://edge.kuzeykibrissmart.tv/kanalt/bant1/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://edge.kuzeykibrissmart.tv/kanalt/bant1/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_117_ktv_k_br_s_tv", number = 118, name = "KTV Kıbrıs TV", logoText = "KTV\nKIBRI",
             c1 = 0xFFB91C1CL, c2 = 0xFFEF4444L, cat = "Kıbrıs", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://edge.kuzeykibrissmart.tv/kibristv/bant1/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://edge.kuzeykibrissmart.tv/kibristv/bant1/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://edge.kuzeykibrissmart.tv/kibristv/bant1/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://edge.kuzeykibrissmart.tv/kibristv/bant1/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_118_k_br_s_ada_tv", number = 119, name = "Kıbrıs Ada TV", logoText = "KIBRI\nADA",
             c1 = 0xFF1E3A8AL, c2 = 0xFF3B82F6L, cat = "Kıbrıs", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://edge.kuzeykibrissmart.tv/adatv/bant1/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://edge.kuzeykibrissmart.tv/adatv/bant1/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://edge.kuzeykibrissmart.tv/adatv/bant1/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://edge.kuzeykibrissmart.tv/adatv/bant1/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_119_k_br_s_gen__tv", number = 120, name = "Kıbrıs Genç TV", logoText = "KIBRI\nGENÇ",
             c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Kıbrıs", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://edge.kuzeykibrissmart.tv/kibrisgenctv/bant1/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://edge.kuzeykibrissmart.tv/kibrisgenctv/bant1/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://edge.kuzeykibrissmart.tv/kibrisgenctv/bant1/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://edge.kuzeykibrissmart.tv/kibrisgenctv/bant1/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_120_sim_tv_k_br_s", number = 121, name = "Sim TV Kıbrıs", logoText = "SIM\nKIBRI",
             c1 = 0xFF6B21A8L, c2 = 0xFFA855F7L, cat = "Kıbrıs", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://edge.kuzeykibrissmart.tv/simtv/bant1/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://edge.kuzeykibrissmart.tv/simtv/bant1/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://edge.kuzeykibrissmart.tv/simtv/bant1/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://edge.kuzeykibrissmart.tv/simtv/bant1/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_121_tv_2020_k_br_s", number = 122, name = "TV 2020 Kıbrıs", logoText = "2020\nKIBRI",
             c1 = 0xFFC2410CL, c2 = 0xFFF97316L, cat = "Kıbrıs", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://edge.kuzeykibrissmart.tv/tv2020/bant1/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://edge.kuzeykibrissmart.tv/tv2020/bant1/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://edge.kuzeykibrissmart.tv/tv2020/bant1/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://edge.kuzeykibrissmart.tv/tv2020/bant1/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_122_al_zahra_t_rk_tv", number = 123, name = "Al Zahra Türk TV", logoText = "AL\nZAHRA",
             c1 = 0xFF0E7490L, c2 = 0xFF06B6D4L, cat = "Dini", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://live.al-zahratv.com/live/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://live.al-zahratv.com/live/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://live.al-zahratv.com/live/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://live.al-zahratv.com/live/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_123_diyanet_tv", number = 124, name = "Diyanet TV", logoText = "DIYANE",
             c1 = 0xFFBE185DL, c2 = 0xFFF472B6L, cat = "Dini", badge = "FHD", logoUrl = "https://i.ibb.co/k9phm3v/diyanettv.png",
-            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://eustr73.mediatriple.net/videoonlylive/mtikoimxnztxlive/broadcast_5e3bf95a47e07.smil/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://eustr73.mediatriple.net/videoonlylive/mtikoimxnztxlive/broadcast_5e3bf95a47e07.smil/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://eustr73.mediatriple.net/videoonlylive/mtikoimxnztxlive/broadcast_5e3bf95a47e07.smil/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://eustr73.mediatriple.net/videoonlylive/mtikoimxnztxlive/broadcast_5e3bf95a47e07.smil/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_124_dost_tv", number = 125, name = "Dost TV", logoText = "DOST",
             c1 = 0xFF1F2937L, c2 = 0xFF64748BL, cat = "Dini", badge = "HD", logoUrl = "https://i.ibb.co/jwgqtSB/dosttv.png",
-            sources = listOf(StreamSource("Standart Akış", "https://dost.stream.emsal.im/tv/live.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://dost.stream.emsal.im/tv/live.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "http://dost.stream.emsal.im/tv/live.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_125_gonca_tv", number = 126, name = "Gonca TV", logoText = "GONCA",
             c1 = 0xFFB45309L, c2 = 0xFFFACC15L, cat = "Dini", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://edge.taksimbilisim.com/goncatv/bant1/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://edge.taksimbilisim.com/goncatv/bant1/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://edge.taksimbilisim.com/goncatv/bant1/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://edge.taksimbilisim.com/goncatv/bant1/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_126_kanal_on4_tv", number = 127, name = "Kanal On4 TV", logoText = "KANAL\nON4",
             c1 = 0xFFB91C1CL, c2 = 0xFFEF4444L, cat = "Dini", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://edge1.socialsmart.tv/on4/bant1/chunks.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://edge1.socialsmart.tv/on4/bant1/chunks.m3u8", StreamType.HLS), StreamSource("Adaptif Akış (Edge1 Playlist)", "https://edge1.socialsmart.tv/on4/bant1/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Sunucu (Edge Chunks)", "https://edge.socialsmart.tv/on4/bant1/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Sunucu (Edge Playlist)", "https://edge.socialsmart.tv/on4/bant1/playlist.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_127_kud_s_tv", number = 128, name = "Kudüs TV", logoText = "KUDÜS",
             c1 = 0xFF1E3A8AL, c2 = 0xFF3B82F6L, cat = "Dini", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://yayin30.haber100.com/live/kudustv/chunklist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://yayin30.haber100.com/live/kudustv/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Playlist)", "https://yayin30.haber100.com/live/kudustv/playlist.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_128_laleg_l_tv", number = 129, name = "Lalegül TV", logoText = "LALEGÜ",
             c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Dini", badge = "HD", logoUrl = "https://i.ibb.co/wrL2khn/lalegul.png",
-            sources = listOf(StreamSource("Standart Akış", "https://lbl.netmedya.net/hls/lalegultv.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://lbl.netmedya.net/hls/lalegultv.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "http://lbl.netmedya.net/hls/lalegultv.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_129_mukabele_tv", number = 130, name = "Mukabele TV", logoText = "MUKABE",
             c1 = 0xFF6B21A8L, c2 = 0xFFA855F7L, cat = "Dini", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/mukabele-tv/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/mukabele-tv/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/mukabele-tv/playlist/0.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/mukabele-tv/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/mukabele-tv/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_130_rehber_tv", number = 131, name = "Rehber TV", logoText = "REHBER",
             c1 = 0xFFC2410CL, c2 = 0xFFF97316L, cat = "Dini", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://cdn4.yayin.com.tr/rehbertv/tracks-v1a1/mono.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://cdn4.yayin.com.tr/rehbertv/tracks-v1a1/mono.m3u8", StreamType.HLS), StreamSource("Adaptif Playlist Akışı", "https://cdn4.yayin.com.tr/rehbertv/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "http://cdn4.yayin.com.tr/rehbertv/tracks-v1a1/mono.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_131_semerkand_tv", number = 132, name = "Semerkand TV", logoText = "SEMERK",
             c1 = 0xFF0E7490L, c2 = 0xFF06B6D4L, cat = "Dini", badge = "HD", logoUrl = "https://i.ibb.co/k8L3Mq1/semerkandtv.png",
-            sources = listOf(StreamSource("Standart Akış", "https://b01c02nl.mediatriple.net/videoonlylive/mtisvwurbfcyslive/broadcast_58d915bd40efc.smil/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://b01c02nl.mediatriple.net/videoonlylive/mtisvwurbfcyslive/broadcast_58d915bd40efc.smil/mt_0.m3u8", StreamType.HLS), StreamSource("Standart Akış", "https://b01c02nl.mediatriple.net/videoonlylive/mtisvwurbfcyslive/broadcast_58d915bd40efc.smil/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "http://b01c02nl.mediatriple.net/videoonlylive/mtisvwurbfcyslive/broadcast_58d915bd40efc.smil/mt_0.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://b01c02nl.mediatriple.net/videoonlylive/mtisvwurbfcyslive/broadcast_58d915bd40efc.smil/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://b01c02nl.mediatriple.net/videoonlylive/mtisvwurbfcyslive/broadcast_58d915bd40efc.smil/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_132_semerkand_tv_way", number = 133, name = "Semerkand TV Way", logoText = "SEMER\nWAY",
             c1 = 0xFFBE185DL, c2 = 0xFFF472B6L, cat = "Dini", badge = "HD", logoUrl = "https://i.ibb.co/k8L3Mq1/semerkandtv.png",
-            sources = listOf(StreamSource("Standart Akış", "https://b01c02nl.mediatriple.net/videoonlylive/mtisvwurbfcyslive/broadcast_6409fdaa68111.smil/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://b01c02nl.mediatriple.net/videoonlylive/mtisvwurbfcyslive/broadcast_6409fdaa68111.smil/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://b01c02nl.mediatriple.net/videoonlylive/mtisvwurbfcyslive/broadcast_6409fdaa68111.smil/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://b01c02nl.mediatriple.net/videoonlylive/mtisvwurbfcyslive/broadcast_6409fdaa68111.smil/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_133_vav_tv", number = 134, name = "Vav TV", logoText = "VAV",
             c1 = 0xFF1F2937L, c2 = 0xFF64748BL, cat = "Dini", badge = "FHD", logoUrl = "https://i.ibb.co/bj1H8LCm/vavtv.png",
-            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://trkvz-live.ercdn.net/vavtv/vavtv.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/kltr-sanat-tv/playlist/0.m3u8", StreamType.HLS), StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://trkvz-live.ercdn.net/vavtv/vavtv.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "https://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/kltr-sanat-tv/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 4", "http://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/kltr-sanat-tv/playlist/0.m3u8", StreamType.HLS), StreamSource("FHD 1080p Akış", "https://trkvz-live.ercdn.net/vavtv/vavtv_1080p.m3u8", StreamType.HLS), StreamSource("HD 720p Hızlı Akış", "https://trkvz-live.ercdn.net/vavtv/vavtv_720p.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_134_aksu_tv_kahramanmara", number = 135, name = "Aksu TV Kahramanmaraş", logoText = "AKSU\nKAHRA",
             c1 = 0xFFB45309L, c2 = 0xFFFACC15L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_aksutv/aksutv/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_aksutv/aksutv/playlist.m3u8", StreamType.HLS), StreamSource("Hızlı Doğrudan Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_aksutv/aksutv/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_aksutv/aksutv/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://live.artidijitalmedya.com/artidijital_aksutv/aksutv/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_135_alanya_posta_tv", number = 136, name = "Alanya Posta TV", logoText = "ALANY\nPOSTA",
             c1 = 0xFFB91C1CL, c2 = 0xFFEF4444L, cat = "Yerel", badge = "FHD", logoUrl = "",
-            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://api-tv3.yayin.com.tr/postatv/postatv/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://api-tv3.yayin.com.tr/postatv/postatv/playlist.m3u8", StreamType.HLS), StreamSource("Hızlı Chunks Akışı", "https://api-tv3.yayin.com.tr/postatv/postatv/chunks.m3u8", StreamType.HLS), StreamSource("Mono Doğrudan Akış", "https://api-tv3.yayin.com.tr/postatv/postatv/tracks-v1a1/mono.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://api-tv3.yayin.com.tr/postatv/postatv/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://api-tv3.yayin.com.tr/postatv/postatv/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_136_alta__tv_ordu", number = 137, name = "Altaş TV Ordu", logoText = "ALTAŞ\nORDU",
             c1 = 0xFF1E3A8AL, c2 = 0xFF3B82F6L, cat = "Yerel", badge = "FHD", logoUrl = "",
-            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://edge1.socialsmart.tv/altastv/bant1/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://edge1.socialsmart.tv/altastv/bant1/playlist.m3u8", StreamType.HLS), StreamSource("Hızlı Akış (Edge1 Chunks)", "https://edge1.socialsmart.tv/altastv/bant1/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Sunucu (Edge Chunks)", "https://edge.socialsmart.tv/altastv/bant1/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Sunucu (Edge Playlist)", "https://edge.socialsmart.tv/altastv/bant1/playlist.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_137_anadolu_net_tv", number = 138, name = "Anadolu Net TV", logoText = "ANADO\nNET",
             c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_anadolunet/anadolunet/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_anadolunet/anadolunet/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://live.artidijitalmedya.com/artidijital_anadolunet/anadolunet/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_anadolunet/anadolunet/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://live.artidijitalmedya.com/artidijital_anadolunet/anadolunet/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_138_aras_tv", number = 139, name = "Aras TV", logoText = "ARAS",
             c1 = 0xFF6B21A8L, c2 = 0xFFA855F7L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://2.rtmp.org/tv217/yayin.stream/chunklist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://2.rtmp.org/tv217/yayin.stream/chunklist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "http://1.rtmp.org/tv217/yayin.stream/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Playlist)", "https://2.rtmp.org/tv217/yayin.stream/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "http://1.rtmp.org/tv217/yayin.stream/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "http://1.rtmp.org/tv217/yayin.stream/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_139_art_world_tv", number = 140, name = "Art World TV", logoText = "ART\nWORLD",
             c1 = 0xFFC2410CL, c2 = 0xFFF97316L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_artworld/artworld/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_artworld/artworld/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://live.artidijitalmedya.com/artidijital_artworld/artworld/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_artworld/artworld/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://live.artidijitalmedya.com/artidijital_artworld/artworld/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_140_bir_tv", number = 141, name = "Bir TV", logoText = "BIR",
             c1 = 0xFF0E7490L, c2 = 0xFF06B6D4L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://edge1.socialsmart.tv/birtv/bant1/chunks.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://edge.socialsmart.tv/birtv/bant1/chunks.m3u8", StreamType.HLS), StreamSource("Standart Akış", "https://edge1.socialsmart.tv/birtv/bant1/chunks.m3u8", StreamType.HLS), StreamSource("Adaptif Akış (Edge1 Playlist)", "https://edge1.socialsmart.tv/birtv/bant1/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Sunucu (Edge Playlist)", "https://edge.socialsmart.tv/birtv/bant1/playlist.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_141_bodrum_kent_tv", number = 142, name = "Bodrum Kent TV", logoText = "BODRU\nKENT",
             c1 = 0xFFBE185DL, c2 = 0xFFF472B6L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://edge1.socialsmart.tv/bodrumkenttv/bant1/chunks.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://edge1.socialsmart.tv/bodrumkenttv/bant1/chunks.m3u8", StreamType.HLS), StreamSource("Adaptif Akış (Edge1 Playlist)", "https://edge1.socialsmart.tv/bodrumkenttv/bant1/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Sunucu (Edge Chunks)", "https://edge.socialsmart.tv/bodrumkenttv/bant1/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Sunucu (Edge Playlist)", "https://edge.socialsmart.tv/bodrumkenttv/bant1/playlist.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_142_brtv_karab_k", number = 143, name = "BRTV Karabük", logoText = "BRTV\nKARAB",
             c1 = 0xFF1F2937L, c2 = 0xFF64748BL, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_brtv/brtv/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_brtv/brtv/playlist.m3u8", StreamType.HLS), StreamSource("Hızlı Doğrudan Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_brtv/brtv/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_brtv/brtv/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://live.artidijitalmedya.com/artidijital_brtv/brtv/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_143_bursa_as_tv", number = 144, name = "Bursa AS TV", logoText = "BURSA\nAS",
             c1 = 0xFFB45309L, c2 = 0xFFFACC15L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_astv/astv/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_astv/astv/playlist.m3u8", StreamType.HLS), StreamSource("Hızlı Doğrudan Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_astv/astv/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_astv/astv/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://live.artidijitalmedya.com/artidijital_astv/astv/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_144_bursa_line_tv", number = 145, name = "Bursa Line TV", logoText = "BURSA\nLINE",
             c1 = 0xFFB91C1CL, c2 = 0xFFEF4444L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://edge1.socialsmart.tv/linetv/bant1/chunks.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://edge1.socialsmart.tv/linetv/bant1/chunks.m3u8", StreamType.HLS), StreamSource("Adaptif Akış (Edge1 Playlist)", "https://edge1.socialsmart.tv/linetv/bant1/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Sunucu (Edge Chunks)", "https://edge.socialsmart.tv/linetv/bant1/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Sunucu (Edge Playlist)", "https://edge.socialsmart.tv/linetv/bant1/playlist.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_145_bursa_on6_tv", number = 146, name = "Bursa On6 TV", logoText = "BURSA\nON6",
             c1 = 0xFF1E3A8AL, c2 = 0xFF3B82F6L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_kanal16/kanal16/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_kanal16/kanal16/playlist.m3u8", StreamType.HLS), StreamSource("Hızlı Doğrudan Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_kanal16/kanal16/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_kanal16/kanal16/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://live.artidijitalmedya.com/artidijital_kanal16/kanal16/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_146_deha_tv_denizli", number = 147, name = "Deha TV Denizli", logoText = "DEHA\nDENIZ",
             c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_dehatv/dehatv/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_dehatv/dehatv/playlist.m3u8", StreamType.HLS), StreamSource("Hızlı Doğrudan Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_dehatv/dehatv/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_dehatv/dehatv/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://live.artidijitalmedya.com/artidijital_dehatv/dehatv/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_147_deniz_postas__tv_kay", number = 148, name = "Deniz Postası TV Kayseri", logoText = "DENIZ\nPOSTA",
             c1 = 0xFF6B21A8L, c2 = 0xFFA855F7L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_denizpostasi/denizpostasi/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://live.artidijitalmedya.com/artidijital_denizpostasi/denizpostasi/chunks.m3u8", StreamType.HLS), StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_denizpostasi/denizpostasi/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "http://live.artidijitalmedya.com/artidijital_denizpostasi/denizpostasi/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_denizpostasi/denizpostasi/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://live.artidijitalmedya.com/artidijital_denizpostasi/denizpostasi/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_148_derin_tv", number = 149, name = "Derin TV", logoText = "DERIN",
             c1 = 0xFFC2410CL, c2 = 0xFFF97316L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://cdn4.yayin.com.tr/derintv/index.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://cdn4.yayin.com.tr/derintv/index.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Playlist)", "https://cdn4.yayin.com.tr/derintv/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Master)", "https://cdn4.yayin.com.tr/derintv/master.m3u8", StreamType.HLS))
         )
     )
 
@@ -1750,187 +1908,187 @@ class TvRepository(private val appContext: Context) {
         ch(
             id = "ch_149_dim_tv_alanya", number = 150, name = "Dim TV Alanya", logoText = "DIM\nALANY",
             c1 = 0xFF0E7490L, c2 = 0xFF06B6D4L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_dimtv/dimtv/chunks.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_dimtv/dimtv/chunks.m3u8", StreamType.HLS), StreamSource("Adaptif Akış (Playlist)", "https://live.artidijitalmedya.com/artidijital_dimtv/dimtv/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "http://live.artidijitalmedya.com/artidijital_dimtv/dimtv/chunks.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_150_edirne_tv", number = 151, name = "Edirne TV", logoText = "EDIRNE",
             c1 = 0xFFBE185DL, c2 = 0xFFF472B6L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://yayin.edirnetv.com:8088/hls/etvcanliyayin.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://yayin.edirnetv.com:8088/hls/etvcanliyayin.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "http://yayin.edirnetv.com:8088/hls/etvcanliyayin.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_151_er_tv_malatya", number = 152, name = "Er TV Malatya", logoText = "ER\nMALAT",
             c1 = 0xFF1F2937L, c2 = 0xFF64748BL, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_ertv_new/ertv/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_ertv_new/ertv/playlist.m3u8", StreamType.HLS), StreamSource("Hızlı Doğrudan Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_ertv_new/ertv/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_ertv_new/ertv/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://live.artidijitalmedya.com/artidijital_ertv_new/ertv/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_152_erciyes_tv_kayseri", number = 153, name = "Erciyes TV Kayseri", logoText = "ERCIY\nKAYSE",
             c1 = 0xFFB45309L, c2 = 0xFFFACC15L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_erciyestv/erciyestv/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_erciyestv/erciyestv/playlist.m3u8", StreamType.HLS), StreamSource("Hızlı Doğrudan Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_erciyestv/erciyestv/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_erciyestv/erciyestv/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://live.artidijitalmedya.com/artidijital_erciyestv/erciyestv/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_153_erci__tv_van", number = 154, name = "Erciş TV Van", logoText = "ERCIŞ\nVAN",
             c1 = 0xFFB91C1CL, c2 = 0xFFEF4444L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://cdn1-ercistv.yayin.com.tr/ercistv/amlst:ercistv/chunklist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://cdn1-ercistv.yayin.com.tr/ercistv/amlst:ercistv/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Playlist)", "https://cdn1-ercistv.yayin.com.tr/ercistv/amlst:ercistv/playlist.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_154_es_tv_eski_ehir", number = 155, name = "ES TV Eskişehir", logoText = "ES\nESKIŞ",
             c1 = 0xFF1E3A8AL, c2 = 0xFF3B82F6L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_estv/estv/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_estv/estv/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://live.artidijitalmedya.com/artidijital_estv/estv/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_estv/estv/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://live.artidijitalmedya.com/artidijital_estv/estv/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_155_etv_kayseri", number = 156, name = "ETV Kayseri", logoText = "ETV\nKAYSE",
             c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_etv/etv/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_etv/etv/playlist.m3u8", StreamType.HLS), StreamSource("Hızlı Doğrudan Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_etv/etv/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_etv/etv/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://live.artidijitalmedya.com/artidijital_etv/etv/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_156_etv_manisa", number = 157, name = "ETV Manisa", logoText = "ETV\nMANIS",
             c1 = 0xFF6B21A8L, c2 = 0xFFA855F7L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://edge1.socialsmart.tv/manisaetv/bant1/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://edge1.socialsmart.tv/manisaetv/bant1/playlist.m3u8", StreamType.HLS), StreamSource("Hızlı Akış (Edge1 Chunks)", "https://edge1.socialsmart.tv/manisaetv/bant1/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Sunucu (Edge Chunks)", "https://edge.socialsmart.tv/manisaetv/bant1/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Sunucu (Edge Playlist)", "https://edge.socialsmart.tv/manisaetv/bant1/playlist.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_157_fortuna_tv", number = 158, name = "Fortuna TV", logoText = "FORTUN",
             c1 = 0xFFC2410CL, c2 = 0xFFF97316L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://edge1.socialsmart.tv/ftvturk/bant1/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://edge1.socialsmart.tv/ftvturk/bant1/playlist.m3u8", StreamType.HLS), StreamSource("Hızlı Akış (Edge1 Chunks)", "https://edge1.socialsmart.tv/ftvturk/bant1/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Sunucu (Edge Chunks)", "https://edge.socialsmart.tv/ftvturk/bant1/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Sunucu (Edge Playlist)", "https://edge.socialsmart.tv/ftvturk/bant1/playlist.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_158_frt_tv_fethiye", number = 159, name = "FRT TV Fethiye", logoText = "FRT\nFETHI",
             c1 = 0xFF0E7490L, c2 = 0xFF06B6D4L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://edge1.socialsmart.tv/frttv/bant1/chunks.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://edge1.socialsmart.tv/frttv/bant1/chunks.m3u8", StreamType.HLS), StreamSource("Adaptif Akış (Edge1 Playlist)", "https://edge1.socialsmart.tv/frttv/bant1/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Sunucu (Edge Chunks)", "https://edge.socialsmart.tv/frttv/bant1/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Sunucu (Edge Playlist)", "https://edge.socialsmart.tv/frttv/bant1/playlist.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_159_grt_gaziantep_tv", number = 160, name = "GRT Gaziantep TV", logoText = "GRT\nGAZIA",
             c1 = 0xFFBE185DL, c2 = 0xFFF472B6L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_grt/grt/chunks.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_grt/grt/chunks.m3u8", StreamType.HLS), StreamSource("Adaptif Akış (Playlist)", "https://live.artidijitalmedya.com/artidijital_grt/grt/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "http://live.artidijitalmedya.com/artidijital_grt/grt/chunks.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_160_gurbet_24_tv", number = 161, name = "Gurbet 24 TV", logoText = "GURBE\n24",
             c1 = 0xFF1F2937L, c2 = 0xFF64748BL, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "http://cdn-gurbet24.yayin.com.tr/gurbet24/gurbet24/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "http://cdn-gurbet24.yayin.com.tr/gurbet24/gurbet24/playlist.m3u8", StreamType.HLS), StreamSource("Hızlı Chunks Akışı", "http://cdn-gurbet24.yayin.com.tr/gurbet24/gurbet24/chunks.m3u8", StreamType.HLS), StreamSource("Mono Doğrudan Akış", "http://cdn-gurbet24.yayin.com.tr/gurbet24/gurbet24/tracks-v1a1/mono.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "http://cdn-gurbet24.yayin.com.tr/gurbet24/gurbet24/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "http://cdn-gurbet24.yayin.com.tr/gurbet24/gurbet24/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_161_g_neydo_u_tv__anl_ur", number = 162, name = "Güneydoğu TV Şanlıurfa", logoText = "GÜNEY\nŞANLI",
             c1 = 0xFFB45309L, c2 = 0xFFFACC15L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://edge1.socialsmart.tv/gtv/bant1/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://edge1.socialsmart.tv/gtv/bant1/playlist.m3u8", StreamType.HLS), StreamSource("Hızlı Akış (Edge1 Chunks)", "https://edge1.socialsmart.tv/gtv/bant1/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Sunucu (Edge Chunks)", "https://edge.socialsmart.tv/gtv/bant1/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Sunucu (Edge Playlist)", "https://edge.socialsmart.tv/gtv/bant1/playlist.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_162_haber_61_trabzon", number = 163, name = "Haber 61 Trabzon", logoText = "HABER\n61",
             c1 = 0xFFB91C1CL, c2 = 0xFFEF4444L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "http://win8.yayin.com.tr/haber61tv/smil:haber61tv.smil/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "http://win8.yayin.com.tr/haber61tv/smil:haber61tv.smil/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://cdn-haber61tv.yayin.com.tr/haber61tv/haber61tv/playlist.m3u8", StreamType.HLS), StreamSource("Hızlı Chunks Akışı", "http://win8.yayin.com.tr/haber61tv/smil:haber61tv.smil/chunks.m3u8", StreamType.HLS), StreamSource("Mono Doğrudan Akış", "http://win8.yayin.com.tr/haber61tv/smil:haber61tv.smil/tracks-v1a1/mono.m3u8", StreamType.HLS), StreamSource("Hızlı Chunks Akışı", "https://cdn-haber61tv.yayin.com.tr/haber61tv/haber61tv/chunks.m3u8", StreamType.HLS), StreamSource("Mono Doğrudan Akış", "https://cdn-haber61tv.yayin.com.tr/haber61tv/haber61tv/tracks-v1a1/mono.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_163_hunat_tv_kayseri", number = 164, name = "Hunat TV Kayseri", logoText = "HUNAT\nKAYSE",
             c1 = 0xFF1E3A8AL, c2 = 0xFF3B82F6L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_hunattv/hunattv/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_hunattv/hunattv/playlist.m3u8", StreamType.HLS), StreamSource("Hızlı Doğrudan Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_hunattv/hunattv/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_hunattv/hunattv/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://live.artidijitalmedya.com/artidijital_hunattv/hunattv/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_164_i_kra___diyar_tv", number = 165, name = "İkra / Diyar TV", logoText = "İKRA\n/",
             c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_diyartv/diyartv/chunks.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_diyartv/diyartv/chunks.m3u8", StreamType.HLS), StreamSource("Adaptif Akış (Playlist)", "https://live.artidijitalmedya.com/artidijital_diyartv/diyartv/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "http://live.artidijitalmedya.com/artidijital_diyartv/diyartv/chunks.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_165_i_zmir_time_35_tv", number = 166, name = "İzmir Time 35 TV", logoText = "İZMIR\nTIME",
             c1 = 0xFF6B21A8L, c2 = 0xFFA855F7L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://cdn-time35tv.yayin.com.tr/time35tv/time35tv/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://cdn-time35tv.yayin.com.tr/time35tv/time35tv/playlist.m3u8", StreamType.HLS), StreamSource("Hızlı Chunks Akışı", "https://cdn-time35tv.yayin.com.tr/time35tv/time35tv/chunks.m3u8", StreamType.HLS), StreamSource("Mono Doğrudan Akış", "https://cdn-time35tv.yayin.com.tr/time35tv/time35tv/tracks-v1a1/mono.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://cdn-time35tv.yayin.com.tr/time35tv/time35tv/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://cdn-time35tv.yayin.com.tr/time35tv/time35tv/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_166_i__el_tv_mersin", number = 167, name = "İçel TV Mersin", logoText = "İÇEL\nMERSI",
             c1 = 0xFFC2410CL, c2 = 0xFFF97316L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://edge1.socialsmart.tv/iceltv/bant1/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://edge1.socialsmart.tv/iceltv/bant1/playlist.m3u8", StreamType.HLS), StreamSource("Hızlı Akış (Edge1 Chunks)", "https://edge1.socialsmart.tv/iceltv/bant1/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Sunucu (Edge Chunks)", "https://edge.socialsmart.tv/iceltv/bant1/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Sunucu (Edge Playlist)", "https://edge.socialsmart.tv/iceltv/bant1/playlist.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_167_kanal_12", number = 168, name = "Kanal 12", logoText = "KANAL\n12",
             c1 = 0xFF0E7490L, c2 = 0xFF06B6D4L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_kanal12/kanal12/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_kanal12/kanal12/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://live.artidijitalmedya.com/artidijital_kanal12/kanal12/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_kanal12/kanal12/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://live.artidijitalmedya.com/artidijital_kanal12/kanal12/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_168_kanal_13", number = 169, name = "Kanal 13", logoText = "KANAL\n13",
             c1 = 0xFFBE185DL, c2 = 0xFFF472B6L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://cdn4.yayin.com.tr/kanal13/index.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://cdn4.yayin.com.tr/kanal13/index.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Playlist)", "https://cdn4.yayin.com.tr/kanal13/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Master)", "https://cdn4.yayin.com.tr/kanal13/master.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_169_kanal_15_burdur", number = 170, name = "Kanal 15 Burdur", logoText = "KANAL\n15",
             c1 = 0xFF1F2937L, c2 = 0xFF64748BL, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_kanal15/kanal15/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_kanal15/kanal15/playlist.m3u8", StreamType.HLS), StreamSource("Hızlı Doğrudan Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_kanal15/kanal15/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_kanal15/kanal15/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://live.artidijitalmedya.com/artidijital_kanal15/kanal15/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_170_kanal_19__orum", number = 171, name = "Kanal 19 Çorum", logoText = "KANAL\n19",
             c1 = 0xFFB45309L, c2 = 0xFFFACC15L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://live.euromediacenter.com/kanal19/tracks-v1a1/mono.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://live.euromediacenter.com/kanal19/tracks-v1a1/mono.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "http://live.euromediacenter.com/kanal19/tracks-v1a1/mono.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_171_kanal_23_elaz__", number = 172, name = "Kanal 23 Elazığ", logoText = "KANAL\n23",
             c1 = 0xFFB91C1CL, c2 = 0xFFEF4444L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_kanal23/kanal23/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_kanal23/kanal23/playlist.m3u8", StreamType.HLS), StreamSource("Hızlı Doğrudan Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_kanal23/kanal23/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_kanal23/kanal23/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://live.artidijitalmedya.com/artidijital_kanal23/kanal23/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_172_kanal_26_eski_ehir", number = 173, name = "Kanal 26 Eskişehir", logoText = "KANAL\n26",
             c1 = 0xFF1E3A8AL, c2 = 0xFF3B82F6L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_kanal26/kanal26/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_kanal26/kanal26/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://live.artidijitalmedya.com/artidijital_kanal26/kanal26/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_kanal26/kanal26/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://live.artidijitalmedya.com/artidijital_kanal26/kanal26/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_173_kanal_3_afyon", number = 174, name = "Kanal 3 Afyon", logoText = "KANAL\n3",
             c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_kanal3/kanal3/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_kanal3/kanal3/playlist.m3u8", StreamType.HLS), StreamSource("Hızlı Doğrudan Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_kanal3/kanal3/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_kanal3/kanal3/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://live.artidijitalmedya.com/artidijital_kanal3/kanal3/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_174_kanal_32_isparta", number = 175, name = "Kanal 32 Isparta", logoText = "KANAL\n32",
             c1 = 0xFF6B21A8L, c2 = 0xFFA855F7L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://edge1.socialsmart.tv/kanal32/bant1/chunks.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://edge1.socialsmart.tv/kanal32/bant1/chunks.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://edge1.socialsmart.tv/kanal32/bant1/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Sunucu (Edge Chunks)", "https://edge.socialsmart.tv/kanal32/bant1/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Sunucu (Edge Playlist)", "https://edge.socialsmart.tv/kanal32/bant1/playlist.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_175_kanal_33_mersin", number = 176, name = "Kanal 33 Mersin", logoText = "KANAL\n33",
             c1 = 0xFFC2410CL, c2 = 0xFFF97316L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://edge1.socialsmart.tv/kanal33/bant1/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://edge1.socialsmart.tv/kanal33/bant1/playlist.m3u8", StreamType.HLS), StreamSource("Hızlı Akış (Edge1 Chunks)", "https://edge1.socialsmart.tv/kanal33/bant1/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Sunucu (Edge Chunks)", "https://edge.socialsmart.tv/kanal33/bant1/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Sunucu (Edge Playlist)", "https://edge.socialsmart.tv/kanal33/bant1/playlist.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_176_kanal_34_i_stanbul", number = 177, name = "Kanal 34 İstanbul", logoText = "KANAL\n34",
             c1 = 0xFF0E7490L, c2 = 0xFF06B6D4L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://live.euromediacenter.com/kanal34/tracks-v1a1/mono.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://live.euromediacenter.com/kanal34/tracks-v1a1/mono.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "http://live.euromediacenter.com/kanal34/tracks-v1a1/mono.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_177_kanal_53_rize", number = 178, name = "Kanal 53 Rize", logoText = "KANAL\n53",
             c1 = 0xFFBE185DL, c2 = 0xFFF472B6L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://kanal53.ozelip.com:3448/hybrid/play.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://kanal53.ozelip.com:3448/hybrid/play.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://kanal53.ozelip.com:3448/hybrid/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "https://kanal53.ozelip.com:3448/hybrid/chunklist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 4", "http://kanal53.ozelip.com:3448/hybrid/play.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_178_kanal_58_sivas", number = 179, name = "Kanal 58 Sivas", logoText = "KANAL\n58",
             c1 = 0xFF1F2937L, c2 = 0xFF64748BL, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_kanal58/kanal58/chunks.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_kanal58/kanal58/chunks.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://live.artidijitalmedya.com/artidijital_kanal58/kanal58/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "http://live.artidijitalmedya.com/artidijital_kanal58/kanal58/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_kanal58/kanal58/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://live.artidijitalmedya.com/artidijital_kanal58/kanal58/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_179_kanal_f_rat_elaz__", number = 180, name = "Kanal Fırat Elazığ", logoText = "KANAL\nFIRAT",
             c1 = 0xFFB45309L, c2 = 0xFFFACC15L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_kanalfirat/kanalfirat/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_kanalfirat/kanalfirat/playlist.m3u8", StreamType.HLS), StreamSource("Hızlı Doğrudan Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_kanalfirat/kanalfirat/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_kanalfirat/kanalfirat/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://live.artidijitalmedya.com/artidijital_kanalfirat/kanalfirat/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_180_kanal_plus", number = 181, name = "Kanal Plus", logoText = "KANAL\nPLUS",
             c1 = 0xFFB91C1CL, c2 = 0xFFEF4444L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_kanalplus/kanalplus/mpeg/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_kanalplus/kanalplus/mpeg/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://live.artidijitalmedya.com/artidijital_kanalplus/kanalplus/mpeg/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_kanalplus/kanalplus/mpeg/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://live.artidijitalmedya.com/artidijital_kanalplus/kanalplus/mpeg/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_181_kanal_urfa", number = 182, name = "Kanal Urfa", logoText = "KANAL\nURFA",
             c1 = 0xFF1E3A8AL, c2 = 0xFF3B82F6L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://edge1.socialsmart.tv/kanalurfa/bant1/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://edge1.socialsmart.tv/kanalurfa/bant1/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://edge1.taksimbilisim.com/kanalurfa/bant1/chunks.m3u8", StreamType.HLS), StreamSource("Hızlı Akış (Edge1 Chunks)", "https://edge1.socialsmart.tv/kanalurfa/bant1/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Sunucu (Edge Chunks)", "https://edge.socialsmart.tv/kanalurfa/bant1/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Sunucu (Edge Playlist)", "https://edge.socialsmart.tv/kanalurfa/bant1/playlist.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_182_kanal_v_antalya", number = 183, name = "Kanal V Antalya", logoText = "KANAL\nV",
             c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_kanalv/kanalv/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://live.artidijitalmedya.com/artidijital_kanalv/kanalv/chunks.m3u8", StreamType.HLS), StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_kanalv/kanalv/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "http://live.artidijitalmedya.com/artidijital_kanalv/kanalv/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_kanalv/kanalv/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://live.artidijitalmedya.com/artidijital_kanalv/kanalv/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_183_kanal_z_zonguldak", number = 184, name = "Kanal Z Zonguldak", logoText = "KANAL\nZ",
             c1 = 0xFF6B21A8L, c2 = 0xFFA855F7L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_kanalz/kanalz/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_kanalz/kanalz/playlist.m3u8", StreamType.HLS), StreamSource("Hızlı Doğrudan Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_kanalz/kanalz/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_kanalz/kanalz/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://live.artidijitalmedya.com/artidijital_kanalz/kanalz/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_184_kardelen_tv_erzurum", number = 185, name = "Kardelen TV Erzurum", logoText = "KARDE\nERZUR",
             c1 = 0xFFC2410CL, c2 = 0xFFF97316L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://edge1.socialsmart.tv/kardelentv/bant1/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://edge1.socialsmart.tv/kardelentv/bant1/playlist.m3u8", StreamType.HLS), StreamSource("Hızlı Akış (Edge1 Chunks)", "https://edge1.socialsmart.tv/kardelentv/bant1/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Sunucu (Edge Chunks)", "https://edge.socialsmart.tv/kardelentv/bant1/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Sunucu (Edge Playlist)", "https://edge.socialsmart.tv/kardelentv/bant1/playlist.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_185_kay_tv_kayseri", number = 186, name = "Kay TV Kayseri", logoText = "KAY\nKAYSE",
             c1 = 0xFF0E7490L, c2 = 0xFF06B6D4L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_kaytv/kaytv/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_kaytv/kaytv/playlist.m3u8", StreamType.HLS), StreamSource("Hızlı Doğrudan Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_kaytv/kaytv/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_kaytv/kaytv/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://live.artidijitalmedya.com/artidijital_kaytv/kaytv/index.m3u8", StreamType.HLS))
         )
     )
 
@@ -1938,197 +2096,576 @@ class TvRepository(private val appContext: Context) {
         ch(
             id = "ch_186_kocaeli_tv", number = 187, name = "Kocaeli TV", logoText = "KOCAEL",
             c1 = 0xFFBE185DL, c2 = 0xFFF472B6L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://edge1.socialsmart.tv/kocaelitv/bant1/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://edge1.socialsmart.tv/kocaelitv/bant1/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://edge1.socialsmart.tv/kocaelitv/bant1/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Sunucu (Edge Chunks)", "https://edge.socialsmart.tv/kocaelitv/bant1/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Sunucu (Edge Playlist)", "https://edge.socialsmart.tv/kocaelitv/bant1/playlist.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_187_kontv_konya", number = 188, name = "KonTV Konya", logoText = "KONTV\nKONYA",
             c1 = 0xFF1F2937L, c2 = 0xFF64748BL, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://canli.kontv.com.tr/live/kontv.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://canli.kontv.com.tr/live/kontv.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "http://canli.kontv.com.tr/live/kontv.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_188_konya_olay_tv", number = 189, name = "Konya Olay TV", logoText = "KONYA\nOLAY",
             c1 = 0xFFB45309L, c2 = 0xFFFACC15L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_konyaolaytv/konyaolaytv/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://live.artidijitalmedya.com/artidijital_konyaolaytv/konyaolaytv/chunks.m3u8", StreamType.HLS), StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_konyaolaytv/konyaolaytv/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "http://live.artidijitalmedya.com/artidijital_konyaolaytv/konyaolaytv/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_konyaolaytv/konyaolaytv/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://live.artidijitalmedya.com/artidijital_konyaolaytv/konyaolaytv/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_koza_tv", number = 190, name = "KOZA TV", logoText = "KOZA\nTV",
             c1 = 0xFFC2410CL, c2 = 0xFFF97316L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Canlı Akış", "http://176.65.153.35:6003/play/a019/index.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Canlı Akış", "http://176.65.153.35:6003/play/a019/index.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Playlist)", "http://176.65.153.35:6003/play/a019/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Master)", "http://176.65.153.35:6003/play/a019/master.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_189_ktv_konya", number = 191, name = "KTV Konya", logoText = "KTV\nKONYA",
             c1 = 0xFFB91C1CL, c2 = 0xFFEF4444L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://cdn-ktvtv.yayin.com.tr/ktvtv/ktvtv/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://cdn-ktvtv.yayin.com.tr/ktvtv/ktvtv/playlist.m3u8", StreamType.HLS), StreamSource("Hızlı Chunks Akışı", "https://cdn-ktvtv.yayin.com.tr/ktvtv/ktvtv/chunks.m3u8", StreamType.HLS), StreamSource("Mono Doğrudan Akış", "https://cdn-ktvtv.yayin.com.tr/ktvtv/ktvtv/tracks-v1a1/mono.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://cdn-ktvtv.yayin.com.tr/ktvtv/ktvtv/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://cdn-ktvtv.yayin.com.tr/ktvtv/ktvtv/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_190_life_tv", number = 192, name = "Life TV", logoText = "LIFE",
             c1 = 0xFF1E3A8AL, c2 = 0xFF3B82F6L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_lifetv/lifetv/chunks.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://live.artidijitalmedya.com/artidijital_lifetv/lifetv/chunks.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://live.artidijitalmedya.com/artidijital_lifetv/lifetv/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "http://live.artidijitalmedya.com/artidijital_lifetv/lifetv/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_lifetv/lifetv/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://live.artidijitalmedya.com/artidijital_lifetv/lifetv/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_191_mavi_karadeniz_tv", number = 193, name = "Mavi Karadeniz TV", logoText = "MAVI\nKARAD",
             c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_mavikaradeniz/mavikaradeniz/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_mavikaradeniz/mavikaradeniz/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://live.artidijitalmedya.com/artidijital_mavikaradeniz/mavikaradeniz/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_mavikaradeniz/mavikaradeniz/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://live.artidijitalmedya.com/artidijital_mavikaradeniz/mavikaradeniz/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_192_mercan_tv_ad_yaman", number = 194, name = "Mercan TV Adıyaman", logoText = "MERCA\nADIYA",
             c1 = 0xFF6B21A8L, c2 = 0xFFA855F7L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_mercantv/mercantv/chunks.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_mercantv/mercantv/chunks.m3u8", StreamType.HLS), StreamSource("Adaptif Akış (Playlist)", "https://live.artidijitalmedya.com/artidijital_mercantv/mercantv/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "http://live.artidijitalmedya.com/artidijital_mercantv/mercantv/chunks.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_193_metropol_tv", number = 195, name = "Metropol TV", logoText = "METROP",
             c1 = 0xFFC2410CL, c2 = 0xFFF97316L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://edge1.socialsmart.tv/metropoltv/smil/metropoltv/bant1/chunks.m3u8?app=supersatforum", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://edge1.socialsmart.tv/metropoltv/smil/metropoltv/bant1/chunks.m3u8?app=supersatforum", StreamType.HLS), StreamSource("Adaptif Akış (Edge1 Playlist)", "https://edge1.socialsmart.tv/metropoltv/smil/metropoltv/bant1/playlist.m3u8?app=supersatforum", StreamType.HLS), StreamSource("Yedek Sunucu (Edge Chunks)", "https://edge.socialsmart.tv/metropoltv/smil/metropoltv/bant1/chunks.m3u8?app=supersatforum", StreamType.HLS), StreamSource("Yedek Sunucu (Edge Playlist)", "https://edge.socialsmart.tv/metropoltv/smil/metropoltv/bant1/playlist.m3u8?app=supersatforum", StreamType.HLS))
         ),
         ch(
             id = "ch_194_mu_la_t_rk_tv", number = 196, name = "Muğla Türk TV", logoText = "MUĞLA\nTÜRK",
             c1 = 0xFF0E7490L, c2 = 0xFF06B6D4L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://edge1.socialsmart.tv/muglaturk/bant1/chunks.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://edge1.socialsmart.tv/muglaturk/bant1/chunks.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://edge1.socialsmart.tv/muglaturk/bant1/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Sunucu (Edge Chunks)", "https://edge.socialsmart.tv/muglaturk/bant1/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Sunucu (Edge Playlist)", "https://edge.socialsmart.tv/muglaturk/bant1/playlist.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_195_olay_t_rk_kayseri", number = 197, name = "Olay Türk Kayseri", logoText = "OLAY\nTÜRK",
             c1 = 0xFFBE185DL, c2 = 0xFFF472B6L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_olayturk/olayturk/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_olayturk/olayturk/playlist.m3u8", StreamType.HLS), StreamSource("Hızlı Doğrudan Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_olayturk/olayturk/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_olayturk/olayturk/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://live.artidijitalmedya.com/artidijital_olayturk/olayturk/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_196_ordu_bel_tv", number = 198, name = "Ordu Bel TV", logoText = "ORDU\nBEL",
             c1 = 0xFF1F2937L, c2 = 0xFF64748BL, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://cdn1-ordubeltv.yayin.com.tr/ordubeltv/ordubeltv/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://cdn1-ordubeltv.yayin.com.tr/ordubeltv/ordubeltv/playlist.m3u8", StreamType.HLS), StreamSource("Hızlı Chunks Akışı", "https://cdn1-ordubeltv.yayin.com.tr/ordubeltv/ordubeltv/chunks.m3u8", StreamType.HLS), StreamSource("Mono Doğrudan Akış", "https://cdn1-ordubeltv.yayin.com.tr/ordubeltv/ordubeltv/tracks-v1a1/mono.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://cdn1-ordubeltv.yayin.com.tr/ordubeltv/ordubeltv/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://cdn1-ordubeltv.yayin.com.tr/ordubeltv/ordubeltv/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_197_ruha_tv__anl_urfa", number = 199, name = "Ruha TV Şanlıurfa", logoText = "RUHA\nŞANLI",
             c1 = 0xFFB45309L, c2 = 0xFFFACC15L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://ruhatv.radyotelekom.com.tr:3515/live/ruhatvlive.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://ruhatv.radyotelekom.com.tr:3515/live/ruhatvlive.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "http://ruhatv.radyotelekom.com.tr:3515/live/ruhatvlive.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_198_sa_l_k_channel", number = 200, name = "Sağlık Channel", logoText = "SAĞLI\nCHANN",
             c1 = 0xFFB91C1CL, c2 = 0xFFEF4444L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://live.euromediacenter.com/saglikchannel/tracks-v1a1/mono.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://live.euromediacenter.com/saglikchannel/tracks-v1a1/mono.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "http://live.euromediacenter.com/saglikchannel/tracks-v1a1/mono.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_199_su_tv", number = 201, name = "Su TV", logoText = "SU",
             c1 = 0xFF1E3A8AL, c2 = 0xFF3B82F6L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_sutv/sutv/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_sutv/sutv/playlist.m3u8", StreamType.HLS), StreamSource("Hızlı Doğrudan Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_sutv/sutv/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_sutv/sutv/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://live.artidijitalmedya.com/artidijital_sutv/sutv/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_200_sun_tv_mersin", number = 202, name = "Sun TV Mersin", logoText = "SUN\nMERSI",
             c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_sunrtv/sunrtv/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_sunrtv/sunrtv/playlist.m3u8", StreamType.HLS), StreamSource("Hızlı Doğrudan Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_sunrtv/sunrtv/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_sunrtv/sunrtv/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://live.artidijitalmedya.com/artidijital_sunrtv/sunrtv/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_201_tempo_tv", number = 203, name = "Tempo TV", logoText = "TEMPO",
             c1 = 0xFF6B21A8L, c2 = 0xFFA855F7L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_tempotv/tempotv/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://live.artidijitalmedya.com/artidijital_tempotv/tempotv/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://live.artidijitalmedya.com/artidijital_tempotv/tempotv/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_tempotv/tempotv/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://live.artidijitalmedya.com/artidijital_tempotv/tempotv/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_202_ton_tv__anakkale", number = 204, name = "Ton TV Çanakkale", logoText = "TON\nÇANAK",
             c1 = 0xFFC2410CL, c2 = 0xFFF97316L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_tontv/tontv/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_tontv/tontv/playlist.m3u8", StreamType.HLS), StreamSource("Hızlı Doğrudan Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_tontv/tontv/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_tontv/tontv/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://live.artidijitalmedya.com/artidijital_tontv/tontv/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_203_tv_41_kocaeli", number = 205, name = "TV 41 Kocaeli", logoText = "41\nKOCAE",
             c1 = 0xFF0E7490L, c2 = 0xFF06B6D4L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_tv41/tv41/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://live.artidijitalmedya.com/artidijital_tv41/tv41/chunks.m3u8", StreamType.HLS), StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_tv41/tv41/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "http://live.artidijitalmedya.com/artidijital_tv41/tv41/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_tv41/tv41/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://live.artidijitalmedya.com/artidijital_tv41/tv41/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_204_tv_48_mu_la", number = 206, name = "TV 48 Muğla", logoText = "48\nMUĞLA",
             c1 = 0xFFBE185DL, c2 = 0xFFF472B6L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://ajansplay.com:5443/LiveApp/streams/tv48.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://ajansplay.com:5443/LiveApp/streams/tv48.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "http://ajansplay.com:5443/LiveApp/streams/tv48.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_205_tv_52_ordu", number = 207, name = "TV 52 Ordu", logoText = "52\nORDU",
             c1 = 0xFF1F2937L, c2 = 0xFF64748BL, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://edge1.socialsmart.tv/tv52/bant1/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://edge1.socialsmart.tv/tv52/bant1/playlist.m3u8", StreamType.HLS), StreamSource("Hızlı Akış (Edge1 Chunks)", "https://edge1.socialsmart.tv/tv52/bant1/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Sunucu (Edge Chunks)", "https://edge.socialsmart.tv/tv52/bant1/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Sunucu (Edge Playlist)", "https://edge.socialsmart.tv/tv52/bant1/playlist.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_206_t_rk_klinikleri_tv", number = 208, name = "Türk Klinikleri TV", logoText = "TÜRK\nKLINI",
             c1 = 0xFFB45309L, c2 = 0xFFFACC15L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "http://mn-nl.mncdn.com/turkiyeklinikleri/smil:turkiyeklinikleri/chunklist_b3128000.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "http://mn-nl.mncdn.com/turkiyeklinikleri/smil:turkiyeklinikleri/chunklist_b3128000.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://mn-nl.mncdn.com/turkiyeklinikleri/smil:turkiyeklinikleri/chunklist_b3128000.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_207_urfanatik_tv", number = 209, name = "Urfanatik TV", logoText = "URFANA",
             c1 = 0xFFB91C1CL, c2 = 0xFFEF4444L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_urfanatiktv/urfanatiktv/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_urfanatiktv/urfanatiktv/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://live.artidijitalmedya.com/artidijital_urfanatiktv/urfanatiktv/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_urfanatiktv/urfanatiktv/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://live.artidijitalmedya.com/artidijital_urfanatiktv/urfanatiktv/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_208_van_g_l__tv", number = 210, name = "Van Gölü TV", logoText = "VAN\nGÖLÜ",
             c1 = 0xFF1E3A8AL, c2 = 0xFF3B82F6L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://cdn1-vangolutv.yayin.com.tr/vangolutv/amlst:vangolutv/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://cdn1-vangolutv.yayin.com.tr/vangolutv/amlst:vangolutv/playlist.m3u8", StreamType.HLS), StreamSource("Hızlı Chunks Akışı", "https://cdn1-vangolutv.yayin.com.tr/vangolutv/amlst:vangolutv/chunks.m3u8", StreamType.HLS), StreamSource("Mono Doğrudan Akış", "https://cdn1-vangolutv.yayin.com.tr/vangolutv/amlst:vangolutv/tracks-v1a1/mono.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://cdn1-vangolutv.yayin.com.tr/vangolutv/amlst:vangolutv/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://cdn1-vangolutv.yayin.com.tr/vangolutv/amlst:vangolutv/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_209_vuslat_tv_malatya", number = 211, name = "Vuslat TV Malatya", logoText = "VUSLA\nMALAT",
             c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_vuslattv/vuslattv/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://live.artidijitalmedya.com/artidijital_vuslattv/vuslattv/chunks.m3u8", StreamType.HLS), StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_vuslattv/vuslattv/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "http://live.artidijitalmedya.com/artidijital_vuslattv/vuslattv/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_vuslattv/vuslattv/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://live.artidijitalmedya.com/artidijital_vuslattv/vuslattv/index.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_210__ay_tv_rize", number = 212, name = "Çay TV Rize", logoText = "ÇAY\nRIZE",
             c1 = 0xFF6B21A8L, c2 = 0xFFA855F7L, cat = "Yerel", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://edge1.socialsmart.tv/caytv/bant1/playlist.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://edge1.socialsmart.tv/caytv/bant1/playlist.m3u8", StreamType.HLS), StreamSource("Hızlı Akış (Edge1 Chunks)", "https://edge1.socialsmart.tv/caytv/bant1/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Sunucu (Edge Chunks)", "https://edge.socialsmart.tv/caytv/bant1/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Sunucu (Edge Playlist)", "https://edge.socialsmart.tv/caytv/bant1/playlist.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_211_belemt_rk_tv", number = 213, name = "Belemtürk TV", logoText = "BELEMT",
             c1 = 0xFFC2410CL, c2 = 0xFFF97316L, cat = "Dünya", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://edge.socialsmart.tv/belemturktv/bant1/chunks.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://edge.socialsmart.tv/belemturktv/bant1/chunks.m3u8", StreamType.HLS), StreamSource("Hızlı Akış (Edge1 Chunks)", "https://edge1.socialsmart.tv/belemturktv/bant1/chunks.m3u8", StreamType.HLS), StreamSource("Adaptif Akış (Edge1 Playlist)", "https://edge1.socialsmart.tv/belemturktv/bant1/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Sunucu (Edge Playlist)", "https://edge.socialsmart.tv/belemturktv/bant1/playlist.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_212_br_ksel_t_rk_tv", number = 214, name = "Brüksel Türk TV", logoText = "BRÜKS\nTÜRK",
             c1 = 0xFF0E7490L, c2 = 0xFF06B6D4L, cat = "Dünya", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://live.euromediacenter.com/brukselturk/tracks-v1a1/mono.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://live.euromediacenter.com/brukselturk/tracks-v1a1/mono.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "http://live.euromediacenter.com/brukselturk/tracks-v1a1/mono.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_213_finest_tv", number = 215, name = "Finest TV", logoText = "FINEST",
             c1 = 0xFFBE185DL, c2 = 0xFFF472B6L, cat = "Dünya", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "http://media.finest.tv/hls/live.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "http://media.finest.tv/hls/live.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://media.finest.tv/hls/live.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_214_fx_t_rkiye", number = 216, name = "FX Türkiye", logoText = "FX",
             c1 = 0xFF1F2937L, c2 = 0xFF64748BL, cat = "Dünya", badge = "FHD", logoUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4d/FX_International_logo.svg/960px-FX_International_logo.svg.png",
-            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://saran-live.ercdn.net/fx/index.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://saran-live.ercdn.net/fx/index.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Playlist)", "https://saran-live.ercdn.net/fx/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Master)", "https://saran-live.ercdn.net/fx/master.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_215_h_r_tv", number = 217, name = "Hür TV", logoText = "HÜR",
             c1 = 0xFFB45309L, c2 = 0xFFFACC15L, cat = "Dünya", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://live.euromediacenter.com/hurtv/tracks-v1a1/mono.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://live.euromediacenter.com/hurtv/tracks-v1a1/mono.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "http://live.euromediacenter.com/hurtv/tracks-v1a1/mono.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_216_i_svi_re_tv", number = 218, name = "İsviçre TV", logoText = "İSVIÇR",
             c1 = 0xFFB91C1CL, c2 = 0xFFEF4444L, cat = "Dünya", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://i41.ozelip.com:3269/hybrid/play.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://i41.ozelip.com:3269/hybrid/play.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://i41.ozelip.com:3269/hybrid/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "https://i41.ozelip.com:3269/hybrid/chunklist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 4", "http://i41.ozelip.com:3269/hybrid/play.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_217_kanal_avrupa", number = 219, name = "Kanal Avrupa", logoText = "KANAL\nAVRUP",
             c1 = 0xFF1E3A8AL, c2 = 0xFF3B82F6L, cat = "Dünya", badge = "HD", logoUrl = "",
-            sources = listOf(StreamSource("Standart Akış", "https://api-tv27.yayin.com.tr/kanalavrupa/index.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Standart Akış", "https://api-tv27.yayin.com.tr/kanalavrupa/index.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://cdn-kanalavrupa.yayin.com.tr/kanalavrupa/tracks-v2a1/mono.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "https://api-tv27.yayin.com.tr/kanalavrupa/tracks-v1a1/mono.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Playlist)", "https://api-tv27.yayin.com.tr/kanalavrupa/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Master)", "https://api-tv27.yayin.com.tr/kanalavrupa/master.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_218_trt_arabi", number = 220, name = "TRT Arabi", logoText = "TRT\nARABI",
             c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Dünya", badge = "HD", logoUrl = "https://i.imgur.com/yyhWOZs.png",
-            sources = listOf(StreamSource("HD 720p", "https://tv-trtarabi.medya.trt.com.tr/master.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("HD 720p", "https://tv-trtarabi.medya.trt.com.tr/master.m3u8", StreamType.HLS), StreamSource("FHD 1080p (TRT CDN)", "https://tv-trtarabi.medya.trt.com.tr/master_1080.m3u8", StreamType.HLS), StreamSource("HD 720p (Hızlı Yedek)", "https://tv-trtarabi.medya.trt.com.tr/master_720.m3u8", StreamType.HLS), StreamSource("SD 480p (Kesintisiz Yedek)", "https://tv-trtarabi.medya.trt.com.tr/master_480.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_219_trt_avaz", number = 221, name = "TRT Avaz", logoText = "TRT\nAVAZ",
             c1 = 0xFF6B21A8L, c2 = 0xFFA855F7L, cat = "Dünya", badge = "HD", logoUrl = "https://i.imgur.com/VhTwXu5.png",
-            sources = listOf(StreamSource("HD 720p", "https://tv-trtavaz.medya.trt.com.tr/master.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("HD 720p", "https://tv-trtavaz.medya.trt.com.tr/master.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://tv-trtavaz.medya.trt.com.tr/master_720.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "https://tv-trtavaz.medya.trt.com.tr/master_1440.m3u8", StreamType.HLS), StreamSource("FHD 1080p (TRT CDN)", "https://tv-trtavaz.medya.trt.com.tr/master_1080.m3u8", StreamType.HLS), StreamSource("SD 480p (Kesintisiz Yedek)", "https://tv-trtavaz.medya.trt.com.tr/master_480.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_220_trt_kurd_", number = 222, name = "TRT Kurdî", logoText = "TRT\nKURDÎ",
             c1 = 0xFFC2410CL, c2 = 0xFFF97316L, cat = "Dünya", badge = "HD", logoUrl = "https://i.imgur.com/6BpymfB.png",
-            sources = listOf(StreamSource("HD 720p", "https://tv-trtkurdi.medya.trt.com.tr/master.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("HD 720p", "https://tv-trtkurdi.medya.trt.com.tr/master.m3u8", StreamType.HLS), StreamSource("FHD 1080p (TRT CDN)", "https://tv-trtkurdi.medya.trt.com.tr/master_1080.m3u8", StreamType.HLS), StreamSource("HD 720p (Hızlı Yedek)", "https://tv-trtkurdi.medya.trt.com.tr/master_720.m3u8", StreamType.HLS), StreamSource("SD 480p (Kesintisiz Yedek)", "https://tv-trtkurdi.medya.trt.com.tr/master_480.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_221_trt_t_rk", number = 223, name = "TRT Türk", logoText = "TRT\nTÜRK",
             c1 = 0xFF0E7490L, c2 = 0xFF06B6D4L, cat = "Dünya", badge = "HD", logoUrl = "https://i.imgur.com/OSTOQNw.png",
-            sources = listOf(StreamSource("HD 720p", "https://tv-trtturk.medya.trt.com.tr/master.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://tv-trtturk.medya.trt.com.tr/master_1080.m3u8", StreamType.HLS), StreamSource("HD 720p", "https://tv-trtturk.medya.trt.com.tr/master.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "https://tv-trtturk.medya.trt.com.tr/master_720.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 4", "https://tv-trtturk.medya.trt.com.tr/master_1440.m3u8", StreamType.HLS), StreamSource("SD 480p (Kesintisiz Yedek)", "https://tv-trtturk.medya.trt.com.tr/master_480.m3u8", StreamType.HLS))
         ),
         ch(
             id = "ch_222_trt_world", number = 224, name = "TRT World", logoText = "TRT\nWORLD",
             c1 = 0xFFBE185DL, c2 = 0xFFF472B6L, cat = "Dünya", badge = "FHD", logoUrl = "https://i.imgur.com/JEA2xpv.png",
-            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://tv-trtworld.medya.trt.com.tr/master.m3u8", StreamType.HLS))
+            sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://tv-trtworld.medya.trt.com.tr/master.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://tv-trtworld.medya.trt.com.tr/master_1080.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "http://tv-trtworld.medya.trt.com.tr/master.m3u8", StreamType.HLS), StreamSource("HD 720p (Hızlı Yedek)", "https://tv-trtworld.medya.trt.com.tr/master_720.m3u8", StreamType.HLS), StreamSource("SD 480p (Kesintisiz Yedek)", "https://tv-trtworld.medya.trt.com.tr/master_480.m3u8", StreamType.HLS), StreamSource("FHD 1080p (TRT CDN)", "http://tv-trtworld.medya.trt.com.tr/master_1080.m3u8", StreamType.HLS))
         )
     )
 
 
     // ULTRA HIZLI ÖN-HESAPLAMALI EPG ÜRETİCİ (222 KANAL İÇİN SADECE 1 KEZ SAAT FORMATLAR!)
+
+    private fun getBuiltInChannelsChunk7(): List<TvChannel> = listOf(
+        ch(
+            id = "ch_tr_anadolu_net", number = 225, name = "Anadolu Net TV", logoText = "ANADO\nNET",
+            c1 = 0xFF1E3A8AL, c2 = 0xFF3B82F6L, cat = "Ulusal", badge = "FHD", logoUrl = "https://www.anadolunettv.com/d/r/logo.png",
+            sources = listOf(StreamSource("FHD 1080p", "https://live.artidijitalmedya.com/artidijital_anadolunet/anadolunet/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış", "https://live.artidijitalmedya.com/artidijital_anadolunettv/anadolunettv/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "https://live.artidijitalmedya.com/artidijital_anadolunet/anadolunet/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_anadolunet/anadolunet/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://live.artidijitalmedya.com/artidijital_anadolunet/anadolunet/index.m3u8", StreamType.HLS), StreamSource("Hızlı Doğrudan Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_anadolunettv/anadolunettv/chunks.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_atv_avrupa", number = 226, name = "ATV Avrupa", logoText = "ATV\nAVRUP",
+            c1 = 0xFFB91C1CL, c2 = 0xFFEF4444L, cat = "Ulusal", badge = "HD", logoUrl = "https://i.imgur.com/HyVUwFC.png",
+            sources = listOf(StreamSource("Canlı Akış", "http://umperisn.mywire.org/index.php?id=1875&token=DeaTHLesS", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_show_turk", number = 227, name = "Show Türk", logoText = "SHOW\nTÜRK",
+            c1 = 0xFF6B21A8L, c2 = 0xFFA855F7L, cat = "Ulusal", badge = "HD", logoUrl = "https://i.imgur.com/ESCf2dj.png",
+            sources = listOf(StreamSource("Canlı Akış", "http://umperisn.mywire.org/index.php?id=1874&token=DeaTHLesS", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://ciner.daioncdn.net/showtv/showtv.m3u8?app=showtv_web", StreamType.HLS), StreamSource("Alternatif Akış 3", "https://rmtftbjlne.turknet.ercdn.net/bpeytmnqyp/showtv/showtv.m3u8", StreamType.HLS), StreamSource("FHD 1080p Akış", "https://ciner.daioncdn.net/showtv/showtv_1080p.m3u8?app=showtv_web", StreamType.HLS), StreamSource("HD 720p Hızlı Akış", "https://ciner.daioncdn.net/showtv/showtv_720p.m3u8?app=showtv_web", StreamType.HLS), StreamSource("SD 480p Yedek Akış", "https://ciner.daioncdn.net/showtv/showtv_480p.m3u8?app=showtv_web", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_kanald_drama", number = 228, name = "Kanal D Drama", logoText = "KANAL\nDRAMA",
+            c1 = 0xFF0E7490L, c2 = 0xFF06B6D4L, cat = "Ulusal", badge = "FHD", logoUrl = "https://i.imgur.com/WIeZMKT.png",
+            sources = listOf(StreamSource("FHD 1080p", "https://cdn-uw2-prod.tsv2.amagi.tv/linear/amg01602-themahqfrance-vivekanald-samsungspain/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://cdn-uw2-prod.tsv2.amagi.tv/linear/amg01602-themahqfrance-vivekanald-samsungspain/index.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://cdn-uw2-prod.tsv2.amagi.tv/linear/amg01602-themahqfrance-vivekanald-samsungspain/chunklist.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_tv4", number = 229, name = "TV 4", logoText = "TV 4",
+            c1 = 0xFFC2410CL, c2 = 0xFFF97316L, cat = "Ulusal", badge = "HD", logoUrl = "https://i.postimg.cc/FKkHW8KK/tv4.png",
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://turkmedya-live.ercdn.net/tv4/tv4_1080p.m3u8", StreamType.HLS), StreamSource("HD 720p", "https://turkmedya-live.ercdn.net/tv4/tv4_720p.m3u8", StreamType.HLS), StreamSource("Yedek Akış", "https://turkmedya-live.ercdn.net/tv4/tv4.m3u8", StreamType.HLS), StreamSource("SD 480p Yedek Akış", "https://turkmedya-live.ercdn.net/tv4/tv4_480p.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_tv5_hd", number = 230, name = "TV 5 HD", logoText = "TV 5",
+            c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Ulusal", badge = "HD", logoUrl = "",
+            sources = listOf(StreamSource("HD Akış", "https://ip252.ozelip.com:1936/protv5/protv5/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://ip252.ozelip.com:1936/protv5/protv5/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://ip252.ozelip.com:1936/protv5/protv5/index.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_trt3", number = 231, name = "TRT 3", logoText = "TRT 3",
+            c1 = 0xFFB91C1CL, c2 = 0xFFEF4444L, cat = "Ulusal", badge = "FHD", logoUrl = "",
+            sources = listOf(StreamSource("FHD 1080p", "https://tv-trt3.live.trt.com.tr/master.m3u8", StreamType.HLS), StreamSource("FHD 1080p (TRT CDN)", "https://tv-trt3.live.trt.com.tr/master_1080.m3u8", StreamType.HLS), StreamSource("HD 720p (Hızlı Yedek)", "https://tv-trt3.live.trt.com.tr/master_720.m3u8", StreamType.HLS), StreamSource("SD 480p (Kesintisiz Yedek)", "https://tv-trt3.live.trt.com.tr/master_480.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_life_tv", number = 232, name = "Life TV", logoText = "LIFE\nTV",
+            c1 = 0xFFBE185DL, c2 = 0xFFF472B6L, cat = "Ulusal", badge = "HD", logoUrl = "https://i.ibb.co/9hCVNks/life-tv.png",
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://live.artidijitalmedya.com/artidijital_lifetv/lifetv/chunks.m3u8", StreamType.HLS), StreamSource("Canlı Akış", "https://live.artidijitalmedya.com/artidijital_lifetv/lifetv/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "http://live.artidijitalmedya.com/artidijital_lifetv/lifetv/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_lifetv/lifetv/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://live.artidijitalmedya.com/artidijital_lifetv/lifetv/index.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_woman_tv", number = 233, name = "Woman Kadın TV", logoText = "WOMAN\nTV",
+            c1 = 0xFFBE185DL, c2 = 0xFFF472B6L, cat = "Ulusal", badge = "HD", logoUrl = "https://i.ibb.co/DKHDfbr/wmtv.png",
+            sources = listOf(StreamSource("Canlı Akış", "https://embedlp.b-cdn.net/womantv.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "http://embedlp.b-cdn.net/womantv.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_aile_tv", number = 234, name = "Aile TV", logoText = "AİLE\nTV",
+            c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Ulusal", badge = "HD", logoUrl = "",
+            sources = listOf(StreamSource("Canlı Akış", "https://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/aile-tv/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/aile-tv/playlist/0.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/aile-tv/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/aile-tv/index.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_finans_turk", number = 235, name = "Finans Türk TV", logoText = "FİNAN\nTÜRK",
+            c1 = 0xFF1E3A8AL, c2 = 0xFF3B82F6L, cat = "Haber", badge = "HD", logoUrl = "",
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://yayin30.haber100.com/live/finansturk/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://yayin30.haber100.com/live/finansturk/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://yayin30.haber100.com/live/finansturk/index.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_turkhaber", number = 236, name = "TürkHaber TV", logoText = "TÜRK\nHABER",
+            c1 = 0xFFB91C1CL, c2 = 0xFFEF4444L, cat = "Haber", badge = "HD", logoUrl = "",
+            sources = listOf(StreamSource("Canlı Akış", "https://edge1.socialsmart.tv/turkhaber/bant1/playlist.m3u8", StreamType.HLS), StreamSource("Hızlı Akış (Edge1 Chunks)", "https://edge1.socialsmart.tv/turkhaber/bant1/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Sunucu (Edge Chunks)", "https://edge.socialsmart.tv/turkhaber/bant1/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Sunucu (Edge Playlist)", "https://edge.socialsmart.tv/turkhaber/bant1/playlist.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_haber61", number = 237, name = "Haber 61 Trabzon", logoText = "HABER\n61",
+            c1 = 0xFF1E3A8AL, c2 = 0xFF3B82F6L, cat = "Haber", badge = "HD", logoUrl = "https://i.ibb.co/mHt7rQf/Tryerel.png",
+            sources = listOf(StreamSource("Canlı Akış", "https://cdn-haber61tv.yayin.com.tr/haber61tv/haber61tv/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış", "https://cdn-haber61tv.yayin.com.tr/haber61tv/smil:haber61tv.smil/playlist.m3u8", StreamType.HLS), StreamSource("Hızlı Chunks Akışı", "https://cdn-haber61tv.yayin.com.tr/haber61tv/haber61tv/chunks.m3u8", StreamType.HLS), StreamSource("Mono Doğrudan Akış", "https://cdn-haber61tv.yayin.com.tr/haber61tv/haber61tv/tracks-v1a1/mono.m3u8", StreamType.HLS), StreamSource("Hızlı Chunks Akışı", "https://cdn-haber61tv.yayin.com.tr/haber61tv/smil:haber61tv.smil/chunks.m3u8", StreamType.HLS), StreamSource("Mono Doğrudan Akış", "https://cdn-haber61tv.yayin.com.tr/haber61tv/smil:haber61tv.smil/tracks-v1a1/mono.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_tay_tv", number = 238, name = "TAY TV", logoText = "TAY\nTV",
+            c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Spor", badge = "HD", logoUrl = "",
+            sources = listOf(StreamSource("Canlı Akış", "https://duhnet.hipodrom.com/S2/HLS_LIVE/mislitaynp/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://duhnet.hipodrom.com/S2/HLS_LIVE/mislitaynp/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://duhnet.hipodrom.com/S2/HLS_LIVE/mislitaynp/index.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_ztk_tv", number = 239, name = "ZTK TV", logoText = "ZTK\nSPOR",
+            c1 = 0xFFB91C1CL, c2 = 0xFFEF4444L, cat = "Spor", badge = "HD", logoUrl = "",
+            sources = listOf(StreamSource("Canlı Akış", "https://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/ztktv/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/ztktv/playlist/0.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/ztktv/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/ztktv/index.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_satranc_tv", number = 240, name = "Satranç TV", logoText = "SATRA\nTV",
+            c1 = 0xFF1F2937L, c2 = 0xFF64748BL, cat = "Spor", badge = "HD", logoUrl = "",
+            sources = listOf(StreamSource("Canlı Akış", "http://139.162.182.79/live/test/index.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Playlist)", "http://139.162.182.79/live/test/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Master)", "http://139.162.182.79/live/test/master.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_tarih_tv", number = 241, name = "Tarih TV", logoText = "TARİH\nTV",
+            c1 = 0xFFB45309L, c2 = 0xFFFACC15L, cat = "Belgesel", badge = "HD", logoUrl = "",
+            sources = listOf(StreamSource("Canlı Akış", "https://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/Tarih-tv/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/Tarih-tv/playlist/0.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/Tarih-tv/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/Tarih-tv/index.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_ciftci_tv", number = 242, name = "Çiftçi TV", logoText = "ÇİFTÇ\nTV",
+            c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Belgesel", badge = "HD", logoUrl = "https://i.ibb.co/vHwMgx0/ciftci.png",
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://live.artidijitalmedya.com/artidijital_ciftcitv/ciftcitv/playlist.m3u8", StreamType.HLS), StreamSource("Hızlı Doğrudan Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_ciftcitv/ciftcitv/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_ciftcitv/ciftcitv/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://live.artidijitalmedya.com/artidijital_ciftcitv/ciftcitv/index.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_kultur_sanat", number = 243, name = "Kültür Sanat TV", logoText = "KÜLTÜ\nSANAT",
+            c1 = 0xFF6B21A8L, c2 = 0xFFA855F7L, cat = "Belgesel", badge = "HD", logoUrl = "",
+            sources = listOf(StreamSource("Canlı Akış", "https://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/kltr-sanat-tv/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/kltr-sanat-tv/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/kltr-sanat-tv/index.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_babyfirst", number = 244, name = "BabyFirst Türkiye", logoText = "BABYF\nTV",
+            c1 = 0xFFBE185DL, c2 = 0xFFF472B6L, cat = "Çocuk", badge = "HD", logoUrl = "https://i.imgur.com/WxLHBwu.png",
+            sources = listOf(StreamSource("HD 720p", "http://206.212.244.63/639/index.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Playlist)", "http://206.212.244.63/639/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Master)", "http://206.212.244.63/639/master.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_babytv_tr", number = 245, name = "BabyTV Türkiye", logoText = "BABYT\nTR",
+            c1 = 0xFF0E7490L, c2 = 0xFF06B6D4L, cat = "Çocuk", badge = "FHD", logoUrl = "https://i.imgur.com/4BDJ5FT.png",
+            sources = listOf(StreamSource("FHD 1080p", "https://saran-live.ercdn.net/babytv/index.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Playlist)", "https://saran-live.ercdn.net/babytv/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Master)", "https://saran-live.ercdn.net/babytv/master.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_zarok_tv", number = 246, name = "Zarok TV", logoText = "ZAROK\nTV",
+            c1 = 0xFFC2410CL, c2 = 0xFFF97316L, cat = "Çocuk", badge = "HD", logoUrl = "",
+            sources = listOf(StreamSource("Canlı Akış", "https://zindikurmanci.zaroktv.com.tr/hls/stream.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "http://zindikurmanci.zaroktv.com.tr/hls/stream.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_fashion_one", number = 247, name = "Fashion One TV", logoText = "FASHI\nONE",
+            c1 = 0xFFBE185DL, c2 = 0xFFF472B6L, cat = "Müzik", badge = "HD", logoUrl = "",
+            sources = listOf(StreamSource("Canlı Akış", "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/broadcast_57e4f8c600b6d.smil/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/broadcast_5c9e2ee690051.smil/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/broadcast_57e4f8c600b6d.smil/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/broadcast_57e4f8c600b6d.smil/index.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_chill_tv", number = 248, name = "Chill TV", logoText = "CHILL\nTV",
+            c1 = 0xFF0E7490L, c2 = 0xFF06B6D4L, cat = "Müzik", badge = "HD", logoUrl = "",
+            sources = listOf(StreamSource("Canlı Akış", "https://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/chill-tv/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/chill-tv/playlist/0.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/chill-tv/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/chill-tv/index.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_sat7_turk", number = 249, name = "Sat 7 Türk", logoText = "SAT 7\nTÜRK",
+            c1 = 0xFFB45309L, c2 = 0xFFFACC15L, cat = "Dini", badge = "HD", logoUrl = "https://i.ibb.co/Cm1kp8f/sat7turk.png",
+            sources = listOf(StreamSource("Canlı Akış", "https://svs.itworkscdn.net/sat7turklive/sat7turk.smil/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış", "https://svs.itworkscdn.net/sat7turklive/sat7turk.smil/playlist_dvr.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "https://live.artidijitalmedya.com/artidijital_sat7turk/sat7turk/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://svs.itworkscdn.net/sat7turklive/sat7turk.smil/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://svs.itworkscdn.net/sat7turklive/sat7turk.smil/index.m3u8", StreamType.HLS), StreamSource("Adaptif Akış (Playlist)", "https://live.artidijitalmedya.com/artidijital_sat7turk/sat7turk/playlist.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_kanal_hayat", number = 250, name = "Kanal Hayat", logoText = "KANAL\nHAYAT",
+            c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Dini", badge = "HD", logoUrl = "https://i.ibb.co/1qFR0jX/Kanalhayat.png",
+            sources = listOf(StreamSource("Canlı Akış", "https://livecdn.use1-0004.jwplive.com/live/sites/WpgVdplm/media/icNwL50b/live.isml/live.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://tbn02a.ltnschedule.com/hls/nx21i.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "http://livecdn.use1-0004.jwplive.com/live/sites/WpgVdplm/media/icNwL50b/live.isml/live.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 4", "http://tbn02a.ltnschedule.com/hls/nx21i.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_kurani_kerim", number = 251, name = "Kur'an-ı Kerim TV", logoText = "KURAN\nTV",
+            c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Dini", badge = "HD", logoUrl = "",
+            sources = listOf(StreamSource("Canlı Akış", "https://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/kurani-kerim-tv/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/kurani-kerim-dersleri-tv/playlist/0.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/kurani-kerim-tv/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/kurani-kerim-tv/index.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_ilahiler_tv", number = 252, name = "İlahiler TV", logoText = "İLAHİ\nTV",
+            c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Dini", badge = "HD", logoUrl = "",
+            sources = listOf(StreamSource("Canlı Akış", "https://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/ilahiler-tv/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/ilahiler-tv/playlist/0.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/ilahiler-tv/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/ilahiler-tv/index.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_islam_tv", number = 253, name = "İslam TV", logoText = "İSLAM\nTV",
+            c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Dini", badge = "HD", logoUrl = "",
+            sources = listOf(StreamSource("Canlı Akış", "https://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/islamtv/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/islamtv/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/islamtv/index.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_asri_saadet", number = 254, name = "Asr-ı Saadet TV", logoText = "ASRI\nSAADE",
+            c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Dini", badge = "HD", logoUrl = "",
+            sources = listOf(StreamSource("Canlı Akış", "https://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/asr-i-saadet-tv/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/asr-i-saadet-tv/playlist/0.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/asr-i-saadet-tv/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/asr-i-saadet-tv/index.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_mihrap_tv", number = 255, name = "Mihrap TV", logoText = "MİHRA\nTV",
+            c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Dini", badge = "HD", logoUrl = "",
+            sources = listOf(StreamSource("Canlı Akış", "https://yayin30.haber100.com/live/mihraptv/chunklist_w2099091652.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "http://yayin30.haber100.com/live/mihraptv/chunklist_w2099091652.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_ikra_tv", number = 256, name = "İkra TV", logoText = "İKRA\nTV",
+            c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Dini", badge = "HD", logoUrl = "",
+            sources = listOf(StreamSource("Canlı Akış", "https://rtmp.ikratv.com/live/kanal1/v3/index.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Playlist)", "https://rtmp.ikratv.com/live/kanal1/v3/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Master)", "https://rtmp.ikratv.com/live/kanal1/v3/master.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_kudus_tv", number = 257, name = "Kudüs TV", logoText = "KUDÜS\nTV",
+            c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Dini", badge = "HD", logoUrl = "",
+            sources = listOf(StreamSource("Canlı Akış", "https://yayin1.haber100.com/kudustvapp/kudustv/chunklist_w1714163689.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "http://yayin1.haber100.com/kudustvapp/kudustv/chunklist_w1714163689.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_vaaz_tv", number = 258, name = "Vaaz TV", logoText = "VAAZ\nTV",
+            c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Dini", badge = "HD", logoUrl = "",
+            sources = listOf(StreamSource("Canlı Akış", "https://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/vaaz-tv/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/vaaz-tv/playlist/0.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/vaaz-tv/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/vaaz-tv/index.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_ada_tv", number = 259, name = "Ada TV Kıbrıs", logoText = "ADA\nTV",
+            c1 = 0xFF0E7490L, c2 = 0xFF06B6D4L, cat = "Kıbrıs", badge = "HD", logoUrl = "https://i.imgur.com/YWmkUWU.png",
+            sources = listOf(StreamSource("Canlı Akış", "https://yayin1.canlitv.fun/live/kibrisadatv.stream/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://yayin1.canlitv.fun/live/kibrisadatv.stream/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://yayin1.canlitv.fun/live/kibrisadatv.stream/index.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_altas_tv", number = 260, name = "Altaş TV Ordu", logoText = "ALTAŞ\nTV",
+            c1 = 0xFF1E3A8AL, c2 = 0xFF3B82F6L, cat = "Yerel", badge = "FHD", logoUrl = "https://i.imgur.com/XaJ7fp6.png",
+            sources = listOf(StreamSource("FHD 1080p", "https://edge1.socialsmart.tv/altastv/bant1/playlist.m3u8", StreamType.HLS), StreamSource("Hızlı Akış (Edge1 Chunks)", "https://edge1.socialsmart.tv/altastv/bant1/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Sunucu (Edge Chunks)", "https://edge.socialsmart.tv/altastv/bant1/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Sunucu (Edge Playlist)", "https://edge.socialsmart.tv/altastv/bant1/playlist.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_aras_tv", number = 261, name = "Aras TV Erzurum", logoText = "ARAS\nTV",
+            c1 = 0xFFC2410CL, c2 = 0xFFF97316L, cat = "Yerel", badge = "HD", logoUrl = "https://i.imgur.com/JsDCyWG.png",
+            sources = listOf(StreamSource("Canlı Akış", "http://1.rtmp.org/tv217/yayin.stream/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "http://1.rtmp.org/tv217/yayin.stream/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "http://1.rtmp.org/tv217/yayin.stream/index.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_atv_alanya", number = 262, name = "ATV Alanya", logoText = "ATV\nALANY",
+            c1 = 0xFFB91C1CL, c2 = 0xFFEF4444L, cat = "Yerel", badge = "FHD", logoUrl = "https://i.imgur.com/bUwarR0.png",
+            sources = listOf(StreamSource("FHD 1080p", "https://cdn-alanyatv.yayin.com.tr/alanyatv/alanyatv/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://cdn-alanyatv.yayin.com.tr/alanyatv/alanyatv/chunklist_w116897790.m3u8", StreamType.HLS), StreamSource("Hızlı Chunks Akışı", "https://cdn-alanyatv.yayin.com.tr/alanyatv/alanyatv/chunks.m3u8", StreamType.HLS), StreamSource("Mono Doğrudan Akış", "https://cdn-alanyatv.yayin.com.tr/alanyatv/alanyatv/tracks-v1a1/mono.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_as_tv_bursa", number = 263, name = "AS TV Bursa", logoText = "AS TV\nBURSA",
+            c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Yerel", badge = "HD", logoUrl = "https://i.ibb.co/mHt7rQf/Tryerel.png",
+            sources = listOf(StreamSource("Canlı Akış", "https://live.artidijitalmedya.com/artidijital_astv/astv/chunks.m3u8", StreamType.HLS), StreamSource("Adaptif Akış (Playlist)", "https://live.artidijitalmedya.com/artidijital_astv/astv/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "http://live.artidijitalmedya.com/artidijital_astv/astv/chunks.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_line_tv_bursa", number = 264, name = "Line TV Bursa", logoText = "LINE\nBURSA",
+            c1 = 0xFF1E3A8AL, c2 = 0xFF3B82F6L, cat = "Yerel", badge = "HD", logoUrl = "",
+            sources = listOf(StreamSource("Canlı Akış", "https://edge1.socialsmart.tv/linetv/bant1/playlist.m3u8", StreamType.HLS), StreamSource("Hızlı Akış (Edge1 Chunks)", "https://edge1.socialsmart.tv/linetv/bant1/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Sunucu (Edge Chunks)", "https://edge.socialsmart.tv/linetv/bant1/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Sunucu (Edge Playlist)", "https://edge.socialsmart.tv/linetv/bant1/playlist.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_es_tv_eskisehir", number = 265, name = "ES TV Eskişehir", logoText = "ES TV\nESKİŞ",
+            c1 = 0xFFB91C1CL, c2 = 0xFFEF4444L, cat = "Yerel", badge = "HD", logoUrl = "https://i.ibb.co/mHt7rQf/Tryerel.png",
+            sources = listOf(StreamSource("Canlı Akış", "https://live.artidijitalmedya.com/artidijital_estv/estv/chunks.m3u8", StreamType.HLS), StreamSource("Adaptif Akış (Playlist)", "https://live.artidijitalmedya.com/artidijital_estv/estv/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "http://live.artidijitalmedya.com/artidijital_estv/estv/chunks.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_tv264_sakarya", number = 266, name = "TV 264 Sakarya", logoText = "TV\n264",
+            c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Yerel", badge = "HD", logoUrl = "https://i.ibb.co/mHt7rQf/Tryerel.png",
+            sources = listOf(StreamSource("Canlı Akış", "https://b01c02nl.mediatriple.net/videoonlylive/mtdxkkitgbrckilive/broadcast_5ee244263fd6d.smil/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış", "http://mc1.mediatriple.net/videoonlylive/mtdxkkitgbrckilive/broadcast_5ee244263fd6d.smil/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://b01c02nl.mediatriple.net/videoonlylive/mtdxkkitgbrckilive/broadcast_5ee244263fd6d.smil/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://b01c02nl.mediatriple.net/videoonlylive/mtdxkkitgbrckilive/broadcast_5ee244263fd6d.smil/index.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_tv1_kayseri", number = 267, name = "TV 1 Kayseri", logoText = "TV 1\nKAYSE",
+            c1 = 0xFFC2410CL, c2 = 0xFFF97316L, cat = "Yerel", badge = "HD", logoUrl = "https://i.imgur.com/8CtrYVb.png",
+            sources = listOf(StreamSource("Canlı Akış", "https://edge1.socialsmart.tv/tv1/bant1/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış", "https://edge1.socialsmart.tv/tv1/bant1/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Sunucu (Edge Chunks)", "https://edge.socialsmart.tv/tv1/bant1/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Sunucu (Edge Playlist)", "https://edge.socialsmart.tv/tv1/bant1/playlist.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_kent_turk", number = 268, name = "Kent Türk TV", logoText = "KENT\nTÜRK",
+            c1 = 0xFF6B21A8L, c2 = 0xFFA855F7L, cat = "Yerel", badge = "HD", logoUrl = "https://i.imgur.com/FQKPjsm.png",
+            sources = listOf(StreamSource("Canlı Akış", "https://live.artidijitalmedya.com/artidijital_kentturktv/kentturktv/playlist.m3u8", StreamType.HLS), StreamSource("Hızlı Doğrudan Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_kentturktv/kentturktv/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_kentturktv/kentturktv/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://live.artidijitalmedya.com/artidijital_kentturktv/kentturktv/index.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_mercan_tv", number = 269, name = "Mercan TV Adıyaman", logoText = "MERCA\nTV",
+            c1 = 0xFF0E7490L, c2 = 0xFF06B6D4L, cat = "Yerel", badge = "HD", logoUrl = "https://i.imgur.com/3CWV8bS.png",
+            sources = listOf(StreamSource("Canlı Akış", "https://live.artidijitalmedya.com/artidijital_mercantv/mercantv/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://live.artidijitalmedya.com/artidijital_mercantv/mercantv/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_mercantv/mercantv/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://live.artidijitalmedya.com/artidijital_mercantv/mercantv/index.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_metropol_denizli", number = 270, name = "Metropol TV Denizli", logoText = "METRO\nDENİZ",
+            c1 = 0xFFB45309L, c2 = 0xFFFACC15L, cat = "Yerel", badge = "HD", logoUrl = "https://i.ibb.co/mHt7rQf/Tryerel.png",
+            sources = listOf(StreamSource("Canlı Akış", "https://edge1.socialsmart.tv/metropoltv/smil/metropoltv/bant1/playlist.m3u8", StreamType.HLS), StreamSource("Hızlı Akış (Edge1 Chunks)", "https://edge1.socialsmart.tv/metropoltv/smil/metropoltv/bant1/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Sunucu (Edge Chunks)", "https://edge.socialsmart.tv/metropoltv/smil/metropoltv/bant1/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Sunucu (Edge Playlist)", "https://edge.socialsmart.tv/metropoltv/smil/metropoltv/bant1/playlist.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_mugla_turk", number = 271, name = "Muğla Türk TV", logoText = "MUĞLA\nTÜRK",
+            c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Yerel", badge = "HD", logoUrl = "https://i.ibb.co/mHt7rQf/Tryerel.png",
+            sources = listOf(StreamSource("Canlı Akış", "https://edge1.socialsmart.tv/muglaturk/bant1/playlist.m3u8", StreamType.HLS), StreamSource("Hızlı Akış (Edge1 Chunks)", "https://edge1.socialsmart.tv/muglaturk/bant1/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Sunucu (Edge Chunks)", "https://edge.socialsmart.tv/muglaturk/bant1/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Sunucu (Edge Playlist)", "https://edge.socialsmart.tv/muglaturk/bant1/playlist.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_frt_fethiye", number = 272, name = "FRT Fethiye TV", logoText = "FRT\nFETHİ",
+            c1 = 0xFF0E7490L, c2 = 0xFF06B6D4L, cat = "Yerel", badge = "HD", logoUrl = "https://i.ibb.co/mHt7rQf/Tryerel.png",
+            sources = listOf(StreamSource("Canlı Akış", "https://edge1.socialsmart.tv/frttv/bant1/chunks.m3u8", StreamType.HLS), StreamSource("Adaptif Akış (Edge1 Playlist)", "https://edge1.socialsmart.tv/frttv/bant1/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Sunucu (Edge Chunks)", "https://edge.socialsmart.tv/frttv/bant1/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Sunucu (Edge Playlist)", "https://edge.socialsmart.tv/frttv/bant1/playlist.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_hrt_akdeniz", number = 273, name = "HRT Akdeniz Hatay", logoText = "HRT\nAKDEN",
+            c1 = 0xFFB91C1CL, c2 = 0xFFEF4444L, cat = "Yerel", badge = "HD", logoUrl = "https://i.ibb.co/mHt7rQf/Tryerel.png",
+            sources = listOf(StreamSource("Canlı Akış", "https://vod02.cdn.web.tv/cn/ov/cnovvu97lqw_,240,360,480,.mp4.urlset/playlist-f3-v1-a1.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "http://vod02.cdn.web.tv/cn/ov/cnovvu97lqw_,240,360,480,.mp4.urlset/playlist-f3-v1-a1.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_ordu_bel", number = 274, name = "Ordu Bel TV", logoText = "ORDU\nBEL",
+            c1 = 0xFF1E3A8AL, c2 = 0xFF3B82F6L, cat = "Yerel", badge = "HD", logoUrl = "https://i.ibb.co/mHt7rQf/Tryerel.png",
+            sources = listOf(StreamSource("Canlı Akış", "https://cdn1-ordubeltv.yayin.com.tr/ordubeltv/ordubeltv/playlist.m3u8", StreamType.HLS), StreamSource("Hızlı Chunks Akışı", "https://cdn1-ordubeltv.yayin.com.tr/ordubeltv/ordubeltv/chunks.m3u8", StreamType.HLS), StreamSource("Mono Doğrudan Akış", "https://cdn1-ordubeltv.yayin.com.tr/ordubeltv/ordubeltv/tracks-v1a1/mono.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://cdn1-ordubeltv.yayin.com.tr/ordubeltv/ordubeltv/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://cdn1-ordubeltv.yayin.com.tr/ordubeltv/ordubeltv/index.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_diyar_tv", number = 275, name = "Diyar TV Diyarbakır", logoText = "DİYAR\nTV",
+            c1 = 0xFFC2410CL, c2 = 0xFFF97316L, cat = "Yerel", badge = "HD", logoUrl = "https://i.ibb.co/mHt7rQf/Tryerel.png",
+            sources = listOf(StreamSource("Canlı Akış", "https://live.artidijitalmedya.com/artidijital_diyartv/diyartv/playlist.m3u8", StreamType.HLS), StreamSource("Hızlı Doğrudan Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_diyartv/diyartv/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_diyartv/diyartv/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://live.artidijitalmedya.com/artidijital_diyartv/diyartv/index.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_brtv_karabuk", number = 276, name = "BRTV Karabük", logoText = "BRTV\nKARAB",
+            c1 = 0xFF6B21A8L, c2 = 0xFFA855F7L, cat = "Yerel", badge = "HD", logoUrl = "https://i.ibb.co/mHt7rQf/Tryerel.png",
+            sources = listOf(StreamSource("Canlı Akış", "https://live.artidijitalmedya.com/artidijital_brtv/brtv/chunks.m3u8", StreamType.HLS), StreamSource("Adaptif Akış (Playlist)", "https://live.artidijitalmedya.com/artidijital_brtv/brtv/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "http://live.artidijitalmedya.com/artidijital_brtv/brtv/chunks.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_sun_rtv", number = 277, name = "Sun RTV Mersin", logoText = "SUN\nRTV",
+            c1 = 0xFFB45309L, c2 = 0xFFFACC15L, cat = "Yerel", badge = "HD", logoUrl = "https://i.ibb.co/mHt7rQf/Tryerel.png",
+            sources = listOf(StreamSource("Canlı Akış", "https://live.artidijitalmedya.com/artidijital_sunrtv/sunrtv/chunks.m3u8", StreamType.HLS), StreamSource("Adaptif Akış (Playlist)", "https://live.artidijitalmedya.com/artidijital_sunrtv/sunrtv/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "http://live.artidijitalmedya.com/artidijital_sunrtv/sunrtv/chunks.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_dim_tv_alanya", number = 278, name = "Dim TV Alanya", logoText = "DİM\nTV",
+            c1 = 0xFF0E7490L, c2 = 0xFF06B6D4L, cat = "Yerel", badge = "HD", logoUrl = "",
+            sources = listOf(StreamSource("Canlı Akış", "https://live.artidijitalmedya.com/artidijital_dimtv/dimtv/playlist.m3u8", StreamType.HLS), StreamSource("Hızlı Doğrudan Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_dimtv/dimtv/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://live.artidijitalmedya.com/artidijital_dimtv/dimtv/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://live.artidijitalmedya.com/artidijital_dimtv/dimtv/index.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_tv_den_aydin", number = 279, name = "TV Den Aydın", logoText = "TV\nDEN",
+            c1 = 0xFF1E3A8AL, c2 = 0xFF3B82F6L, cat = "Yerel", badge = "HD", logoUrl = "",
+            sources = listOf(StreamSource("Canlı Akış", "http://canli.tvden.com.tr/hls/live.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://canli.tvden.com.tr/hls/live.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_erzurum_web", number = 280, name = "Erzurum Web TV", logoText = "ERZUR\nWEB",
+            c1 = 0xFF1F2937L, c2 = 0xFF64748BL, cat = "Yerel", badge = "HD", logoUrl = "",
+            sources = listOf(StreamSource("Canlı Akış", "https://win29.yayin.com.tr/erzurumwebtv/erzurumwebtv/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://win29.yayin.com.tr/erzurumwebtv/erzurumwebtv/iptvdelisi.m3u8", StreamType.HLS), StreamSource("Hızlı Chunks Akışı", "https://win29.yayin.com.tr/erzurumwebtv/erzurumwebtv/chunks.m3u8", StreamType.HLS), StreamSource("Mono Doğrudan Akış", "https://win29.yayin.com.tr/erzurumwebtv/erzurumwebtv/tracks-v1a1/mono.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_rize_turk", number = 281, name = "Rize Türk TV", logoText = "RİZE\nTÜRK",
+            c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Yerel", badge = "HD", logoUrl = "",
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://yayin.rizeturk.com:3777/hybrid/play.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://furuncu.kesintisizyayin.com:8044/;", StreamType.PROGRESSIVE), StreamSource("Alternatif Akış 3", "https://yayin.rizeturk.com:3777/hybrid/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 4", "https://yayin.rizeturk.com:3777/hybrid/chunklist.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_bir_tv", number = 282, name = "Bir TV", logoText = "BİR\nTV",
+            c1 = 0xFFB91C1CL, c2 = 0xFFEF4444L, cat = "Yerel", badge = "HD", logoUrl = "",
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://edge.socialsmart.tv/birtv/bant1/chunks.m3u8", StreamType.HLS), StreamSource("Canlı Akış", "https://edge1.socialsmart.tv/birtv/bant1/playlist.m3u8", StreamType.HLS), StreamSource("Hızlı Akış (Edge1 Chunks)", "https://edge1.socialsmart.tv/birtv/bant1/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Sunucu (Edge Playlist)", "https://edge.socialsmart.tv/birtv/bant1/playlist.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_anadolum_tv", number = 283, name = "Anadolum TV", logoText = "ANADO\nTV",
+            c1 = 0xFFC2410CL, c2 = 0xFFF97316L, cat = "Yerel", badge = "HD", logoUrl = "",
+            sources = listOf(StreamSource("Canlı Akış", "https://cdn4.yayin.com.tr/anadolum/tracks-v1a1/mono.m3u8", StreamType.HLS), StreamSource("Adaptif Playlist Akışı", "https://cdn4.yayin.com.tr/anadolum/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "http://cdn4.yayin.com.tr/anadolum/tracks-v1a1/mono.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_serhat_tv", number = 284, name = "Serhat TV Kars", logoText = "SERHA\nTV",
+            c1 = 0xFF6B21A8L, c2 = 0xFFA855F7L, cat = "Yerel", badge = "HD", logoUrl = "",
+            sources = listOf(StreamSource("Canlı Akış", "https://cdn4.yayin.com.tr/serhattv/tracks-v1a1/mono.m3u8", StreamType.HLS), StreamSource("Adaptif Playlist Akışı", "https://cdn4.yayin.com.tr/serhattv/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "http://cdn4.yayin.com.tr/serhattv/tracks-v1a1/mono.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_viyana_tv", number = 285, name = "Viyana TV", logoText = "VİYAN\nTV",
+            c1 = 0xFFB91C1CL, c2 = 0xFFEF4444L, cat = "Dünya", badge = "HD", logoUrl = "https://i.ibb.co/mHt7rQf/Tryerel.png",
+            sources = listOf(StreamSource("Canlı Akış", "http://nrttn172.kesintisizyayin.com:29010/nrttn/nrttn/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "http://nrttn172.kesintisizyayin.com:29010/nrttn/nrttn/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "http://nrttn172.kesintisizyayin.com:29010/nrttn/nrttn/index.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_persiana_tr", number = 286, name = "Persiana Türkiye", logoText = "PERSI\nTR",
+            c1 = 0xFF0E7490L, c2 = 0xFF06B6D4L, cat = "Dünya", badge = "FHD", logoUrl = "",
+            sources = listOf(StreamSource("FHD 1080p", "https://turkhls.persiana.live/hls/stream.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "http://turkhls.persiana.live/hls/stream.m3u8", StreamType.HLS))
+        )        ,
+        ch(
+            id = "ch_tr_cnn_turk", number = 287, name = "CNN Türk", logoText = "CNN\nTÜRK",
+            c1 = 0xFFB91C1CL, c2 = 0xFFEF4444L, cat = "Haber", badge = "FHD", logoUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/6/69/CNN_T%C3%BCrk_logo.svg/960px-CNN_T%C3%BCrk_logo.svg.png",
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://live.duhnet.tv//S2/HLS_LIVE/cnnturknp/track_2_550/playlist.m3u8?&live=true&app=com.cnnturk&st=htljvbPX2R8vvfAY-YUYEw&e=1791036999", StreamType.HLS), StreamSource("Canlı Akış 2 (HD)", "https://live.duhnet.tv/S2/HLS_LIVE/cnnturknp/track_4_1000/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış 3 (Master)", "https://live.duhnet.tv/S2/HLS_LIVE/cnnturknp/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 4", "http://46.32.176.50/cnnturk/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 5", "http://umperisn.mywire.org/index.php?id=594252&token=DeaTHLesS", StreamType.HLS), StreamSource("Duhnet Hızlı (Track 2)", "https://live.duhnet.tv/S2/HLS_LIVE/cnnturknp/track_2_550/playlist.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_flash_haber_hd", number = 288, name = "Flash Haber HD", logoText = "FLASH\nHABER",
+            c1 = 0xFFB91C1CL, c2 = 0xFFEF4444L, cat = "Haber", badge = "FHD", logoUrl = "",
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://flashhaber-live.ercdn.net/flashhaber/flashhaber_1080p.m3u8", StreamType.HLS), StreamSource("Adaptif Akış", "https://flashhaber-live.ercdn.net/flashhaber/flashhaber.m3u8", StreamType.HLS), StreamSource("HD 720p (Hızlı Yedek)", "https://flashhaber-live.ercdn.net/flashhaber/flashhaber_720p.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 4", "https://b01c02nl.mediatriple.net/videoonlylive/mtyycglqauzjhlive/broadcast_67c053c48829f.smil/mt_0.m3u8", StreamType.HLS), StreamSource("SD 480p Yedek Akış", "https://flashhaber-live.ercdn.net/flashhaber/flashhaber_480p.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_ekol_spor_hd", number = 289, name = "Ekol Spor HD", logoText = "EKOL\nSPOR",
+            c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Spor", badge = "FHD", logoUrl = "https://i.ibb.co/Ln92Dj2/Ekoltv.png",
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://ekoltv-live.ercdn.net/ekolsport/ekolsport_1080p.m3u8", StreamType.HLS), StreamSource("Adaptif Akış", "https://ekoltv-live.ercdn.net/ekolsport/ekolsport.m3u8", StreamType.HLS), StreamSource("HD 720p (Hızlı Yedek)", "https://ekoltv-live.ercdn.net/ekolsport/ekolsport_720p.m3u8", StreamType.HLS), StreamSource("SD 480p Yedek Akış", "https://ekoltv-live.ercdn.net/ekolsport/ekolsport_480p.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_nr1_turk", number = 290, name = "NR1 Türk TV", logoText = "NR1\nTÜRK",
+            c1 = 0xFFBE185DL, c2 = 0xFFF472B6L, cat = "Müzik", badge = "HD", logoUrl = "",
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/broadcast_5c9e187770143.smil/chunklist_b400000.m3u8", StreamType.HLS), StreamSource("Adaptif Akış (Playlist)", "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/broadcast_5c9e187770143.smil/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "http://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/broadcast_5c9e187770143.smil/chunklist_b400000.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Chunks)", "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/broadcast_5c9e187770143.smil/chunklist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/broadcast_5c9e187770143.smil/index.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_nr1_dance", number = 291, name = "NR1 Dance TV", logoText = "NR1\nDANCE",
+            c1 = 0xFF6B21A8L, c2 = 0xFFA855F7L, cat = "Müzik", badge = "HD", logoUrl = "",
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/u_stream_5c9e2aa8acf44_1/chunklist.m3u8", StreamType.HLS), StreamSource("Adaptif Akış (Playlist)", "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/u_stream_5c9e2aa8acf44_1/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/u_stream_5c9e2aa8acf44_1/index.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_nr1_rap", number = 292, name = "NR1 Rap TV", logoText = "NR1\nRAP",
+            c1 = 0xFFC2410CL, c2 = 0xFFF97316L, cat = "Müzik", badge = "HD", logoUrl = "",
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/u_stream_5c9e198784bdc_1/chunklist.m3u8", StreamType.HLS), StreamSource("Adaptif Akış (Playlist)", "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/u_stream_5c9e198784bdc_1/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış (Index)", "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/u_stream_5c9e198784bdc_1/index.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_damar_turk", number = 293, name = "Damar Türk TV", logoText = "DAMAR\nTÜRK",
+            c1 = 0xFFB91C1CL, c2 = 0xFFEF4444L, cat = "Müzik", badge = "HD", logoUrl = "",
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://stream.yayintescil.com:3183/hybrid/play.m3u8", StreamType.HLS), StreamSource("Yedek Akış 2", "https://stream.yayintescil.com:3183/hybrid/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "https://stream.yayintescil.com:3183/hybrid/chunklist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 4", "http://stream.yayintescil.com:3183/hybrid/play.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_ritim_tv", number = 294, name = "Ritim TV", logoText = "RİTİM\nTV",
+            c1 = 0xFF0E7490L, c2 = 0xFF06B6D4L, cat = "Müzik", badge = "HD", logoUrl = "",
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://ritimtv.ozelip.com:3632/hybrid/play.m3u8", StreamType.HLS), StreamSource("Yedek Akış 2", "https://ritimtv.ozelip.com:3632/hybrid/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "https://ritimtv.ozelip.com:3632/hybrid/chunklist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 4", "http://ritimtv.ozelip.com:3632/hybrid/play.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_saban_tv", number = 295, name = "Şaban TV", logoText = "ŞABAN\nTV",
+            c1 = 0xFFB45309L, c2 = 0xFFFACC15L, cat = "Ulusal", badge = "HD", logoUrl = "",
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://tv156.radyotelekom.com.tr:3996/hybrid/play.m3u8", StreamType.HLS), StreamSource("Yedek Akış 2", "https://tv156.radyotelekom.com.tr:3996/hybrid/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "https://tv156.radyotelekom.com.tr:3996/hybrid/chunklist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 4", "http://tv156.radyotelekom.com.tr:3996/hybrid/play.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_vrt_tv", number = 296, name = "VRT TV", logoText = "VRT\nTV",
+            c1 = 0xFF1E3A8AL, c2 = 0xFF3B82F6L, cat = "Yerel", badge = "HD", logoUrl = "",
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://vrttv.ozelip.com:3278/hybrid/play.m3u8", StreamType.HLS), StreamSource("Yedek Akış 2", "https://vrttv.ozelip.com:3278/hybrid/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "https://vrttv.ozelip.com:3278/hybrid/chunklist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 4", "http://vrttv.ozelip.com:3278/hybrid/play.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_tv_b", number = 297, name = "TV B", logoText = "TV B",
+            c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Yerel", badge = "HD", logoUrl = "",
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://ip44.radyotelekomtv.com:3958/stream/play.m3u8", StreamType.HLS), StreamSource("Yedek Akış 2", "https://ip44.radyotelekomtv.com:3958/stream/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "https://ip44.radyotelekomtv.com:3958/stream/chunklist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 4", "http://ip44.radyotelekomtv.com:3958/stream/play.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_slow_karadeniz_fm", number = 298, name = "Slow Karadeniz FM", logoText = "SLOW\nFM",
+            c1 = 0xFF0E7490L, c2 = 0xFF06B6D4L, cat = "Müzik", badge = "HD", logoUrl = "",
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://dinle.slowkaradenizfm.com:9578/;", StreamType.PROGRESSIVE), StreamSource("Slow Karadeniz TV Yayını", "https://yayin.slowkaradeniztv.com:3390/hybrid/play.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 3", "https://yayin.slowkaradeniztv.com:3390/hybrid/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 4", "https://yayin.slowkaradeniztv.com:3390/hybrid/chunklist.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_tr_cay_fm", number = 299, name = "Çay FM", logoText = "ÇAY\nFM",
+            c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Müzik", badge = "HD", logoUrl = "",
+            sources = listOf(StreamSource("Ana Yayın (FHD/HD)", "https://dinle.cayfm.net:8010/;", StreamType.PROGRESSIVE), StreamSource("Çay TV Yayını", "https://edge1.socialsmart.tv/caytv/bant1/chunks.m3u8", StreamType.HLS), StreamSource("Adaptif Akış (Edge1 Playlist)", "https://edge1.socialsmart.tv/caytv/bant1/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Sunucu (Edge Chunks)", "https://edge.socialsmart.tv/caytv/bant1/chunks.m3u8", StreamType.HLS), StreamSource("Yedek Sunucu (Edge Playlist)", "https://edge.socialsmart.tv/caytv/bant1/playlist.m3u8", StreamType.HLS))
+        )
+    )
+
     fun generateScheduleForChannelFast(
         channel: TvChannel,
         baseHourStart: Long,
@@ -3114,10 +3651,11 @@ class TvViewModel(private val repository: TvRepository) : ViewModel() {
                 "${timeFmt.format(Date(s))} - ${timeFmt.format(Date(e))}"
             }
 
-            val builtInList = ArrayList<TvChannel>(initialBuiltIn.size)
-            val combinedEpg = HashMap<String, List<EpgProgram>>(initialBuiltIn.size + 32)
+            val currentBuiltInBase = repository.getBuiltInChannels()
+            val builtInList = ArrayList<TvChannel>(currentBuiltInBase.size)
+            val combinedEpg = HashMap<String, List<EpgProgram>>(currentBuiltInBase.size + 64)
 
-            for (ch in initialBuiltIn) {
+            for (ch in currentBuiltInBase) {
                 val sched = repository.generateScheduleForChannelFast(ch, baseHourStart, currentHourOfDay, preformattedWindows)
                 combinedEpg[ch.epgChannelId] = sched
                 val cur = sched[1]
@@ -3135,6 +3673,33 @@ class TvViewModel(private val repository: TvRepository) : ViewModel() {
 
             _builtInChannels.value = builtInList
             _epgMap.value = combinedEpg
+
+            // Arka planda https://aciptv.acvid.site/m3ulist/testchannel.m3u içindeki Türk kanallarını
+            // çekip doğrudan Ana Kanal Listesine (Canlı TV) ve yedek akışlara birleştir
+            launch(Dispatchers.IO) {
+                val remoteTrM3u = repository.fetchAndCacheAciptvTurkishM3u()
+                if (remoteTrM3u.isNotBlank()) {
+                    val mergedBase = repository.mergeTurkishM3uIntoBuiltIn(repository.getStaticBuiltInChannels(), remoteTrM3u)
+                    val refreshedBuiltIn = ArrayList<TvChannel>(mergedBase.size)
+                    for (ch in mergedBase) {
+                        val sched = repository.generateScheduleForChannelFast(ch, baseHourStart, currentHourOfDay, preformattedWindows)
+                        combinedEpg[ch.epgChannelId] = sched
+                        val cur = sched[1]
+                        val nxt = sched[2]
+                        refreshedBuiltIn.add(
+                            ch.copy(
+                                currentProgramTitle = cur.title,
+                                currentProgramTime = cur.timeWindowText,
+                                nextProgramTitle = nxt.title,
+                                currentProgress = cur.progressFraction(now),
+                                isCustomM3u = false
+                            )
+                        )
+                    }
+                    _builtInChannels.value = refreshedBuiltIn
+                    _epgMap.value = combinedEpg.toMap()
+                }
+            }
 
             if (_playlists.value.isNotEmpty()) {
                 _isLoadingM3u.value = true
@@ -3310,7 +3875,7 @@ fun RedoXLandingScreen(
                         onClick = onToggleAutoStart
                     )
                     Text(
-                        text = "Chromecast 4K • RedoX TV v1.3 Release",
+                        text = "Chromecast 4K • RedoX TV v1.5 Multi-Source",
                         color = TvThemeColors.BullRedBright,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold
@@ -6983,13 +7548,19 @@ fun RedoXPlayerScreen(
         bumpOsdTimer()
     }
 
+    var autoTriedCount by remember(playingChannel.id) { mutableIntStateOf(0) }
+
     DisposableEffect(exoPlayer, playingChannel.id, currentSourceIndex) {
         val listener = object : Player.Listener {
             override fun onPlaybackStateChanged(playbackState: Int) {
                 isBuffering = playbackState == Player.STATE_BUFFERING
                 if (playbackState == Player.STATE_READY) {
                     playbackError = null
+                    autoTriedCount = 0
                     onClearBroken(playingChannel.id)
+                    if (currentSourceIndex != savedSourceIndex) {
+                        onSavePreferredSource(playingChannel.id, currentSourceIndex)
+                    }
                 }
             }
 
@@ -7035,13 +7606,14 @@ fun RedoXPlayerScreen(
             }
 
             override fun onPlayerError(error: PlaybackException) {
-                if (currentSourceIndex + 1 < playingChannel.sources.size) {
-                    val nextIdx = currentSourceIndex + 1
-                    autoFailoverBanner = "⚡ Ana yayın yanıt vermedi, otomatik Yedek Akışa (${nextIdx + 1}/${playingChannel.sources.size}) geçildi"
+                if (playingChannel.sources.size > 1 && autoTriedCount + 1 < playingChannel.sources.size) {
+                    autoTriedCount += 1
+                    val nextIdx = (currentSourceIndex + 1) % playingChannel.sources.size
+                    autoFailoverBanner = "⚡ Kaynak yanıt vermedi, Alternatif Akışa (${nextIdx + 1}/${playingChannel.sources.size}) geçildi"
                     currentSourceIndex = nextIdx
                 } else {
                     isBuffering = false
-                    playbackError = "⚠️ Yayın şu an yanıt vermiyor. 'Alternatif Yayın / Yenile' butonunu deneyin."
+                    playbackError = "⚠️ Tüm alternatif kaynaklar denendi. 'Alternatif Yayın' butonuyla tekrar deneyebilirsiniz."
                     onMarkBroken(playingChannel.id)
                 }
             }
@@ -7070,10 +7642,11 @@ fun RedoXPlayerScreen(
             exoPlayer.prepare()
             exoPlayer.play()
         }
-        delay(4500L)
-        if (isBuffering && exoPlayer.playbackState != Player.STATE_READY && currentSourceIndex + 1 < playingChannel.sources.size) {
-            val nextIdx = currentSourceIndex + 1
-            autoFailoverBanner = "⚡ Ana yayın gecikti, otomatik Alternatif Akışa (${nextIdx + 1}/${playingChannel.sources.size}) geçildi"
+        delay(3200L)
+        if (isBuffering && exoPlayer.playbackState != Player.STATE_READY && playingChannel.sources.size > 1 && autoTriedCount + 1 < playingChannel.sources.size) {
+            autoTriedCount += 1
+            val nextIdx = (currentSourceIndex + 1) % playingChannel.sources.size
+            autoFailoverBanner = "⚡ Yayın gecikti, hızlı Alternatif Akışa (${nextIdx + 1}/${playingChannel.sources.size}) geçildi"
             currentSourceIndex = nextIdx
         }
     }
@@ -7559,12 +8132,17 @@ fun RedoXPlayerScreen(
                     }
 
                     if (playingChannel.sources.size > 1) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            playingChannel.sources.forEachIndexed { idx, src ->
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            modifier = Modifier.width(460.dp)
+                        ) {
+                            items(playingChannel.sources.size) { idx ->
+                                val src = playingChannel.sources[idx]
                                 TvCompactChipButton(
-                                    text = if (idx == currentSourceIndex) "✓ Kaynak ${idx + 1}: ${src.label}" else "Kaynak ${idx + 1}: ${src.label}",
+                                    text = if (idx == currentSourceIndex) "✓ Akış ${idx + 1}: ${src.label}" else "Akış ${idx + 1}/${playingChannel.sources.size}",
                                     icon = Icons.Rounded.Sensors,
                                     onClick = {
+                                        autoTriedCount = 0
                                         currentSourceIndex = idx
                                         onSavePreferredSource(playingChannel.id, idx)
                                         bumpOsdTimer(focusControls = true)

@@ -351,7 +351,7 @@ data class TrackOption(
 )
 
 enum class MainNavTab(val title: String, val subtitle: String, val icon: ImageVector) {
-    ALL_CHANNELS("Canlı TV", "297 Kanal • 900+ Yedek Akış", Icons.Rounded.LiveTv),
+    ALL_CHANNELS("Canlı TV", "299 Kanal • 1184 Yedek Akış", Icons.Rounded.LiveTv),
     FAVORITES("Favorilerim", "Sıralanabilir Liste", Icons.Rounded.Star),
     CUSTOM_M3U("Özel M3U Kanalları", "Eklenen Listelerim", Icons.Rounded.FolderOpen),
     MULTI_VIEW("Bölünmüş Ekran", "2'li & 4'lü Canlı İzle", Icons.Rounded.GridView),
@@ -990,7 +990,8 @@ class TvRepository(private val appContext: Context) {
         getBuiltInChannelsChunk4() +
         getBuiltInChannelsChunk5() +
         getBuiltInChannelsChunk6() +
-        getBuiltInChannelsChunk7()
+        getBuiltInChannelsChunk7() +
+        getBuiltInChannelsChunk8()
 
     fun getBuiltInChannels(): List<TvChannel> {
         val base = getStaticBuiltInChannels()
@@ -2479,6 +2480,9 @@ class TvRepository(private val appContext: Context) {
             c1 = 0xFFB91C1CL, c2 = 0xFFEF4444L, cat = "Yerel", badge = "FHD", logoUrl = "https://i.imgur.com/bUwarR0.png",
             sources = listOf(StreamSource("FHD 1080p", "https://cdn-alanyatv.yayin.com.tr/alanyatv/alanyatv/playlist.m3u8", StreamType.HLS), StreamSource("Alternatif Akış 2", "https://cdn-alanyatv.yayin.com.tr/alanyatv/alanyatv/chunklist_w116897790.m3u8", StreamType.HLS), StreamSource("Hızlı Chunks Akışı", "https://cdn-alanyatv.yayin.com.tr/alanyatv/alanyatv/chunks.m3u8", StreamType.HLS), StreamSource("Mono Doğrudan Akış", "https://cdn-alanyatv.yayin.com.tr/alanyatv/alanyatv/tracks-v1a1/mono.m3u8", StreamType.HLS))
         ),
+    )
+
+    private fun getBuiltInChannelsChunk8(): List<TvChannel> = listOf(
         ch(
             id = "ch_tr_as_tv_bursa", number = 263, name = "AS TV Bursa", logoText = "AS TV\nBURSA",
             c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Yerel", badge = "HD", logoUrl = "https://i.ibb.co/mHt7rQf/Tryerel.png",
@@ -3875,7 +3879,7 @@ fun RedoXLandingScreen(
                         onClick = onToggleAutoStart
                     )
                     Text(
-                        text = "Chromecast 4K • RedoX TV v1.5 Multi-Source",
+                        text = "Chromecast 4K • RedoX TV v1.5.1 Release",
                         color = TvThemeColors.BullRedBright,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold
@@ -7558,7 +7562,7 @@ fun RedoXPlayerScreen(
                     playbackError = null
                     autoTriedCount = 0
                     onClearBroken(playingChannel.id)
-                    if (currentSourceIndex != savedSourceIndex) {
+                    if (preferredSources[playingChannel.id] != currentSourceIndex) {
                         onSavePreferredSource(playingChannel.id, currentSourceIndex)
                     }
                 }
@@ -8136,8 +8140,7 @@ fun RedoXPlayerScreen(
                             horizontalArrangement = Arrangement.spacedBy(6.dp),
                             modifier = Modifier.width(460.dp)
                         ) {
-                            items(playingChannel.sources.size) { idx ->
-                                val src = playingChannel.sources[idx]
+                            itemsIndexed(playingChannel.sources) { idx, src ->
                                 TvCompactChipButton(
                                     text = if (idx == currentSourceIndex) "✓ Akış ${idx + 1}: ${src.label}" else "Akış ${idx + 1}/${playingChannel.sources.size}",
                                     icon = Icons.Rounded.Sensors,

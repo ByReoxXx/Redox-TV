@@ -3,8 +3,10 @@
 package com.example.chromecasttv
 
 import android.app.PictureInPictureParams
+import android.content.ClipboardManager
 import android.content.Context
 import android.net.Uri
+import android.view.inputmethod.InputMethodManager
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
@@ -349,7 +351,7 @@ data class TrackOption(
 )
 
 enum class MainNavTab(val title: String, val subtitle: String, val icon: ImageVector) {
-    ALL_CHANNELS("Canlı TV", "222 Yerleşik Kanal", Icons.Rounded.LiveTv),
+    ALL_CHANNELS("Canlı TV", "224 Yerleşik Kanal", Icons.Rounded.LiveTv),
     FAVORITES("Favorilerim", "Sıralanabilir Liste", Icons.Rounded.Star),
     CUSTOM_M3U("Özel M3U Kanalları", "Eklenen Listelerim", Icons.Rounded.FolderOpen),
     MULTI_VIEW("Bölünmüş Ekran", "2'li & 4'lü Canlı İzle", Icons.Rounded.GridView),
@@ -425,24 +427,33 @@ fun ChannelBrandLogoBox(
 
 object LocalTransferWebServer {
     fun getLocalWifiIpAddress(): String {
+        var fallbackIp: String? = null
         try {
             val interfaces = NetworkInterface.getNetworkInterfaces()
-            while (interfaces.hasMoreElements()) {
+            while (interfaces != null && interfaces.hasMoreElements()) {
                 val iface = interfaces.nextElement()
                 if (iface.isLoopback || !iface.isUp) continue
+                val name = iface.name.lowercase(Locale.getDefault())
                 val addresses = iface.inetAddresses
                 while (addresses.hasMoreElements()) {
                     val addr = addresses.nextElement()
                     if (addr is Inet4Address && !addr.isLoopbackAddress) {
                         val ip = addr.hostAddress ?: continue
+                        if (name.startsWith("wlan") || name.startsWith("eth") || name.startsWith("en")) {
+                            if (ip.startsWith("192.") || ip.startsWith("10.") || ip.startsWith("172.")) {
+                                return ip
+                            }
+                        }
                         if (ip.startsWith("192.") || ip.startsWith("10.") || ip.startsWith("172.")) {
-                            return ip
+                            if (fallbackIp == null) fallbackIp = ip
+                        } else if (fallbackIp == null && !ip.startsWith("169.254.")) {
+                            fallbackIp = ip
                         }
                     }
                 }
             }
         } catch (_: Exception) {}
-        return "127.0.0.1"
+        return fallbackIp ?: "192.168.1.1"
     }
 
     fun buildMobileWebHtml(): String = """
@@ -1303,52 +1314,57 @@ class TvRepository(private val appContext: Context) {
             sources = listOf(StreamSource("HD 720p", "https://dogus.daioncdn.net/ntv/ntv.m3u8?app=ntv_web", StreamType.HLS))
         ),
         ch(
-            id = "ch_65_tbmm_tv", number = 65, name = "TBMM TV", logoText = "TBMM",
+            id = "ch_sozcu_tv", number = 65, name = "Sözcü TV", logoText = "SÖZCÜ\nTV",
+            c1 = 0xFFB91C1CL, c2 = 0xFFEF4444L, cat = "Haber", badge = "FHD", logoUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/S%C3%B6zc%C3%BC_TV_logo.svg/960px-S%C3%B6zc%C3%BC_TV_logo.svg.png",
+            sources = listOf(StreamSource("FHD 1080p (Ana Yayın)", "http://45.88.139.156/yt1/szctv.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_65_tbmm_tv", number = 66, name = "TBMM TV", logoText = "TBMM",
             c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Haber", badge = "HD", logoUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/TBMM_TV_logo.svg/960px-TBMM_TV_logo.svg.png",
             sources = listOf(StreamSource("HD 720p", "https://meclistv-live.ercdn.net/meclistv/meclistv.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_66_tele_1", number = 66, name = "Tele 1", logoText = "TELE\n1",
+            id = "ch_66_tele_1", number = 67, name = "Tele 1", logoText = "TELE\n1",
             c1 = 0xFF6B21A8L, c2 = 0xFFA855F7L, cat = "Haber", badge = "FHD", logoUrl = "https://upload.wikimedia.org/wikipedia/tr/4/43/Tele1_logosu.png",
             sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://tele1-live.ercdn.net/tele1/tele1.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_67_telenews", number = 67, name = "Telenews", logoText = "TELENE",
+            id = "ch_67_telenews", number = 68, name = "Telenews", logoText = "TELENE",
             c1 = 0xFFC2410CL, c2 = 0xFFF97316L, cat = "Haber", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://cdn-telenews.yayin.com.tr/telenews/index.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_68_tgrt_haber_hd", number = 68, name = "TGRT Haber HD", logoText = "TGRT\nHABER",
+            id = "ch_68_tgrt_haber_hd", number = 69, name = "TGRT Haber HD", logoText = "TGRT\nHABER",
             c1 = 0xFF0E7490L, c2 = 0xFF06B6D4L, cat = "Haber", badge = "HD", logoUrl = "https://i.ibb.co/K5frjVY/tgrt-haber.png",
             sources = listOf(StreamSource("Standart Akış", "https://tgrthaber-live.daioncdn.net/tgrthaber/tgrthaber.m3u8", StreamType.HLS), StreamSource("Yedek Akış", "https://canli.tgrthaber.com/tgrt.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_69_th_t_rk_haber_tv", number = 69, name = "TH Türk Haber TV", logoText = "TH\nTÜRK",
+            id = "ch_69_th_t_rk_haber_tv", number = 70, name = "TH Türk Haber TV", logoText = "TH\nTÜRK",
             c1 = 0xFFBE185DL, c2 = 0xFFF472B6L, cat = "Haber", badge = "HD", logoUrl = "https://i.ibb.co/ySv65wg/turk-haber.png",
             sources = listOf(StreamSource("Standart Akış", "https://edge1.socialsmart.tv/turkhaber/bant1/chunks.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_70_trt_haber", number = 70, name = "TRT Haber", logoText = "TRT\nHABER",
+            id = "ch_70_trt_haber", number = 71, name = "TRT Haber", logoText = "TRT\nHABER",
             c1 = 0xFF1F2937L, c2 = 0xFF64748BL, cat = "Haber", badge = "HD", logoUrl = "https://i.imgur.com/OVfo8Ab.png",
             sources = listOf(StreamSource("HD 720p", "https://tv-trthaber.medya.trt.com.tr/master.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_71_tvnet", number = 71, name = "TVNET", logoText = "TVNET",
+            id = "ch_71_tvnet", number = 72, name = "TVNET", logoText = "TVNET",
             c1 = 0xFFB45309L, c2 = 0xFFFACC15L, cat = "Haber", badge = "FHD", logoUrl = "https://i.imgur.com/mQo8yWQ.png",
             sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://mn-nl.mncdn.com/tvnet/tvnet/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_72_tyt_t_rk", number = 72, name = "TYT Türk", logoText = "TYT\nTÜRK",
+            id = "ch_72_tyt_t_rk", number = 73, name = "TYT Türk", logoText = "TYT\nTÜRK",
             c1 = 0xFFB91C1CL, c2 = 0xFFEF4444L, cat = "Haber", badge = "FHD", logoUrl = "",
             sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://tytturk-live.ercdn.net/tytturk/tytturk.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_73__lke_tv", number = 73, name = "Ülke TV", logoText = "ÜLKE",
+            id = "ch_73__lke_tv", number = 74, name = "Ülke TV", logoText = "ÜLKE",
             c1 = 0xFF1E3A8AL, c2 = 0xFF3B82F6L, cat = "Haber", badge = "HD", logoUrl = "https://i.imgur.com/wdWR7Qk.png",
             sources = listOf(StreamSource("HD 720p", "https://livetv.radyotvonline.net/kanal7live/ulketv/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_74_agro_tv", number = 74, name = "Agro TV", logoText = "AGRO",
+            id = "ch_74_agro_tv", number = 75, name = "Agro TV", logoText = "AGRO",
             c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Belgesel", badge = "HD", logoUrl = "https://i.ibb.co/1RnLJpf/agro.png",
             sources = listOf(StreamSource("Standart Akış", "https://yayin30.haber100.com/live/agrotv/playlist.m3u8", StreamType.HLS))
         )
@@ -1356,187 +1372,187 @@ class TvRepository(private val appContext: Context) {
 
     private fun getBuiltInChannelsChunk3(): List<TvChannel> = listOf(
         ch(
-            id = "ch_75_bizimev_tv", number = 75, name = "Bizimev TV", logoText = "BIZIME",
+            id = "ch_75_bizimev_tv", number = 76, name = "Bizimev TV", logoText = "BIZIME",
             c1 = 0xFF6B21A8L, c2 = 0xFFA855F7L, cat = "Belgesel", badge = "HD", logoUrl = "https://i.imgur.com/eJa6sFY.png",
             sources = listOf(StreamSource("HD 720p", "https://mn-nl.mncdn.com/blutv_bizimev/bizimev_sd.smil/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_76_cgtn_documentary", number = 76, name = "CGTN Documentary", logoText = "CGTN\nDOCUM",
+            id = "ch_76_cgtn_documentary", number = 77, name = "CGTN Documentary", logoText = "CGTN\nDOCUM",
             c1 = 0xFFC2410CL, c2 = 0xFFF97316L, cat = "Belgesel", badge = "HD", logoUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d6/CGTN_Documentary_logo.png/960px-CGTN_Documentary_logo.png",
             sources = listOf(StreamSource("Standart Akış", "https://mn-nl.mncdn.com/dogusdyg_drone/cgtn/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_77_gzt_tv", number = 77, name = "GZT TV", logoText = "GZT",
+            id = "ch_77_gzt_tv", number = 78, name = "GZT TV", logoText = "GZT",
             c1 = 0xFF0E7490L, c2 = 0xFF06B6D4L, cat = "Belgesel", badge = "FHD", logoUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ef/GZT_logo.svg/960px-GZT_logo.svg.png",
             sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://gzttv-live.lg.mncdn.com/gzttv-live/gzttv/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_78_love_nature_hd", number = 78, name = "Love Nature HD", logoText = "LOVE\nNATUR",
+            id = "ch_78_love_nature_hd", number = 79, name = "Love Nature HD", logoText = "LOVE\nNATUR",
             c1 = 0xFFBE185DL, c2 = 0xFFF472B6L, cat = "Belgesel", badge = "FHD", logoUrl = "",
             sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://lovenatureus-eng-plex.amagi.tv/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_79_national_geographic", number = 79, name = "National Geographic", logoText = "NATIO\nGEOGR",
+            id = "ch_79_national_geographic", number = 80, name = "National Geographic", logoText = "NATIO\nGEOGR",
             c1 = 0xFF1F2937L, c2 = 0xFF64748BL, cat = "Belgesel", badge = "FHD", logoUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/Natgeologo.svg/960px-Natgeologo.svg.png",
             sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://saran-live.ercdn.net/natgeohd/index.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_80_national_geographic_", number = 80, name = "National Geographic Wild", logoText = "NATIO\nGEOGR",
+            id = "ch_80_national_geographic_", number = 81, name = "National Geographic Wild", logoText = "NATIO\nGEOGR",
             c1 = 0xFFB45309L, c2 = 0xFFFACC15L, cat = "Belgesel", badge = "FHD", logoUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/2/27/National_Geographic_Wild_logo.svg/960px-National_Geographic_Wild_logo.svg.png",
             sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://saran-live.ercdn.net/natgeowild/index.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_81_tgrt_belgesel", number = 81, name = "TGRT Belgesel", logoText = "TGRT\nBELGE",
+            id = "ch_81_tgrt_belgesel", number = 82, name = "TGRT Belgesel", logoText = "TGRT\nBELGE",
             c1 = 0xFFB91C1CL, c2 = 0xFFEF4444L, cat = "Belgesel", badge = "HD", logoUrl = "https://i.ibb.co/JHH0xcX/tgrtbel22.png",
             sources = listOf(StreamSource("Standart Akış", "https://tgrt-live.ercdn.net/tgrtbelgesel/tgrtbelgesel.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_82_trt_belgesel", number = 82, name = "TRT Belgesel", logoText = "TRT\nBELGE",
+            id = "ch_82_trt_belgesel", number = 83, name = "TRT Belgesel", logoText = "TRT\nBELGE",
             c1 = 0xFF1E3A8AL, c2 = 0xFF3B82F6L, cat = "Belgesel", badge = "FHD", logoUrl = "https://i.imgur.com/MGO87pe.png",
             sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://tv-trtbelgesel-dai.medya.trt.com.tr/master.m3u8", StreamType.HLS), StreamSource("Yedek Akış", "https://tv-trtbelgesel.medya.trt.com.tr/master.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_83_wild_earth_tv", number = 83, name = "Wild Earth TV", logoText = "WILD\nEARTH",
+            id = "ch_83_wild_earth_tv", number = 84, name = "Wild Earth TV", logoText = "WILD\nEARTH",
             c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Belgesel", badge = "FHD", logoUrl = "",
             sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://wildearth-adsfree-ono.amagi.tv/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_84_yaban_tv", number = 84, name = "Yaban TV", logoText = "YABAN",
+            id = "ch_84_yaban_tv", number = 85, name = "Yaban TV", logoText = "YABAN",
             c1 = 0xFF6B21A8L, c2 = 0xFFA855F7L, cat = "Belgesel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("HD 720p", "https://59cba4d34b678.streamlock.net/live1/yabantv/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_85__ift_i_tv", number = 85, name = "Çiftçi TV", logoText = "ÇIFTÇI",
+            id = "ch_85__ift_i_tv", number = 86, name = "Çiftçi TV", logoText = "ÇIFTÇI",
             c1 = 0xFFC2410CL, c2 = 0xFFF97316L, cat = "Belgesel", badge = "HD", logoUrl = "https://i.ibb.co/vHwMgx0/ciftci.png",
             sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_ciftcitv/ciftcitv/chunks.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_86_dream_t_rk", number = 86, name = "Dream Türk", logoText = "DREAM\nTÜRK",
+            id = "ch_86_dream_t_rk", number = 87, name = "Dream Türk", logoText = "DREAM\nTÜRK",
             c1 = 0xFF0E7490L, c2 = 0xFF06B6D4L, cat = "Müzik", badge = "HD", logoUrl = "https://i.ibb.co/fxRrKmB/dream-turk.png",
             sources = listOf(StreamSource("HD 720p", "https://live.duhnet.tv/S2/HLS_LIVE/dreamturknp/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_87_kral_pop_tv", number = 87, name = "Kral Pop TV", logoText = "KRAL\nPOP",
+            id = "ch_87_kral_pop_tv", number = 88, name = "Kral Pop TV", logoText = "KRAL\nPOP",
             c1 = 0xFFBE185DL, c2 = 0xFFF472B6L, cat = "Müzik", badge = "HD", logoUrl = "https://i.imgur.com/ch365lh.png",
             sources = listOf(StreamSource("Standart Akış", "https://dogus-live.daioncdn.net/kralpoptv/playlist.m3u8", StreamType.HLS), StreamSource("Yedek Akış", "http://dygvideo.dygdigital.com/live/hls/kralpop", StreamType.HLS))
         ),
         ch(
-            id = "ch_88_number_1_a_k", number = 88, name = "Number 1 Aşk", logoText = "NUMBE\n1",
+            id = "ch_88_number_1_a_k", number = 89, name = "Number 1 Aşk", logoText = "NUMBE\n1",
             c1 = 0xFF1F2937L, c2 = 0xFF64748BL, cat = "Müzik", badge = "HD", logoUrl = "https://i.ibb.co/5cJ0KtQ/nr1-ask.png",
             sources = listOf(StreamSource("Standart Akış", "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/u_stream_5c9e18f9cea15_1/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_89_number_1_damar", number = 89, name = "Number 1 Damar", logoText = "NUMBE\n1",
+            id = "ch_89_number_1_damar", number = 90, name = "Number 1 Damar", logoText = "NUMBE\n1",
             c1 = 0xFFB45309L, c2 = 0xFFFACC15L, cat = "Müzik", badge = "HD", logoUrl = "https://i.ibb.co/2yCF7ms/nr1-damar.png",
             sources = listOf(StreamSource("Standart Akış", "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/u_stream_5c9e198784bdc_1/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_90_number_1_dance", number = 90, name = "Number 1 Dance", logoText = "NUMBE\n1",
+            id = "ch_90_number_1_dance", number = 91, name = "Number 1 Dance", logoText = "NUMBE\n1",
             c1 = 0xFFB91C1CL, c2 = 0xFFEF4444L, cat = "Müzik", badge = "HD", logoUrl = "https://i.ibb.co/kXFSFTN/nr1-dance.png",
             sources = listOf(StreamSource("Standart Akış", "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/u_stream_5c9e2aa8acf44_1/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_91_number_1_tv_hd", number = 91, name = "Number 1 TV HD", logoText = "NUMBE\n1",
+            id = "ch_91_number_1_tv_hd", number = 92, name = "Number 1 TV HD", logoText = "NUMBE\n1",
             c1 = 0xFF1E3A8AL, c2 = 0xFF3B82F6L, cat = "Müzik", badge = "HD", logoUrl = "https://i.ibb.co/sybLTBG/nr1.png",
             sources = listOf(StreamSource("Standart Akış", "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/u_stream_5c9e17cd6360b_1/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_92_number_1_t_rk", number = 92, name = "Number 1 Türk", logoText = "NUMBE\n1",
+            id = "ch_92_number_1_t_rk", number = 93, name = "Number 1 Türk", logoText = "NUMBE\n1",
             c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Müzik", badge = "HD", logoUrl = "https://i.imgur.com/18zjk3q.png",
             sources = listOf(StreamSource("HD 720p", "https://mn-nl.mncdn.com/blutv_nr1turk2/live.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_93_power_dance", number = 93, name = "Power Dance", logoText = "POWER\nDANCE",
+            id = "ch_93_power_dance", number = 94, name = "Power Dance", logoText = "POWER\nDANCE",
             c1 = 0xFF6B21A8L, c2 = 0xFFA855F7L, cat = "Müzik", badge = "HD", logoUrl = "https://i.ibb.co/5hwZ7xw/power-dance.png",
             sources = listOf(StreamSource("Standart Akış", "https://listen.powerapp.com.tr/dance/dance.smil/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_94_power_love", number = 94, name = "Power Love", logoText = "POWER\nLOVE",
+            id = "ch_94_power_love", number = 95, name = "Power Love", logoText = "POWER\nLOVE",
             c1 = 0xFFC2410CL, c2 = 0xFFF97316L, cat = "Müzik", badge = "HD", logoUrl = "https://i.ibb.co/bJL1VnX/power-love.png",
             sources = listOf(StreamSource("Standart Akış", "https://listen.powerapp.com.tr/plove/love.smil/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_95_power_tv", number = 95, name = "Power TV", logoText = "POWER",
+            id = "ch_95_power_tv", number = 96, name = "Power TV", logoText = "POWER",
             c1 = 0xFF0E7490L, c2 = 0xFF06B6D4L, cat = "Müzik", badge = "HD", logoUrl = "https://i.ibb.co/JrXDQJy/power-tv.png",
             sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_powertv/powertv/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_96_power_tv_hd", number = 96, name = "Power TV HD", logoText = "POWER",
+            id = "ch_96_power_tv_hd", number = 97, name = "Power TV HD", logoText = "POWER",
             c1 = 0xFFBE185DL, c2 = 0xFFF472B6L, cat = "Müzik", badge = "HD", logoUrl = "https://i.ibb.co/JrXDQJy/power-tv.png",
             sources = listOf(StreamSource("Standart Akış", "https://livetv.powerapp.com.tr/powerTV/powerhd.smil/chunklist_b2650000_sltur.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_97_powert_rk_akustik", number = 97, name = "PowerTürk Akustik", logoText = "POWER\nAKUST",
+            id = "ch_97_powert_rk_akustik", number = 98, name = "PowerTürk Akustik", logoText = "POWER\nAKUST",
             c1 = 0xFF1F2937L, c2 = 0xFF64748BL, cat = "Müzik", badge = "HD", logoUrl = "https://i.ibb.co/XFY7dCW/powerturk-akustik.png",
             sources = listOf(StreamSource("Standart Akış", "https://listen.powerapp.com.tr/pturkakustik/akustik.smil/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_98_powert_rk_slow", number = 98, name = "PowerTürk Slow", logoText = "POWER\nSLOW",
+            id = "ch_98_powert_rk_slow", number = 99, name = "PowerTürk Slow", logoText = "POWER\nSLOW",
             c1 = 0xFFB45309L, c2 = 0xFFFACC15L, cat = "Müzik", badge = "HD", logoUrl = "https://i.ibb.co/R4pcKqK/powerturk-slow.png",
             sources = listOf(StreamSource("Standart Akış", "https://listen.powerapp.com.tr/pturkslow/slow.smil/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_99_powert_rk_taptaze", number = 99, name = "PowerTürk Taptaze", logoText = "POWER\nTAPTA",
+            id = "ch_99_powert_rk_taptaze", number = 100, name = "PowerTürk Taptaze", logoText = "POWER\nTAPTA",
             c1 = 0xFFB91C1CL, c2 = 0xFFEF4444L, cat = "Müzik", badge = "HD", logoUrl = "https://i.ibb.co/F5K5xs9/powerturk-taptaze.png",
             sources = listOf(StreamSource("Standart Akış", "https://listen.powerapp.com.tr/pturktaptaze/taptaze.smil/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_100_powert_rk_tv_hd", number = 100, name = "PowerTürk TV HD", logoText = "POWERT",
+            id = "ch_100_powert_rk_tv_hd", number = 101, name = "PowerTürk TV HD", logoText = "POWERT",
             c1 = 0xFF1E3A8AL, c2 = 0xFF3B82F6L, cat = "Müzik", badge = "FHD", logoUrl = "https://i.ibb.co/xXcBD2C/powerturk.png",
             sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://livetv.powerapp.com.tr/powerturkTV/powerturkhd.smil/playlists.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_101_slow_karadeniz_tv", number = 101, name = "Slow Karadeniz TV", logoText = "SLOW\nKARAD",
+            id = "ch_101_slow_karadeniz_tv", number = 102, name = "Slow Karadeniz TV", logoText = "SLOW\nKARAD",
             c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Müzik", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://yayin.slowkaradeniztv.com:3390/multi_web/play.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_102_tatl_ses_tv", number = 102, name = "Tatlıses TV", logoText = "TATLIS",
+            id = "ch_102_tatl_ses_tv", number = 103, name = "Tatlıses TV", logoText = "TATLIS",
             c1 = 0xFF6B21A8L, c2 = 0xFFA855F7L, cat = "Müzik", badge = "HD", logoUrl = "https://i.ibb.co/yRy9zwt/tatlises-tv.png",
             sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_tatlisestv/tatlisestv/chunks.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_103_trt_m_zik", number = 103, name = "TRT Müzik", logoText = "TRT\nMÜZIK",
+            id = "ch_103_trt_m_zik", number = 104, name = "TRT Müzik", logoText = "TRT\nMÜZIK",
             c1 = 0xFFC2410CL, c2 = 0xFFF97316L, cat = "Müzik", badge = "HD", logoUrl = "https://i.imgur.com/fIVFCEd.png",
             sources = listOf(StreamSource("HD 720p", "https://tv-trtmuzik.medya.trt.com.tr/master.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_104_babytv_t_rkiye", number = 104, name = "BabyTV Türkiye", logoText = "BABYTV",
+            id = "ch_104_babytv_t_rkiye", number = 105, name = "BabyTV Türkiye", logoText = "BABYTV",
             c1 = 0xFF0E7490L, c2 = 0xFF06B6D4L, cat = "Çocuk", badge = "FHD", logoUrl = "https://i.imgur.com/4BDJ5FT.png",
             sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://saran-live.ercdn.net/babytv/index.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_105_disney_junior", number = 105, name = "Disney Junior", logoText = "DISNE\nJUNIO",
+            id = "ch_105_disney_junior", number = 106, name = "Disney Junior", logoText = "DISNE\nJUNIO",
             c1 = 0xFFBE185DL, c2 = 0xFFF472B6L, cat = "Çocuk", badge = "FHD", logoUrl = "https://www.dsmart.com.tr/api/v1/public/images/kanallar/disneyjr.png",
             sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://saran-live.ercdn.net/disneyjunior/index.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_106_minika_go", number = 106, name = "Minika Go", logoText = "MINIK\nGO",
+            id = "ch_106_minika_go", number = 107, name = "Minika Go", logoText = "MINIK\nGO",
             c1 = 0xFF1F2937L, c2 = 0xFF64748BL, cat = "Çocuk", badge = "HD", logoUrl = "https://i.imgur.com/qIoipDq.png",
             sources = listOf(StreamSource("HD 720p", "http://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/minikago/minikago_720p.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_107_minika__ocuk", number = 107, name = "Minika Çocuk", logoText = "MINIK\nÇOCUK",
+            id = "ch_107_minika__ocuk", number = 108, name = "Minika Çocuk", logoText = "MINIK\nÇOCUK",
             c1 = 0xFFB45309L, c2 = 0xFFFACC15L, cat = "Çocuk", badge = "HD", logoUrl = "https://i.imgur.com/VCywMTv.png",
             sources = listOf(StreamSource("HD 720p", "http://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/minikago_cocuk/minikago_cocuk_720p.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_108_trt_diyanet__ocuk", number = 108, name = "TRT Diyanet Çocuk", logoText = "TRT\nDIYAN",
+            id = "ch_108_trt_diyanet__ocuk", number = 109, name = "TRT Diyanet Çocuk", logoText = "TRT\nDIYAN",
             c1 = 0xFFB91C1CL, c2 = 0xFFEF4444L, cat = "Çocuk", badge = "HD", logoUrl = "https://i.imgur.com/8PmXz9t.png",
             sources = listOf(StreamSource("HD 720p", "https://tv-trtdiyanetcocuk.medya.trt.com.tr/master.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_109_trt_eba_i_lkokul", number = 109, name = "TRT EBA İlkokul", logoText = "TRT\nEBA",
+            id = "ch_109_trt_eba_i_lkokul", number = 110, name = "TRT EBA İlkokul", logoText = "TRT\nEBA",
             c1 = 0xFF1E3A8AL, c2 = 0xFF3B82F6L, cat = "Çocuk", badge = "HD", logoUrl = "https://i.imgur.com/wDvZfk8.png",
             sources = listOf(StreamSource("HD 720p", "https://tv-e-okul00.medya.trt.com.tr/master.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_110_trt_eba_lise", number = 110, name = "TRT EBA Lise", logoText = "TRT\nEBA",
+            id = "ch_110_trt_eba_lise", number = 111, name = "TRT EBA Lise", logoText = "TRT\nEBA",
             c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Çocuk", badge = "HD", logoUrl = "https://i.imgur.com/IebUZx1.png",
             sources = listOf(StreamSource("HD 720p", "https://tv-e-okul02.medya.trt.com.tr/master.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_111_trt_eba_ortaokul", number = 111, name = "TRT EBA Ortaokul", logoText = "TRT\nEBA",
+            id = "ch_111_trt_eba_ortaokul", number = 112, name = "TRT EBA Ortaokul", logoText = "TRT\nEBA",
             c1 = 0xFF6B21A8L, c2 = 0xFFA855F7L, cat = "Çocuk", badge = "HD", logoUrl = "https://i.imgur.com/yfPTvRx.png",
             sources = listOf(StreamSource("HD 720p", "https://tv-e-okul01.medya.trt.com.tr/master.m3u8", StreamType.HLS))
         )
@@ -1544,187 +1560,187 @@ class TvRepository(private val appContext: Context) {
 
     private fun getBuiltInChannelsChunk4(): List<TvChannel> = listOf(
         ch(
-            id = "ch_112_trt_gen_", number = 112, name = "TRT Genç", logoText = "TRT\nGENÇ",
+            id = "ch_112_trt_gen_", number = 113, name = "TRT Genç", logoText = "TRT\nGENÇ",
             c1 = 0xFFC2410CL, c2 = 0xFFF97316L, cat = "Çocuk", badge = "FHD", logoUrl = "",
             sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://tv-trtgenc.medya.trt.com.tr/master.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_113_trt__ocuk", number = 113, name = "TRT Çocuk", logoText = "TRT\nÇOCUK",
+            id = "ch_113_trt__ocuk", number = 114, name = "TRT Çocuk", logoText = "TRT\nÇOCUK",
             c1 = 0xFF0E7490L, c2 = 0xFF06B6D4L, cat = "Çocuk", badge = "HD", logoUrl = "https://i.imgur.com/QLFmD6d.png",
             sources = listOf(StreamSource("HD 720p", "https://tv-trtcocuk.medya.trt.com.tr/master.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_114_brt_1_hd_k_br_s", number = 114, name = "BRT 1 HD Kıbrıs", logoText = "BRT\n1",
+            id = "ch_114_brt_1_hd_k_br_s", number = 115, name = "BRT 1 HD Kıbrıs", logoText = "BRT\n1",
             c1 = 0xFFBE185DL, c2 = 0xFFF472B6L, cat = "Kıbrıs", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://edge.kuzeykibrissmart.tv/brt1hd/bant1/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_115_brt_2_hd_k_br_s", number = 115, name = "BRT 2 HD Kıbrıs", logoText = "BRT\n2",
+            id = "ch_115_brt_2_hd_k_br_s", number = 116, name = "BRT 2 HD Kıbrıs", logoText = "BRT\n2",
             c1 = 0xFF1F2937L, c2 = 0xFF64748BL, cat = "Kıbrıs", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://edge.kuzeykibrissmart.tv/brt2hd/bant1/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_116_kanal_t_k_br_s", number = 116, name = "Kanal T Kıbrıs", logoText = "KANAL\nT",
+            id = "ch_116_kanal_t_k_br_s", number = 117, name = "Kanal T Kıbrıs", logoText = "KANAL\nT",
             c1 = 0xFFB45309L, c2 = 0xFFFACC15L, cat = "Kıbrıs", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://edge.kuzeykibrissmart.tv/kanalt/bant1/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_117_ktv_k_br_s_tv", number = 117, name = "KTV Kıbrıs TV", logoText = "KTV\nKIBRI",
+            id = "ch_117_ktv_k_br_s_tv", number = 118, name = "KTV Kıbrıs TV", logoText = "KTV\nKIBRI",
             c1 = 0xFFB91C1CL, c2 = 0xFFEF4444L, cat = "Kıbrıs", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://edge.kuzeykibrissmart.tv/kibristv/bant1/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_118_k_br_s_ada_tv", number = 118, name = "Kıbrıs Ada TV", logoText = "KIBRI\nADA",
+            id = "ch_118_k_br_s_ada_tv", number = 119, name = "Kıbrıs Ada TV", logoText = "KIBRI\nADA",
             c1 = 0xFF1E3A8AL, c2 = 0xFF3B82F6L, cat = "Kıbrıs", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://edge.kuzeykibrissmart.tv/adatv/bant1/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_119_k_br_s_gen__tv", number = 119, name = "Kıbrıs Genç TV", logoText = "KIBRI\nGENÇ",
+            id = "ch_119_k_br_s_gen__tv", number = 120, name = "Kıbrıs Genç TV", logoText = "KIBRI\nGENÇ",
             c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Kıbrıs", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://edge.kuzeykibrissmart.tv/kibrisgenctv/bant1/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_120_sim_tv_k_br_s", number = 120, name = "Sim TV Kıbrıs", logoText = "SIM\nKIBRI",
+            id = "ch_120_sim_tv_k_br_s", number = 121, name = "Sim TV Kıbrıs", logoText = "SIM\nKIBRI",
             c1 = 0xFF6B21A8L, c2 = 0xFFA855F7L, cat = "Kıbrıs", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://edge.kuzeykibrissmart.tv/simtv/bant1/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_121_tv_2020_k_br_s", number = 121, name = "TV 2020 Kıbrıs", logoText = "2020\nKIBRI",
+            id = "ch_121_tv_2020_k_br_s", number = 122, name = "TV 2020 Kıbrıs", logoText = "2020\nKIBRI",
             c1 = 0xFFC2410CL, c2 = 0xFFF97316L, cat = "Kıbrıs", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://edge.kuzeykibrissmart.tv/tv2020/bant1/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_122_al_zahra_t_rk_tv", number = 122, name = "Al Zahra Türk TV", logoText = "AL\nZAHRA",
+            id = "ch_122_al_zahra_t_rk_tv", number = 123, name = "Al Zahra Türk TV", logoText = "AL\nZAHRA",
             c1 = 0xFF0E7490L, c2 = 0xFF06B6D4L, cat = "Dini", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://live.al-zahratv.com/live/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_123_diyanet_tv", number = 123, name = "Diyanet TV", logoText = "DIYANE",
+            id = "ch_123_diyanet_tv", number = 124, name = "Diyanet TV", logoText = "DIYANE",
             c1 = 0xFFBE185DL, c2 = 0xFFF472B6L, cat = "Dini", badge = "FHD", logoUrl = "https://i.ibb.co/k9phm3v/diyanettv.png",
             sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://eustr73.mediatriple.net/videoonlylive/mtikoimxnztxlive/broadcast_5e3bf95a47e07.smil/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_124_dost_tv", number = 124, name = "Dost TV", logoText = "DOST",
+            id = "ch_124_dost_tv", number = 125, name = "Dost TV", logoText = "DOST",
             c1 = 0xFF1F2937L, c2 = 0xFF64748BL, cat = "Dini", badge = "HD", logoUrl = "https://i.ibb.co/jwgqtSB/dosttv.png",
             sources = listOf(StreamSource("Standart Akış", "https://dost.stream.emsal.im/tv/live.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_125_gonca_tv", number = 125, name = "Gonca TV", logoText = "GONCA",
+            id = "ch_125_gonca_tv", number = 126, name = "Gonca TV", logoText = "GONCA",
             c1 = 0xFFB45309L, c2 = 0xFFFACC15L, cat = "Dini", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://edge.taksimbilisim.com/goncatv/bant1/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_126_kanal_on4_tv", number = 126, name = "Kanal On4 TV", logoText = "KANAL\nON4",
+            id = "ch_126_kanal_on4_tv", number = 127, name = "Kanal On4 TV", logoText = "KANAL\nON4",
             c1 = 0xFFB91C1CL, c2 = 0xFFEF4444L, cat = "Dini", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://edge1.socialsmart.tv/on4/bant1/chunks.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_127_kud_s_tv", number = 127, name = "Kudüs TV", logoText = "KUDÜS",
+            id = "ch_127_kud_s_tv", number = 128, name = "Kudüs TV", logoText = "KUDÜS",
             c1 = 0xFF1E3A8AL, c2 = 0xFF3B82F6L, cat = "Dini", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://yayin30.haber100.com/live/kudustv/chunklist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_128_laleg_l_tv", number = 128, name = "Lalegül TV", logoText = "LALEGÜ",
+            id = "ch_128_laleg_l_tv", number = 129, name = "Lalegül TV", logoText = "LALEGÜ",
             c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Dini", badge = "HD", logoUrl = "https://i.ibb.co/wrL2khn/lalegul.png",
             sources = listOf(StreamSource("Standart Akış", "https://lbl.netmedya.net/hls/lalegultv.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_129_mukabele_tv", number = 129, name = "Mukabele TV", logoText = "MUKABE",
+            id = "ch_129_mukabele_tv", number = 130, name = "Mukabele TV", logoText = "MUKABE",
             c1 = 0xFF6B21A8L, c2 = 0xFFA855F7L, cat = "Dini", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/mukabele-tv/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_130_rehber_tv", number = 130, name = "Rehber TV", logoText = "REHBER",
+            id = "ch_130_rehber_tv", number = 131, name = "Rehber TV", logoText = "REHBER",
             c1 = 0xFFC2410CL, c2 = 0xFFF97316L, cat = "Dini", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://cdn4.yayin.com.tr/rehbertv/tracks-v1a1/mono.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_131_semerkand_tv", number = 131, name = "Semerkand TV", logoText = "SEMERK",
+            id = "ch_131_semerkand_tv", number = 132, name = "Semerkand TV", logoText = "SEMERK",
             c1 = 0xFF0E7490L, c2 = 0xFF06B6D4L, cat = "Dini", badge = "HD", logoUrl = "https://i.ibb.co/k8L3Mq1/semerkandtv.png",
             sources = listOf(StreamSource("Standart Akış", "https://b01c02nl.mediatriple.net/videoonlylive/mtisvwurbfcyslive/broadcast_58d915bd40efc.smil/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_132_semerkand_tv_way", number = 132, name = "Semerkand TV Way", logoText = "SEMER\nWAY",
+            id = "ch_132_semerkand_tv_way", number = 133, name = "Semerkand TV Way", logoText = "SEMER\nWAY",
             c1 = 0xFFBE185DL, c2 = 0xFFF472B6L, cat = "Dini", badge = "HD", logoUrl = "https://i.ibb.co/k8L3Mq1/semerkandtv.png",
             sources = listOf(StreamSource("Standart Akış", "https://b01c02nl.mediatriple.net/videoonlylive/mtisvwurbfcyslive/broadcast_6409fdaa68111.smil/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_133_vav_tv", number = 133, name = "Vav TV", logoText = "VAV",
+            id = "ch_133_vav_tv", number = 134, name = "Vav TV", logoText = "VAV",
             c1 = 0xFF1F2937L, c2 = 0xFF64748BL, cat = "Dini", badge = "FHD", logoUrl = "https://i.ibb.co/bj1H8LCm/vavtv.png",
             sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://trkvz-live.ercdn.net/vavtv/vavtv.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_134_aksu_tv_kahramanmara", number = 134, name = "Aksu TV Kahramanmaraş", logoText = "AKSU\nKAHRA",
+            id = "ch_134_aksu_tv_kahramanmara", number = 135, name = "Aksu TV Kahramanmaraş", logoText = "AKSU\nKAHRA",
             c1 = 0xFFB45309L, c2 = 0xFFFACC15L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_aksutv/aksutv/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_135_alanya_posta_tv", number = 135, name = "Alanya Posta TV", logoText = "ALANY\nPOSTA",
+            id = "ch_135_alanya_posta_tv", number = 136, name = "Alanya Posta TV", logoText = "ALANY\nPOSTA",
             c1 = 0xFFB91C1CL, c2 = 0xFFEF4444L, cat = "Yerel", badge = "FHD", logoUrl = "",
             sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://api-tv3.yayin.com.tr/postatv/postatv/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_136_alta__tv_ordu", number = 136, name = "Altaş TV Ordu", logoText = "ALTAŞ\nORDU",
+            id = "ch_136_alta__tv_ordu", number = 137, name = "Altaş TV Ordu", logoText = "ALTAŞ\nORDU",
             c1 = 0xFF1E3A8AL, c2 = 0xFF3B82F6L, cat = "Yerel", badge = "FHD", logoUrl = "",
             sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://edge1.socialsmart.tv/altastv/bant1/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_137_anadolu_net_tv", number = 137, name = "Anadolu Net TV", logoText = "ANADO\nNET",
+            id = "ch_137_anadolu_net_tv", number = 138, name = "Anadolu Net TV", logoText = "ANADO\nNET",
             c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_anadolunet/anadolunet/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_138_aras_tv", number = 138, name = "Aras TV", logoText = "ARAS",
+            id = "ch_138_aras_tv", number = 139, name = "Aras TV", logoText = "ARAS",
             c1 = 0xFF6B21A8L, c2 = 0xFFA855F7L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://2.rtmp.org/tv217/yayin.stream/chunklist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_139_art_world_tv", number = 139, name = "Art World TV", logoText = "ART\nWORLD",
+            id = "ch_139_art_world_tv", number = 140, name = "Art World TV", logoText = "ART\nWORLD",
             c1 = 0xFFC2410CL, c2 = 0xFFF97316L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_artworld/artworld/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_140_bir_tv", number = 140, name = "Bir TV", logoText = "BIR",
+            id = "ch_140_bir_tv", number = 141, name = "Bir TV", logoText = "BIR",
             c1 = 0xFF0E7490L, c2 = 0xFF06B6D4L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://edge1.socialsmart.tv/birtv/bant1/chunks.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_141_bodrum_kent_tv", number = 141, name = "Bodrum Kent TV", logoText = "BODRU\nKENT",
+            id = "ch_141_bodrum_kent_tv", number = 142, name = "Bodrum Kent TV", logoText = "BODRU\nKENT",
             c1 = 0xFFBE185DL, c2 = 0xFFF472B6L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://edge1.socialsmart.tv/bodrumkenttv/bant1/chunks.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_142_brtv_karab_k", number = 142, name = "BRTV Karabük", logoText = "BRTV\nKARAB",
+            id = "ch_142_brtv_karab_k", number = 143, name = "BRTV Karabük", logoText = "BRTV\nKARAB",
             c1 = 0xFF1F2937L, c2 = 0xFF64748BL, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_brtv/brtv/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_143_bursa_as_tv", number = 143, name = "Bursa AS TV", logoText = "BURSA\nAS",
+            id = "ch_143_bursa_as_tv", number = 144, name = "Bursa AS TV", logoText = "BURSA\nAS",
             c1 = 0xFFB45309L, c2 = 0xFFFACC15L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_astv/astv/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_144_bursa_line_tv", number = 144, name = "Bursa Line TV", logoText = "BURSA\nLINE",
+            id = "ch_144_bursa_line_tv", number = 145, name = "Bursa Line TV", logoText = "BURSA\nLINE",
             c1 = 0xFFB91C1CL, c2 = 0xFFEF4444L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://edge1.socialsmart.tv/linetv/bant1/chunks.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_145_bursa_on6_tv", number = 145, name = "Bursa On6 TV", logoText = "BURSA\nON6",
+            id = "ch_145_bursa_on6_tv", number = 146, name = "Bursa On6 TV", logoText = "BURSA\nON6",
             c1 = 0xFF1E3A8AL, c2 = 0xFF3B82F6L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_kanal16/kanal16/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_146_deha_tv_denizli", number = 146, name = "Deha TV Denizli", logoText = "DEHA\nDENIZ",
+            id = "ch_146_deha_tv_denizli", number = 147, name = "Deha TV Denizli", logoText = "DEHA\nDENIZ",
             c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_dehatv/dehatv/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_147_deniz_postas__tv_kay", number = 147, name = "Deniz Postası TV Kayseri", logoText = "DENIZ\nPOSTA",
+            id = "ch_147_deniz_postas__tv_kay", number = 148, name = "Deniz Postası TV Kayseri", logoText = "DENIZ\nPOSTA",
             c1 = 0xFF6B21A8L, c2 = 0xFFA855F7L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_denizpostasi/denizpostasi/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_148_derin_tv", number = 148, name = "Derin TV", logoText = "DERIN",
+            id = "ch_148_derin_tv", number = 149, name = "Derin TV", logoText = "DERIN",
             c1 = 0xFFC2410CL, c2 = 0xFFF97316L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://cdn4.yayin.com.tr/derintv/index.m3u8", StreamType.HLS))
         )
@@ -1732,187 +1748,187 @@ class TvRepository(private val appContext: Context) {
 
     private fun getBuiltInChannelsChunk5(): List<TvChannel> = listOf(
         ch(
-            id = "ch_149_dim_tv_alanya", number = 149, name = "Dim TV Alanya", logoText = "DIM\nALANY",
+            id = "ch_149_dim_tv_alanya", number = 150, name = "Dim TV Alanya", logoText = "DIM\nALANY",
             c1 = 0xFF0E7490L, c2 = 0xFF06B6D4L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_dimtv/dimtv/chunks.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_150_edirne_tv", number = 150, name = "Edirne TV", logoText = "EDIRNE",
+            id = "ch_150_edirne_tv", number = 151, name = "Edirne TV", logoText = "EDIRNE",
             c1 = 0xFFBE185DL, c2 = 0xFFF472B6L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://yayin.edirnetv.com:8088/hls/etvcanliyayin.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_151_er_tv_malatya", number = 151, name = "Er TV Malatya", logoText = "ER\nMALAT",
+            id = "ch_151_er_tv_malatya", number = 152, name = "Er TV Malatya", logoText = "ER\nMALAT",
             c1 = 0xFF1F2937L, c2 = 0xFF64748BL, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_ertv_new/ertv/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_152_erciyes_tv_kayseri", number = 152, name = "Erciyes TV Kayseri", logoText = "ERCIY\nKAYSE",
+            id = "ch_152_erciyes_tv_kayseri", number = 153, name = "Erciyes TV Kayseri", logoText = "ERCIY\nKAYSE",
             c1 = 0xFFB45309L, c2 = 0xFFFACC15L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_erciyestv/erciyestv/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_153_erci__tv_van", number = 153, name = "Erciş TV Van", logoText = "ERCIŞ\nVAN",
+            id = "ch_153_erci__tv_van", number = 154, name = "Erciş TV Van", logoText = "ERCIŞ\nVAN",
             c1 = 0xFFB91C1CL, c2 = 0xFFEF4444L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://cdn1-ercistv.yayin.com.tr/ercistv/amlst:ercistv/chunklist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_154_es_tv_eski_ehir", number = 154, name = "ES TV Eskişehir", logoText = "ES\nESKIŞ",
+            id = "ch_154_es_tv_eski_ehir", number = 155, name = "ES TV Eskişehir", logoText = "ES\nESKIŞ",
             c1 = 0xFF1E3A8AL, c2 = 0xFF3B82F6L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_estv/estv/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_155_etv_kayseri", number = 155, name = "ETV Kayseri", logoText = "ETV\nKAYSE",
+            id = "ch_155_etv_kayseri", number = 156, name = "ETV Kayseri", logoText = "ETV\nKAYSE",
             c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_etv/etv/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_156_etv_manisa", number = 156, name = "ETV Manisa", logoText = "ETV\nMANIS",
+            id = "ch_156_etv_manisa", number = 157, name = "ETV Manisa", logoText = "ETV\nMANIS",
             c1 = 0xFF6B21A8L, c2 = 0xFFA855F7L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://edge1.socialsmart.tv/manisaetv/bant1/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_157_fortuna_tv", number = 157, name = "Fortuna TV", logoText = "FORTUN",
+            id = "ch_157_fortuna_tv", number = 158, name = "Fortuna TV", logoText = "FORTUN",
             c1 = 0xFFC2410CL, c2 = 0xFFF97316L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://edge1.socialsmart.tv/ftvturk/bant1/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_158_frt_tv_fethiye", number = 158, name = "FRT TV Fethiye", logoText = "FRT\nFETHI",
+            id = "ch_158_frt_tv_fethiye", number = 159, name = "FRT TV Fethiye", logoText = "FRT\nFETHI",
             c1 = 0xFF0E7490L, c2 = 0xFF06B6D4L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://edge1.socialsmart.tv/frttv/bant1/chunks.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_159_grt_gaziantep_tv", number = 159, name = "GRT Gaziantep TV", logoText = "GRT\nGAZIA",
+            id = "ch_159_grt_gaziantep_tv", number = 160, name = "GRT Gaziantep TV", logoText = "GRT\nGAZIA",
             c1 = 0xFFBE185DL, c2 = 0xFFF472B6L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_grt/grt/chunks.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_160_gurbet_24_tv", number = 160, name = "Gurbet 24 TV", logoText = "GURBE\n24",
+            id = "ch_160_gurbet_24_tv", number = 161, name = "Gurbet 24 TV", logoText = "GURBE\n24",
             c1 = 0xFF1F2937L, c2 = 0xFF64748BL, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "http://cdn-gurbet24.yayin.com.tr/gurbet24/gurbet24/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_161_g_neydo_u_tv__anl_ur", number = 161, name = "Güneydoğu TV Şanlıurfa", logoText = "GÜNEY\nŞANLI",
+            id = "ch_161_g_neydo_u_tv__anl_ur", number = 162, name = "Güneydoğu TV Şanlıurfa", logoText = "GÜNEY\nŞANLI",
             c1 = 0xFFB45309L, c2 = 0xFFFACC15L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://edge1.socialsmart.tv/gtv/bant1/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_162_haber_61_trabzon", number = 162, name = "Haber 61 Trabzon", logoText = "HABER\n61",
+            id = "ch_162_haber_61_trabzon", number = 163, name = "Haber 61 Trabzon", logoText = "HABER\n61",
             c1 = 0xFFB91C1CL, c2 = 0xFFEF4444L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "http://win8.yayin.com.tr/haber61tv/smil:haber61tv.smil/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_163_hunat_tv_kayseri", number = 163, name = "Hunat TV Kayseri", logoText = "HUNAT\nKAYSE",
+            id = "ch_163_hunat_tv_kayseri", number = 164, name = "Hunat TV Kayseri", logoText = "HUNAT\nKAYSE",
             c1 = 0xFF1E3A8AL, c2 = 0xFF3B82F6L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_hunattv/hunattv/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_164_i_kra___diyar_tv", number = 164, name = "İkra / Diyar TV", logoText = "İKRA\n/",
+            id = "ch_164_i_kra___diyar_tv", number = 165, name = "İkra / Diyar TV", logoText = "İKRA\n/",
             c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_diyartv/diyartv/chunks.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_165_i_zmir_time_35_tv", number = 165, name = "İzmir Time 35 TV", logoText = "İZMIR\nTIME",
+            id = "ch_165_i_zmir_time_35_tv", number = 166, name = "İzmir Time 35 TV", logoText = "İZMIR\nTIME",
             c1 = 0xFF6B21A8L, c2 = 0xFFA855F7L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://cdn-time35tv.yayin.com.tr/time35tv/time35tv/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_166_i__el_tv_mersin", number = 166, name = "İçel TV Mersin", logoText = "İÇEL\nMERSI",
+            id = "ch_166_i__el_tv_mersin", number = 167, name = "İçel TV Mersin", logoText = "İÇEL\nMERSI",
             c1 = 0xFFC2410CL, c2 = 0xFFF97316L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://edge1.socialsmart.tv/iceltv/bant1/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_167_kanal_12", number = 167, name = "Kanal 12", logoText = "KANAL\n12",
+            id = "ch_167_kanal_12", number = 168, name = "Kanal 12", logoText = "KANAL\n12",
             c1 = 0xFF0E7490L, c2 = 0xFF06B6D4L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_kanal12/kanal12/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_168_kanal_13", number = 168, name = "Kanal 13", logoText = "KANAL\n13",
+            id = "ch_168_kanal_13", number = 169, name = "Kanal 13", logoText = "KANAL\n13",
             c1 = 0xFFBE185DL, c2 = 0xFFF472B6L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://cdn4.yayin.com.tr/kanal13/index.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_169_kanal_15_burdur", number = 169, name = "Kanal 15 Burdur", logoText = "KANAL\n15",
+            id = "ch_169_kanal_15_burdur", number = 170, name = "Kanal 15 Burdur", logoText = "KANAL\n15",
             c1 = 0xFF1F2937L, c2 = 0xFF64748BL, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_kanal15/kanal15/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_170_kanal_19__orum", number = 170, name = "Kanal 19 Çorum", logoText = "KANAL\n19",
+            id = "ch_170_kanal_19__orum", number = 171, name = "Kanal 19 Çorum", logoText = "KANAL\n19",
             c1 = 0xFFB45309L, c2 = 0xFFFACC15L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://live.euromediacenter.com/kanal19/tracks-v1a1/mono.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_171_kanal_23_elaz__", number = 171, name = "Kanal 23 Elazığ", logoText = "KANAL\n23",
+            id = "ch_171_kanal_23_elaz__", number = 172, name = "Kanal 23 Elazığ", logoText = "KANAL\n23",
             c1 = 0xFFB91C1CL, c2 = 0xFFEF4444L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_kanal23/kanal23/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_172_kanal_26_eski_ehir", number = 172, name = "Kanal 26 Eskişehir", logoText = "KANAL\n26",
+            id = "ch_172_kanal_26_eski_ehir", number = 173, name = "Kanal 26 Eskişehir", logoText = "KANAL\n26",
             c1 = 0xFF1E3A8AL, c2 = 0xFF3B82F6L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_kanal26/kanal26/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_173_kanal_3_afyon", number = 173, name = "Kanal 3 Afyon", logoText = "KANAL\n3",
+            id = "ch_173_kanal_3_afyon", number = 174, name = "Kanal 3 Afyon", logoText = "KANAL\n3",
             c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_kanal3/kanal3/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_174_kanal_32_isparta", number = 174, name = "Kanal 32 Isparta", logoText = "KANAL\n32",
+            id = "ch_174_kanal_32_isparta", number = 175, name = "Kanal 32 Isparta", logoText = "KANAL\n32",
             c1 = 0xFF6B21A8L, c2 = 0xFFA855F7L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://edge1.socialsmart.tv/kanal32/bant1/chunks.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_175_kanal_33_mersin", number = 175, name = "Kanal 33 Mersin", logoText = "KANAL\n33",
+            id = "ch_175_kanal_33_mersin", number = 176, name = "Kanal 33 Mersin", logoText = "KANAL\n33",
             c1 = 0xFFC2410CL, c2 = 0xFFF97316L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://edge1.socialsmart.tv/kanal33/bant1/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_176_kanal_34_i_stanbul", number = 176, name = "Kanal 34 İstanbul", logoText = "KANAL\n34",
+            id = "ch_176_kanal_34_i_stanbul", number = 177, name = "Kanal 34 İstanbul", logoText = "KANAL\n34",
             c1 = 0xFF0E7490L, c2 = 0xFF06B6D4L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://live.euromediacenter.com/kanal34/tracks-v1a1/mono.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_177_kanal_53_rize", number = 177, name = "Kanal 53 Rize", logoText = "KANAL\n53",
+            id = "ch_177_kanal_53_rize", number = 178, name = "Kanal 53 Rize", logoText = "KANAL\n53",
             c1 = 0xFFBE185DL, c2 = 0xFFF472B6L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://kanal53.ozelip.com:3448/hybrid/play.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_178_kanal_58_sivas", number = 178, name = "Kanal 58 Sivas", logoText = "KANAL\n58",
+            id = "ch_178_kanal_58_sivas", number = 179, name = "Kanal 58 Sivas", logoText = "KANAL\n58",
             c1 = 0xFF1F2937L, c2 = 0xFF64748BL, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_kanal58/kanal58/chunks.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_179_kanal_f_rat_elaz__", number = 179, name = "Kanal Fırat Elazığ", logoText = "KANAL\nFIRAT",
+            id = "ch_179_kanal_f_rat_elaz__", number = 180, name = "Kanal Fırat Elazığ", logoText = "KANAL\nFIRAT",
             c1 = 0xFFB45309L, c2 = 0xFFFACC15L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_kanalfirat/kanalfirat/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_180_kanal_plus", number = 180, name = "Kanal Plus", logoText = "KANAL\nPLUS",
+            id = "ch_180_kanal_plus", number = 181, name = "Kanal Plus", logoText = "KANAL\nPLUS",
             c1 = 0xFFB91C1CL, c2 = 0xFFEF4444L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_kanalplus/kanalplus/mpeg/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_181_kanal_urfa", number = 181, name = "Kanal Urfa", logoText = "KANAL\nURFA",
+            id = "ch_181_kanal_urfa", number = 182, name = "Kanal Urfa", logoText = "KANAL\nURFA",
             c1 = 0xFF1E3A8AL, c2 = 0xFF3B82F6L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://edge1.socialsmart.tv/kanalurfa/bant1/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_182_kanal_v_antalya", number = 182, name = "Kanal V Antalya", logoText = "KANAL\nV",
+            id = "ch_182_kanal_v_antalya", number = 183, name = "Kanal V Antalya", logoText = "KANAL\nV",
             c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_kanalv/kanalv/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_183_kanal_z_zonguldak", number = 183, name = "Kanal Z Zonguldak", logoText = "KANAL\nZ",
+            id = "ch_183_kanal_z_zonguldak", number = 184, name = "Kanal Z Zonguldak", logoText = "KANAL\nZ",
             c1 = 0xFF6B21A8L, c2 = 0xFFA855F7L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_kanalz/kanalz/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_184_kardelen_tv_erzurum", number = 184, name = "Kardelen TV Erzurum", logoText = "KARDE\nERZUR",
+            id = "ch_184_kardelen_tv_erzurum", number = 185, name = "Kardelen TV Erzurum", logoText = "KARDE\nERZUR",
             c1 = 0xFFC2410CL, c2 = 0xFFF97316L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://edge1.socialsmart.tv/kardelentv/bant1/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_185_kay_tv_kayseri", number = 185, name = "Kay TV Kayseri", logoText = "KAY\nKAYSE",
+            id = "ch_185_kay_tv_kayseri", number = 186, name = "Kay TV Kayseri", logoText = "KAY\nKAYSE",
             c1 = 0xFF0E7490L, c2 = 0xFF06B6D4L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_kaytv/kaytv/playlist.m3u8", StreamType.HLS))
         )
@@ -1920,187 +1936,192 @@ class TvRepository(private val appContext: Context) {
 
     private fun getBuiltInChannelsChunk6(): List<TvChannel> = listOf(
         ch(
-            id = "ch_186_kocaeli_tv", number = 186, name = "Kocaeli TV", logoText = "KOCAEL",
+            id = "ch_186_kocaeli_tv", number = 187, name = "Kocaeli TV", logoText = "KOCAEL",
             c1 = 0xFFBE185DL, c2 = 0xFFF472B6L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://edge1.socialsmart.tv/kocaelitv/bant1/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_187_kontv_konya", number = 187, name = "KonTV Konya", logoText = "KONTV\nKONYA",
+            id = "ch_187_kontv_konya", number = 188, name = "KonTV Konya", logoText = "KONTV\nKONYA",
             c1 = 0xFF1F2937L, c2 = 0xFF64748BL, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://canli.kontv.com.tr/live/kontv.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_188_konya_olay_tv", number = 188, name = "Konya Olay TV", logoText = "KONYA\nOLAY",
+            id = "ch_188_konya_olay_tv", number = 189, name = "Konya Olay TV", logoText = "KONYA\nOLAY",
             c1 = 0xFFB45309L, c2 = 0xFFFACC15L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_konyaolaytv/konyaolaytv/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_189_ktv_konya", number = 189, name = "KTV Konya", logoText = "KTV\nKONYA",
+            id = "ch_koza_tv", number = 190, name = "KOZA TV", logoText = "KOZA\nTV",
+            c1 = 0xFFC2410CL, c2 = 0xFFF97316L, cat = "Yerel", badge = "HD", logoUrl = "",
+            sources = listOf(StreamSource("Canlı Akış", "http://176.65.153.35:6003/play/a019/index.m3u8", StreamType.HLS))
+        ),
+        ch(
+            id = "ch_189_ktv_konya", number = 191, name = "KTV Konya", logoText = "KTV\nKONYA",
             c1 = 0xFFB91C1CL, c2 = 0xFFEF4444L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://cdn-ktvtv.yayin.com.tr/ktvtv/ktvtv/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_190_life_tv", number = 190, name = "Life TV", logoText = "LIFE",
+            id = "ch_190_life_tv", number = 192, name = "Life TV", logoText = "LIFE",
             c1 = 0xFF1E3A8AL, c2 = 0xFF3B82F6L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_lifetv/lifetv/chunks.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_191_mavi_karadeniz_tv", number = 191, name = "Mavi Karadeniz TV", logoText = "MAVI\nKARAD",
+            id = "ch_191_mavi_karadeniz_tv", number = 193, name = "Mavi Karadeniz TV", logoText = "MAVI\nKARAD",
             c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_mavikaradeniz/mavikaradeniz/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_192_mercan_tv_ad_yaman", number = 192, name = "Mercan TV Adıyaman", logoText = "MERCA\nADIYA",
+            id = "ch_192_mercan_tv_ad_yaman", number = 194, name = "Mercan TV Adıyaman", logoText = "MERCA\nADIYA",
             c1 = 0xFF6B21A8L, c2 = 0xFFA855F7L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_mercantv/mercantv/chunks.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_193_metropol_tv", number = 193, name = "Metropol TV", logoText = "METROP",
+            id = "ch_193_metropol_tv", number = 195, name = "Metropol TV", logoText = "METROP",
             c1 = 0xFFC2410CL, c2 = 0xFFF97316L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://edge1.socialsmart.tv/metropoltv/smil/metropoltv/bant1/chunks.m3u8?app=supersatforum", StreamType.HLS))
         ),
         ch(
-            id = "ch_194_mu_la_t_rk_tv", number = 194, name = "Muğla Türk TV", logoText = "MUĞLA\nTÜRK",
+            id = "ch_194_mu_la_t_rk_tv", number = 196, name = "Muğla Türk TV", logoText = "MUĞLA\nTÜRK",
             c1 = 0xFF0E7490L, c2 = 0xFF06B6D4L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://edge1.socialsmart.tv/muglaturk/bant1/chunks.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_195_olay_t_rk_kayseri", number = 195, name = "Olay Türk Kayseri", logoText = "OLAY\nTÜRK",
+            id = "ch_195_olay_t_rk_kayseri", number = 197, name = "Olay Türk Kayseri", logoText = "OLAY\nTÜRK",
             c1 = 0xFFBE185DL, c2 = 0xFFF472B6L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_olayturk/olayturk/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_196_ordu_bel_tv", number = 196, name = "Ordu Bel TV", logoText = "ORDU\nBEL",
+            id = "ch_196_ordu_bel_tv", number = 198, name = "Ordu Bel TV", logoText = "ORDU\nBEL",
             c1 = 0xFF1F2937L, c2 = 0xFF64748BL, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://cdn1-ordubeltv.yayin.com.tr/ordubeltv/ordubeltv/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_197_ruha_tv__anl_urfa", number = 197, name = "Ruha TV Şanlıurfa", logoText = "RUHA\nŞANLI",
+            id = "ch_197_ruha_tv__anl_urfa", number = 199, name = "Ruha TV Şanlıurfa", logoText = "RUHA\nŞANLI",
             c1 = 0xFFB45309L, c2 = 0xFFFACC15L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://ruhatv.radyotelekom.com.tr:3515/live/ruhatvlive.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_198_sa_l_k_channel", number = 198, name = "Sağlık Channel", logoText = "SAĞLI\nCHANN",
+            id = "ch_198_sa_l_k_channel", number = 200, name = "Sağlık Channel", logoText = "SAĞLI\nCHANN",
             c1 = 0xFFB91C1CL, c2 = 0xFFEF4444L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://live.euromediacenter.com/saglikchannel/tracks-v1a1/mono.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_199_su_tv", number = 199, name = "Su TV", logoText = "SU",
+            id = "ch_199_su_tv", number = 201, name = "Su TV", logoText = "SU",
             c1 = 0xFF1E3A8AL, c2 = 0xFF3B82F6L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_sutv/sutv/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_200_sun_tv_mersin", number = 200, name = "Sun TV Mersin", logoText = "SUN\nMERSI",
+            id = "ch_200_sun_tv_mersin", number = 202, name = "Sun TV Mersin", logoText = "SUN\nMERSI",
             c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_sunrtv/sunrtv/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_201_tempo_tv", number = 201, name = "Tempo TV", logoText = "TEMPO",
+            id = "ch_201_tempo_tv", number = 203, name = "Tempo TV", logoText = "TEMPO",
             c1 = 0xFF6B21A8L, c2 = 0xFFA855F7L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_tempotv/tempotv/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_202_ton_tv__anakkale", number = 202, name = "Ton TV Çanakkale", logoText = "TON\nÇANAK",
+            id = "ch_202_ton_tv__anakkale", number = 204, name = "Ton TV Çanakkale", logoText = "TON\nÇANAK",
             c1 = 0xFFC2410CL, c2 = 0xFFF97316L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_tontv/tontv/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_203_tv_41_kocaeli", number = 203, name = "TV 41 Kocaeli", logoText = "41\nKOCAE",
+            id = "ch_203_tv_41_kocaeli", number = 205, name = "TV 41 Kocaeli", logoText = "41\nKOCAE",
             c1 = 0xFF0E7490L, c2 = 0xFF06B6D4L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_tv41/tv41/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_204_tv_48_mu_la", number = 204, name = "TV 48 Muğla", logoText = "48\nMUĞLA",
+            id = "ch_204_tv_48_mu_la", number = 206, name = "TV 48 Muğla", logoText = "48\nMUĞLA",
             c1 = 0xFFBE185DL, c2 = 0xFFF472B6L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://ajansplay.com:5443/LiveApp/streams/tv48.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_205_tv_52_ordu", number = 205, name = "TV 52 Ordu", logoText = "52\nORDU",
+            id = "ch_205_tv_52_ordu", number = 207, name = "TV 52 Ordu", logoText = "52\nORDU",
             c1 = 0xFF1F2937L, c2 = 0xFF64748BL, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://edge1.socialsmart.tv/tv52/bant1/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_206_t_rk_klinikleri_tv", number = 206, name = "Türk Klinikleri TV", logoText = "TÜRK\nKLINI",
+            id = "ch_206_t_rk_klinikleri_tv", number = 208, name = "Türk Klinikleri TV", logoText = "TÜRK\nKLINI",
             c1 = 0xFFB45309L, c2 = 0xFFFACC15L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "http://mn-nl.mncdn.com/turkiyeklinikleri/smil:turkiyeklinikleri/chunklist_b3128000.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_207_urfanatik_tv", number = 207, name = "Urfanatik TV", logoText = "URFANA",
+            id = "ch_207_urfanatik_tv", number = 209, name = "Urfanatik TV", logoText = "URFANA",
             c1 = 0xFFB91C1CL, c2 = 0xFFEF4444L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_urfanatiktv/urfanatiktv/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_208_van_g_l__tv", number = 208, name = "Van Gölü TV", logoText = "VAN\nGÖLÜ",
+            id = "ch_208_van_g_l__tv", number = 210, name = "Van Gölü TV", logoText = "VAN\nGÖLÜ",
             c1 = 0xFF1E3A8AL, c2 = 0xFF3B82F6L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://cdn1-vangolutv.yayin.com.tr/vangolutv/amlst:vangolutv/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_209_vuslat_tv_malatya", number = 209, name = "Vuslat TV Malatya", logoText = "VUSLA\nMALAT",
+            id = "ch_209_vuslat_tv_malatya", number = 211, name = "Vuslat TV Malatya", logoText = "VUSLA\nMALAT",
             c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://live.artidijitalmedya.com/artidijital_vuslattv/vuslattv/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_210__ay_tv_rize", number = 210, name = "Çay TV Rize", logoText = "ÇAY\nRIZE",
+            id = "ch_210__ay_tv_rize", number = 212, name = "Çay TV Rize", logoText = "ÇAY\nRIZE",
             c1 = 0xFF6B21A8L, c2 = 0xFFA855F7L, cat = "Yerel", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://edge1.socialsmart.tv/caytv/bant1/playlist.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_211_belemt_rk_tv", number = 211, name = "Belemtürk TV", logoText = "BELEMT",
+            id = "ch_211_belemt_rk_tv", number = 213, name = "Belemtürk TV", logoText = "BELEMT",
             c1 = 0xFFC2410CL, c2 = 0xFFF97316L, cat = "Dünya", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://edge.socialsmart.tv/belemturktv/bant1/chunks.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_212_br_ksel_t_rk_tv", number = 212, name = "Brüksel Türk TV", logoText = "BRÜKS\nTÜRK",
+            id = "ch_212_br_ksel_t_rk_tv", number = 214, name = "Brüksel Türk TV", logoText = "BRÜKS\nTÜRK",
             c1 = 0xFF0E7490L, c2 = 0xFF06B6D4L, cat = "Dünya", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://live.euromediacenter.com/brukselturk/tracks-v1a1/mono.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_213_finest_tv", number = 213, name = "Finest TV", logoText = "FINEST",
+            id = "ch_213_finest_tv", number = 215, name = "Finest TV", logoText = "FINEST",
             c1 = 0xFFBE185DL, c2 = 0xFFF472B6L, cat = "Dünya", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "http://media.finest.tv/hls/live.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_214_fx_t_rkiye", number = 214, name = "FX Türkiye", logoText = "FX",
+            id = "ch_214_fx_t_rkiye", number = 216, name = "FX Türkiye", logoText = "FX",
             c1 = 0xFF1F2937L, c2 = 0xFF64748BL, cat = "Dünya", badge = "FHD", logoUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4d/FX_International_logo.svg/960px-FX_International_logo.svg.png",
             sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://saran-live.ercdn.net/fx/index.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_215_h_r_tv", number = 215, name = "Hür TV", logoText = "HÜR",
+            id = "ch_215_h_r_tv", number = 217, name = "Hür TV", logoText = "HÜR",
             c1 = 0xFFB45309L, c2 = 0xFFFACC15L, cat = "Dünya", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://live.euromediacenter.com/hurtv/tracks-v1a1/mono.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_216_i_svi_re_tv", number = 216, name = "İsviçre TV", logoText = "İSVIÇR",
+            id = "ch_216_i_svi_re_tv", number = 218, name = "İsviçre TV", logoText = "İSVIÇR",
             c1 = 0xFFB91C1CL, c2 = 0xFFEF4444L, cat = "Dünya", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://i41.ozelip.com:3269/hybrid/play.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_217_kanal_avrupa", number = 217, name = "Kanal Avrupa", logoText = "KANAL\nAVRUP",
+            id = "ch_217_kanal_avrupa", number = 219, name = "Kanal Avrupa", logoText = "KANAL\nAVRUP",
             c1 = 0xFF1E3A8AL, c2 = 0xFF3B82F6L, cat = "Dünya", badge = "HD", logoUrl = "",
             sources = listOf(StreamSource("Standart Akış", "https://api-tv27.yayin.com.tr/kanalavrupa/index.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_218_trt_arabi", number = 218, name = "TRT Arabi", logoText = "TRT\nARABI",
+            id = "ch_218_trt_arabi", number = 220, name = "TRT Arabi", logoText = "TRT\nARABI",
             c1 = 0xFF047857L, c2 = 0xFF10B981L, cat = "Dünya", badge = "HD", logoUrl = "https://i.imgur.com/yyhWOZs.png",
             sources = listOf(StreamSource("HD 720p", "https://tv-trtarabi.medya.trt.com.tr/master.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_219_trt_avaz", number = 219, name = "TRT Avaz", logoText = "TRT\nAVAZ",
+            id = "ch_219_trt_avaz", number = 221, name = "TRT Avaz", logoText = "TRT\nAVAZ",
             c1 = 0xFF6B21A8L, c2 = 0xFFA855F7L, cat = "Dünya", badge = "HD", logoUrl = "https://i.imgur.com/VhTwXu5.png",
             sources = listOf(StreamSource("HD 720p", "https://tv-trtavaz.medya.trt.com.tr/master.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_220_trt_kurd_", number = 220, name = "TRT Kurdî", logoText = "TRT\nKURDÎ",
+            id = "ch_220_trt_kurd_", number = 222, name = "TRT Kurdî", logoText = "TRT\nKURDÎ",
             c1 = 0xFFC2410CL, c2 = 0xFFF97316L, cat = "Dünya", badge = "HD", logoUrl = "https://i.imgur.com/6BpymfB.png",
             sources = listOf(StreamSource("HD 720p", "https://tv-trtkurdi.medya.trt.com.tr/master.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_221_trt_t_rk", number = 221, name = "TRT Türk", logoText = "TRT\nTÜRK",
+            id = "ch_221_trt_t_rk", number = 223, name = "TRT Türk", logoText = "TRT\nTÜRK",
             c1 = 0xFF0E7490L, c2 = 0xFF06B6D4L, cat = "Dünya", badge = "HD", logoUrl = "https://i.imgur.com/OSTOQNw.png",
             sources = listOf(StreamSource("HD 720p", "https://tv-trtturk.medya.trt.com.tr/master.m3u8", StreamType.HLS))
         ),
         ch(
-            id = "ch_222_trt_world", number = 222, name = "TRT World", logoText = "TRT\nWORLD",
+            id = "ch_222_trt_world", number = 224, name = "TRT World", logoText = "TRT\nWORLD",
             c1 = 0xFFBE185DL, c2 = 0xFFF472B6L, cat = "Dünya", badge = "FHD", logoUrl = "https://i.imgur.com/JEA2xpv.png",
             sources = listOf(StreamSource("FHD 1080p (En Yüksek Bitrate)", "https://tv-trtworld.medya.trt.com.tr/master.m3u8", StreamType.HLS))
         )
@@ -2260,7 +2281,7 @@ class TvViewModel(private val repository: TvRepository) : ViewModel() {
     private val _isMultiViewFourGrid = MutableStateFlow(true)
     private val _searchQuery = MutableStateFlow("")
     private val _sleepTimerMinutes = MutableStateFlow<Int?>(null)
-    private val _localWebServerUrl = MutableStateFlow("")
+    private val _localWebServerUrl = MutableStateFlow("http://${LocalTransferWebServer.getLocalWifiIpAddress()}:8585")
     private val _isLoadingM3u = MutableStateFlow(false)
     private val _statusMessage = MutableStateFlow<String?>(null)
     private val _extraState = MutableStateFlow(
@@ -2396,7 +2417,8 @@ class TvViewModel(private val repository: TvRepository) : ViewModel() {
             hiddenChannelIds = _extraState.value.hiddenChannelIds,
             preferredSources = _extraState.value.preferredSources,
             preferredScales = _extraState.value.preferredScales,
-            autoStartLastChannel = _extraState.value.autoStartLastChannel
+            autoStartLastChannel = _extraState.value.autoStartLastChannel,
+            localWebServerUrl = _localWebServerUrl.value
         )
     )
 
@@ -2426,6 +2448,9 @@ class TvViewModel(private val repository: TvRepository) : ViewModel() {
     fun dismissLandingAndOpenTab(tab: MainNavTab = MainNavTab.ALL_CHANNELS) {
         _selectedTab.value = tab
         _showLandingScreen.value = false
+        if (tab == MainNavTab.M3U_MANAGER) {
+            refreshWifiTransferServer()
+        }
     }
 
     fun openLandingScreen() {
@@ -2434,18 +2459,38 @@ class TvViewModel(private val repository: TvRepository) : ViewModel() {
         _showLandingScreen.value = true
     }
 
+    fun refreshWifiTransferServer() {
+        val ip = LocalTransferWebServer.getLocalWifiIpAddress()
+        val currentSocket = webServerSocket
+        if (currentSocket != null && !currentSocket.isClosed && currentSocket.isBound) {
+            val activePort = currentSocket.localPort.takeIf { it > 0 } ?: 8585
+            _localWebServerUrl.value = "http://$ip:$activePort"
+        } else {
+            startLocalWifiTransferServer()
+        }
+    }
+
     private fun startLocalWifiTransferServer() {
         viewModelScope.launch(Dispatchers.IO) {
+            val ip = LocalTransferWebServer.getLocalWifiIpAddress()
+            _localWebServerUrl.value = "http://$ip:8585"
             try {
-                val ip = LocalTransferWebServer.getLocalWifiIpAddress()
-                val port = 8585
                 try { webServerSocket?.close() } catch (_: Exception) {}
-                val server = ServerSocket().apply {
-                    reuseAddress = true
-                    bind(InetSocketAddress(port))
+                var boundServer: ServerSocket? = null
+                var boundPort = 8585
+                for (candidatePort in 8585..8595) {
+                    try {
+                        val s = ServerSocket()
+                        s.reuseAddress = true
+                        s.bind(InetSocketAddress(candidatePort))
+                        boundServer = s
+                        boundPort = candidatePort
+                        break
+                    } catch (_: Exception) {}
                 }
+                val server = boundServer ?: return@launch
                 webServerSocket = server
-                _localWebServerUrl.value = "http://$ip:$port"
+                _localWebServerUrl.value = "http://${LocalTransferWebServer.getLocalWifiIpAddress()}:$boundPort"
 
                 while (isActive && !server.isClosed) {
                     val client = server.accept()
@@ -2547,6 +2592,9 @@ class TvViewModel(private val repository: TvRepository) : ViewModel() {
         _selectedTab.value = tab
         _selectedCategory.value = "Tümü"
         _showLandingScreen.value = false
+        if (tab == MainNavTab.M3U_MANAGER) {
+            refreshWifiTransferServer()
+        }
     }
 
     fun selectCategory(category: String) {
@@ -3262,7 +3310,7 @@ fun RedoXLandingScreen(
                         onClick = onToggleAutoStart
                     )
                     Text(
-                        text = "Chromecast 4K • RedoX TV v1.1 Release",
+                        text = "Chromecast 4K • RedoX TV v1.3 Release",
                         color = TvThemeColors.BullRedBright,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold
@@ -3657,6 +3705,7 @@ fun RedoXTvRootScreen(
                                 onBackupToDevice = { viewModel.backupSettingsToDevice() },
                                 onRestoreFromDevice = { viewModel.restoreSettingsFromDevice() },
                                 onRestoreHiddenChannels = { viewModel.restoreAllHiddenChannels() },
+                                onRefreshQrServer = { viewModel.refreshWifiTransferServer() },
                                 onRemovePlaylist = { id -> viewModel.removePlaylist(id) },
                                 onRefreshAll = { viewModel.reloadAllChannelsAndEpg() }
                             )
@@ -5649,6 +5698,7 @@ fun M3uPlaylistManagerScreen(
     onBackupToDevice: () -> Unit = {},
     onRestoreFromDevice: () -> Unit = {},
     onRestoreHiddenChannels: () -> Unit = {},
+    onRefreshQrServer: () -> Unit = {},
     onRemovePlaylist: (String) -> Unit,
     onRefreshAll: () -> Unit
 ) {
@@ -5665,13 +5715,50 @@ fun M3uPlaylistManagerScreen(
 
     var newPinInput by remember { mutableStateOf(state.parentalPin) }
 
+    // Kumanda Aşağı/Yukarı ok tuşlarının hiçbir sekmede takılmaması için açık FocusRequester zinciri
+    val tab0FocusRequester = remember { FocusRequester() }
+    val tab1FocusRequester = remember { FocusRequester() }
+    val tab2FocusRequester = remember { FocusRequester() }
+    val tab3FocusRequester = remember { FocusRequester() }
+
+    val field1FocusRequester = remember { FocusRequester() }
+    val field2FocusRequester = remember { FocusRequester() }
+    val field3FocusRequester = remember { FocusRequester() }
+    val field4FocusRequester = remember { FocusRequester() }
+    val submitFocusRequester = remember { FocusRequester() }
+    val bottomBackupFocusRequester = remember { FocusRequester() }
+
+    val activeTabRequester = when (activeSubTab) {
+        0 -> tab0FocusRequester
+        1 -> tab1FocusRequester
+        2 -> tab2FocusRequester
+        else -> tab3FocusRequester
+    }
+
+    // M3U ekranı açıldığında QR web sunucusunun aktif olduğundan emin ol
+    LaunchedEffect(Unit) {
+        onRefreshQrServer()
+    }
+
+    val effectiveWebUrl = remember(state.localWebServerUrl) {
+        state.localWebServerUrl.ifBlank {
+            "http://${LocalTransferWebServer.getLocalWifiIpAddress()}:8585"
+        }
+    }
+
+    fun focusFirstFieldOfCurrentSubTab() {
+        try {
+            field1FocusRequester.requestFocus()
+        } catch (_: Exception) {}
+    }
+
     Row(
         modifier = Modifier.fillMaxSize(),
         horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Column(
             modifier = Modifier
-                .weight(1.2f)
+                .weight(1.22f)
                 .fillMaxHeight()
                 .clip(RoundedCornerShape(16.dp))
                 .background(TvThemeColors.SurfaceCard)
@@ -5681,28 +5768,73 @@ fun M3uPlaylistManagerScreen(
             Column {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TvCompactChipButton(
-                        text = "Dosya & İçe Aktar",
+                        text = if (activeSubTab == 0) "✓ Dosya & İçe Aktar" else "Dosya & İçe Aktar",
                         icon = Icons.Rounded.FolderOpen,
-                        onClick = { activeSubTab = 0 }
+                        onClick = {
+                            activeSubTab = 0
+                            focusFirstFieldOfCurrentSubTab()
+                        },
+                        modifier = Modifier
+                            .focusRequester(tab0FocusRequester)
+                            .onPreviewKeyEvent { ev ->
+                                if (ev.nativeKeyEvent.action == KeyEvent.ACTION_DOWN && ev.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
+                                    focusFirstFieldOfCurrentSubTab()
+                                    true
+                                } else false
+                            }
                     )
                     TvCompactChipButton(
-                        text = "Xtream Codes API",
+                        text = if (activeSubTab == 1) "✓ Xtream Codes API" else "Xtream Codes API",
                         icon = Icons.Rounded.Verified,
-                        onClick = { activeSubTab = 1 }
+                        onClick = {
+                            activeSubTab = 1
+                            focusFirstFieldOfCurrentSubTab()
+                        },
+                        modifier = Modifier
+                            .focusRequester(tab1FocusRequester)
+                            .onPreviewKeyEvent { ev ->
+                                if (ev.nativeKeyEvent.action == KeyEvent.ACTION_DOWN && ev.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
+                                    focusFirstFieldOfCurrentSubTab()
+                                    true
+                                } else false
+                            }
                     )
                     TvCompactChipButton(
-                        text = "M3U URL",
+                        text = if (activeSubTab == 2) "✓ M3U URL" else "M3U URL",
                         icon = Icons.Rounded.CloudDownload,
-                        onClick = { activeSubTab = 2 }
+                        onClick = {
+                            activeSubTab = 2
+                            focusFirstFieldOfCurrentSubTab()
+                        },
+                        modifier = Modifier
+                            .focusRequester(tab2FocusRequester)
+                            .onPreviewKeyEvent { ev ->
+                                if (ev.nativeKeyEvent.action == KeyEvent.ACTION_DOWN && ev.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
+                                    focusFirstFieldOfCurrentSubTab()
+                                    true
+                                } else false
+                            }
                     )
                     TvCompactChipButton(
-                        text = "Telefon QR & PIN",
+                        text = if (activeSubTab == 3) "✓ Telefon QR & PIN" else "Telefon QR & PIN",
                         icon = Icons.Rounded.SettingsRemote,
-                        onClick = { activeSubTab = 3 }
+                        onClick = {
+                            activeSubTab = 3
+                            onRefreshQrServer()
+                            focusFirstFieldOfCurrentSubTab()
+                        },
+                        modifier = Modifier
+                            .focusRequester(tab3FocusRequester)
+                            .onPreviewKeyEvent { ev ->
+                                if (ev.nativeKeyEvent.action == KeyEvent.ACTION_DOWN && ev.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
+                                    focusFirstFieldOfCurrentSubTab()
+                                    true
+                                } else false
+                            }
                     )
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
                 when (activeSubTab) {
                     0 -> {
@@ -5724,60 +5856,105 @@ fun M3uPlaylistManagerScreen(
                                 text = "Dosyadan M3U Seç",
                                 icon = Icons.Rounded.FolderOpen,
                                 isPrimary = true,
-                                onClick = onPickLocalFile
+                                onClick = onPickLocalFile,
+                                modifier = Modifier
+                                    .focusRequester(field1FocusRequester)
+                                    .onPreviewKeyEvent { ev ->
+                                        if (ev.nativeKeyEvent.action == KeyEvent.ACTION_DOWN) {
+                                            when (ev.nativeKeyEvent.keyCode) {
+                                                KeyEvent.KEYCODE_DPAD_UP -> {
+                                                    try { activeTabRequester.requestFocus() } catch (_: Exception) {}
+                                                    true
+                                                }
+                                                KeyEvent.KEYCODE_DPAD_DOWN -> {
+                                                    try { bottomBackupFocusRequester.requestFocus() } catch (_: Exception) {}
+                                                    true
+                                                }
+                                                else -> false
+                                            }
+                                        } else false
+                                    }
                             )
                             TvActionButton(
                                 text = "Download Klasörünü Tara",
                                 icon = Icons.Rounded.ManageSearch,
                                 isPrimary = false,
-                                onClick = onScanDownloadFolder
+                                onClick = onScanDownloadFolder,
+                                modifier = Modifier.onPreviewKeyEvent { ev ->
+                                    if (ev.nativeKeyEvent.action == KeyEvent.ACTION_DOWN) {
+                                        when (ev.nativeKeyEvent.keyCode) {
+                                            KeyEvent.KEYCODE_DPAD_UP -> {
+                                                try { activeTabRequester.requestFocus() } catch (_: Exception) {}
+                                                true
+                                            }
+                                            KeyEvent.KEYCODE_DPAD_DOWN -> {
+                                                try { bottomBackupFocusRequester.requestFocus() } catch (_: Exception) {}
+                                                true
+                                            }
+                                            else -> false
+                                        }
+                                    } else false
+                                }
                             )
                         }
                     }
 
                     1 -> {
                         Text(
-                            text = "Xtream Codes API Hesabı Bağla",
+                            text = "Xtream Codes API Hesabı Bağla (▲/▼ ile Kutular Arası Geçin, OK ile Yazın)",
                             color = TvThemeColors.BullRedBright,
-                            fontSize = 15.sp,
+                            fontSize = 14.sp,
                             fontWeight = FontWeight.Bold
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         TvInputField(
-                            label = "Paket Adı",
+                            label = "1. Paket Adı",
                             value = xtreamName,
                             placeholder = "Örn: VIP Xtream Hesabım",
-                            onValueChange = { xtreamName = it }
+                            onValueChange = { xtreamName = it },
+                            focusRequester = field1FocusRequester,
+                            upFocusRequester = activeTabRequester,
+                            downFocusRequester = field2FocusRequester
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         TvInputField(
-                            label = "Sunucu Adresi (http://sunucu:port)",
+                            label = "2. Sunucu Adresi (http://sunucu:port)",
                             value = xtreamServer,
                             placeholder = "http://ornek-iptv.com:8080",
-                            onValueChange = { xtreamServer = it }
+                            onValueChange = { xtreamServer = it },
+                            focusRequester = field2FocusRequester,
+                            upFocusRequester = field1FocusRequester,
+                            downFocusRequester = field3FocusRequester,
+                            showUrlQuickChips = true
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             Box(modifier = Modifier.weight(1f)) {
                                 TvInputField(
-                                    label = "Kullanıcı Adı",
+                                    label = "3. Kullanıcı Adı",
                                     value = xtreamUser,
                                     placeholder = "kullanici_adi",
-                                    onValueChange = { xtreamUser = it }
+                                    onValueChange = { xtreamUser = it },
+                                    focusRequester = field3FocusRequester,
+                                    upFocusRequester = field2FocusRequester,
+                                    downFocusRequester = submitFocusRequester
                                 )
                             }
                             Box(modifier = Modifier.weight(1f)) {
                                 TvInputField(
-                                    label = "Şifre",
+                                    label = "4. Şifre",
                                     value = xtreamPass,
                                     placeholder = "sifre",
-                                    onValueChange = { xtreamPass = it }
+                                    onValueChange = { xtreamPass = it },
+                                    focusRequester = field4FocusRequester,
+                                    upFocusRequester = field2FocusRequester,
+                                    downFocusRequester = submitFocusRequester
                                 )
                             }
                         }
-                        Spacer(modifier = Modifier.height(10.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
                         TvActionButton(
-                            text = "Xtream Hesabını Bağla",
+                            text = "⚡ Xtream Hesabını Bağla ve Kanalları Yükle",
                             icon = Icons.Rounded.Verified,
                             isPrimary = true,
                             onClick = {
@@ -5785,41 +5962,69 @@ fun M3uPlaylistManagerScreen(
                                     onAddXtreamAccount(xtreamName, xtreamServer, xtreamUser, xtreamPass)
                                     xtreamName = ""; xtreamServer = ""; xtreamUser = ""; xtreamPass = ""
                                 }
-                            }
+                            },
+                            modifier = Modifier
+                                .focusRequester(submitFocusRequester)
+                                .onPreviewKeyEvent { ev ->
+                                    if (ev.nativeKeyEvent.action == KeyEvent.ACTION_DOWN) {
+                                        when (ev.nativeKeyEvent.keyCode) {
+                                            KeyEvent.KEYCODE_DPAD_UP -> {
+                                                try { field3FocusRequester.requestFocus() } catch (_: Exception) {}
+                                                true
+                                            }
+                                            KeyEvent.KEYCODE_DPAD_DOWN -> {
+                                                try { bottomBackupFocusRequester.requestFocus() } catch (_: Exception) {}
+                                                true
+                                            }
+                                            else -> false
+                                        }
+                                    } else false
+                                }
                         )
                     }
 
                     2 -> {
                         Text(
-                            text = "Uzaktan M3U / M3U8 URL Ekle",
+                            text = "Uzaktan M3U / M3U8 URL Ekle (▲/▼ ile Kutular Arası Geçin, OK ile Yazın)",
                             color = TvThemeColors.BullRedBright,
-                            fontSize = 15.sp,
+                            fontSize = 14.sp,
                             fontWeight = FontWeight.Bold
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         TvInputField(
-                            label = "Liste Adı",
+                            label = "1. Liste Adı (İsteğe Bağlı)",
                             value = nameInput,
-                            placeholder = "Örn: Ev IPTV Listem",
-                            onValueChange = { nameInput = it }
+                            placeholder = "Örn: Ev IPTV Listem (Boş bırakabilirsiniz)",
+                            onValueChange = { nameInput = it },
+                            focusRequester = field1FocusRequester,
+                            upFocusRequester = activeTabRequester,
+                            downFocusRequester = field2FocusRequester
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         TvInputField(
-                            label = "M3U / M3U8 URL Adresi",
+                            label = "2. M3U / M3U8 URL Adresi (OK Tuşuyla Yazın veya Panodan Yapıştırın)",
                             value = m3uUrlInput,
                             placeholder = "https://ornek.com/playlist.m3u8",
-                            onValueChange = { m3uUrlInput = it }
+                            onValueChange = { m3uUrlInput = it },
+                            focusRequester = field2FocusRequester,
+                            upFocusRequester = field1FocusRequester,
+                            downFocusRequester = field3FocusRequester,
+                            showUrlQuickChips = true
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         TvInputField(
-                            label = "XMLTV EPG URL (İsteğe Bağlı)",
+                            label = "3. XMLTV EPG URL (İsteğe Bağlı)",
                             value = epgUrlInput,
                             placeholder = "https://ornek.com/epg.xml",
-                            onValueChange = { epgUrlInput = it }
+                            onValueChange = { epgUrlInput = it },
+                            focusRequester = field3FocusRequester,
+                            upFocusRequester = field2FocusRequester,
+                            downFocusRequester = submitFocusRequester,
+                            showUrlQuickChips = true
                         )
-                        Spacer(modifier = Modifier.height(10.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
                         TvActionButton(
-                            text = "M3U URL Kaydet ve Yükle",
+                            text = "🚀 M3U URL Kaydet ve Kanalları Yükle",
                             icon = Icons.Rounded.CloudDownload,
                             isPrimary = true,
                             onClick = {
@@ -5827,7 +6032,24 @@ fun M3uPlaylistManagerScreen(
                                     onAddRemotePlaylist(nameInput, m3uUrlInput, epgUrlInput)
                                     nameInput = ""; m3uUrlInput = ""; epgUrlInput = ""
                                 }
-                            }
+                            },
+                            modifier = Modifier
+                                .focusRequester(submitFocusRequester)
+                                .onPreviewKeyEvent { ev ->
+                                    if (ev.nativeKeyEvent.action == KeyEvent.ACTION_DOWN) {
+                                        when (ev.nativeKeyEvent.keyCode) {
+                                            KeyEvent.KEYCODE_DPAD_UP -> {
+                                                try { field3FocusRequester.requestFocus() } catch (_: Exception) {}
+                                                true
+                                            }
+                                            KeyEvent.KEYCODE_DPAD_DOWN -> {
+                                                try { bottomBackupFocusRequester.requestFocus() } catch (_: Exception) {}
+                                                true
+                                            }
+                                            else -> false
+                                        }
+                                    } else false
+                                }
                         )
                     }
 
@@ -5836,7 +6058,7 @@ fun M3uPlaylistManagerScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(14.dp)
                         ) {
-                            QrMatrixVisualBox(seedText = state.localWebServerUrl)
+                            QrMatrixVisualBox(seedText = effectiveWebUrl)
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = "Telefondan Kablosuz M3U & Xtream Gönder",
@@ -5845,37 +6067,63 @@ fun M3uPlaylistManagerScreen(
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
-                                    text = "Aynı Wi-Fi'daki telefonunuzdan şu adrese girerek M3U gönderebilirsiniz:",
+                                    text = "Telefon kameranızla QR kodu okutun veya tarayıcıdan şu adrese girin:",
                                     color = TvThemeColors.TextSecondary,
                                     fontSize = 11.sp
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = state.localWebServerUrl.ifBlank { "http://192.168.1.x:8585" },
+                                    text = effectiveWebUrl,
                                     color = TvThemeColors.AccentCyan,
-                                    fontSize = 14.sp,
+                                    fontSize = 15.sp,
                                     fontWeight = FontWeight.ExtraBold
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                TvCompactChipButton(
+                                    text = "🔄 QR & Sunucuyu Yenile",
+                                    icon = Icons.Rounded.Refresh,
+                                    onClick = onRefreshQrServer
                                 )
                             }
                         }
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(10.dp))
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            Box(modifier = Modifier.width(160.dp)) {
+                            Box(modifier = Modifier.width(210.dp)) {
                                 TvInputField(
-                                    label = "4 Haneli PIN",
+                                    label = "4 Haneli Ebeveyn PIN Kodu",
                                     value = newPinInput,
                                     placeholder = "0000",
-                                    onValueChange = { if (it.length <= 4) newPinInput = it }
+                                    onValueChange = { if (it.length <= 4) newPinInput = it },
+                                    focusRequester = field1FocusRequester,
+                                    upFocusRequester = activeTabRequester,
+                                    downFocusRequester = submitFocusRequester
                                 )
                             }
                             TvActionButton(
                                 text = "PIN Güncelle",
                                 icon = Icons.Rounded.Verified,
                                 isPrimary = false,
-                                onClick = { onUpdatePin(newPinInput) }
+                                onClick = { onUpdatePin(newPinInput) },
+                                modifier = Modifier
+                                    .focusRequester(submitFocusRequester)
+                                    .onPreviewKeyEvent { ev ->
+                                        if (ev.nativeKeyEvent.action == KeyEvent.ACTION_DOWN) {
+                                            when (ev.nativeKeyEvent.keyCode) {
+                                                KeyEvent.KEYCODE_DPAD_UP -> {
+                                                    try { field1FocusRequester.requestFocus() } catch (_: Exception) {}
+                                                    true
+                                                }
+                                                KeyEvent.KEYCODE_DPAD_DOWN -> {
+                                                    try { bottomBackupFocusRequester.requestFocus() } catch (_: Exception) {}
+                                                    true
+                                                }
+                                                else -> false
+                                            }
+                                        } else false
+                                    }
                             )
                         }
                     }
@@ -5887,7 +6135,8 @@ fun M3uPlaylistManagerScreen(
                     TvCompactChipButton(
                         text = "💾 Yedek Al (Download)",
                         icon = Icons.Rounded.CloudDownload,
-                        onClick = onBackupToDevice
+                        onClick = onBackupToDevice,
+                        modifier = Modifier.focusRequester(bottomBackupFocusRequester)
                     )
                     TvCompactChipButton(
                         text = "♻️ Yedekten Geri Yükle",
@@ -5919,21 +6168,67 @@ fun M3uPlaylistManagerScreen(
             }
         }
 
+        // SAĞ PANEL: HER ZAMAN GÖRÜNÜR GERÇEK QR KOD KARTI + EKLENEN M3U LİSTELERİ
         Column(
             modifier = Modifier
-                .weight(0.8f)
+                .weight(0.82f)
                 .fillMaxHeight()
                 .clip(RoundedCornerShape(16.dp))
                 .background(TvThemeColors.SurfaceCard)
-                .padding(16.dp)
+                .padding(14.dp)
         ) {
+            // Sabit QR ve Telefon Bağlantı Kartı (Hangi sekmede olursanız olun her zaman görünür!)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(TvThemeColors.SurfaceElevated)
+                    .border(1.5.dp, TvThemeColors.BullRedBright.copy(alpha = 0.55f), RoundedCornerShape(14.dp))
+                    .padding(10.dp)
+            ) {
+                QrMatrixVisualBox(seedText = effectiveWebUrl)
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "📱 Telefondan QR ile M3U Yükle",
+                        color = TvThemeColors.BullRedBright,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        maxLines = 1
+                    )
+                    Text(
+                        text = "Kamerayla QR okutun veya telefondan girin:",
+                        color = TvThemeColors.TextSecondary,
+                        fontSize = 10.sp,
+                        maxLines = 1
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = effectiveWebUrl,
+                        color = TvThemeColors.AccentCyan,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        maxLines = 1
+                    )
+                    Spacer(modifier = Modifier.height(5.dp))
+                    TvCompactChipButton(
+                        text = "🔄 QR Yenile",
+                        icon = Icons.Rounded.QrCode2,
+                        onClick = onRefreshQrServer
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
             Text(
                 text = "Eklenen M3U Listeleri (${state.playlists.size})",
                 color = TvThemeColors.TextPrimary,
-                fontSize = 16.sp,
+                fontSize = 14.sp,
                 fontWeight = FontWeight.Bold
             )
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
             if (state.playlists.isEmpty()) {
                 Box(
@@ -5941,7 +6236,7 @@ fun M3uPlaylistManagerScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "Henüz özel liste eklenmedi.\nEklediğiniz listeler 'Özel M3U Kanalları' menüsünde görünecektir.",
+                        text = "Henüz özel liste eklenmedi.\nÜstteki QR kodu telefonunuzla okutarak veya soldan URL/Dosya seçerek hemen ekleyebilirsiniz.",
                         color = TvThemeColors.TextSecondary,
                         fontSize = 11.sp,
                         textAlign = TextAlign.Center
@@ -5988,28 +6283,211 @@ fun M3uPlaylistManagerScreen(
     }
 }
 
+/**
+ * Gerçek ISO/IEC 18004 Version 2-L (25x25) Reed-Solomon QR Kod Üretici.
+ * Telefon kamerası tutulduğunda doğrudan http://<TV-IP>:8585 adresini okur!
+ */
+object IsoQrCodeV2Generator {
+    fun encodeUrlTo25x25Matrix(url: String): Array<IntArray> {
+        val size = 25
+        val matrix = Array(size) { IntArray(size) }
+        val reserved = Array(size) { BooleanArray(size) }
+
+        fun placeFinder(r0: Int, c0: Int) {
+            for (r in 0..6) {
+                for (c in 0..6) {
+                    val isDark = r == 0 || r == 6 || c == 0 || c == 6 || (r in 2..4 && c in 2..4)
+                    matrix[r0 + r][c0 + c] = if (isDark) 1 else 0
+                    reserved[r0 + r][c0 + c] = true
+                }
+            }
+            for (r in -1..7) {
+                for (c in -1..7) {
+                    val rr = r0 + r
+                    val cc = c0 + c
+                    if (rr in 0 until size && cc in 0 until size && !reserved[rr][cc]) {
+                        matrix[rr][cc] = 0
+                        reserved[rr][cc] = true
+                    }
+                }
+            }
+        }
+
+        placeFinder(0, 0)
+        placeFinder(0, 18)
+        placeFinder(18, 0)
+
+        // Alignment pattern at (16..20, 16..20)
+        for (r in 0..4) {
+            for (c in 0..4) {
+                val isDark = r == 0 || r == 4 || c == 0 || c == 4 || (r == 2 && c == 2)
+                matrix[16 + r][16 + c] = if (isDark) 1 else 0
+                reserved[16 + r][16 + c] = true
+            }
+        }
+
+        // Timing patterns (row 6 and col 6)
+        for (i in 8..16) {
+            val bit = if (i % 2 == 0) 1 else 0
+            if (!reserved[6][i]) {
+                matrix[6][i] = bit
+                reserved[6][i] = true
+            }
+            if (!reserved[i][6]) {
+                matrix[i][6] = bit
+                reserved[i][6] = true
+            }
+        }
+
+        // Format info reservation & Dark module
+        for (i in 0..8) {
+            if (i != 6) {
+                reserved[8][i] = true
+                reserved[i][8] = true
+            }
+        }
+        for (i in 0..7) {
+            reserved[8][17 + i] = true
+            reserved[17 + i][8] = true
+        }
+        matrix[17][8] = 1
+
+        // Encode payload bytes (up to 32 bytes for Version 2-L)
+        val cleanUrl = url.ifBlank { "http://192.168.1.1:8585" }
+        val rawBytes = cleanUrl.toByteArray(Charsets.UTF_8).take(32).map { it.toInt() and 0xFF }
+        val bits = ArrayList<Int>(360)
+        fun pushBits(value: Int, count: Int) {
+            for (i in count - 1 downTo 0) {
+                bits.add((value shr i) and 1)
+            }
+        }
+
+        pushBits(0b0100, 4)
+        pushBits(rawBytes.size, 8)
+        for (b in rawBytes) pushBits(b, 8)
+        val term = minOf(4, 272 - bits.size)
+        pushBits(0, term)
+        while (bits.size % 8 != 0) bits.add(0)
+        val padBytes = intArrayOf(0xEC, 0x11)
+        var padIdx = 0
+        while (bits.size < 272) {
+            pushBits(padBytes[padIdx % 2], 8)
+            padIdx++
+        }
+
+        val dataCw = IntArray(34)
+        for (i in 0 until 34) {
+            var v = 0
+            for (b in 0 until 8) {
+                v = (v shl 1) or bits[i * 8 + b]
+            }
+            dataCw[i] = v
+        }
+
+        // Galois Field GF(256) with 0x11D
+        val exp = IntArray(512)
+        val log = IntArray(256)
+        var x = 1
+        for (i in 0 until 255) {
+            exp[i] = x
+            log[x] = i
+            x = x shl 1
+            if ((x and 0x100) != 0) x = x xor 0x11D
+        }
+        for (i in 255 until 512) exp[i] = exp[i - 255]
+
+        var gen = intArrayOf(1)
+        for (i in 0 until 10) {
+            val nxt = IntArray(gen.size + 1)
+            for (j in gen.indices) {
+                nxt[j] = nxt[j] xor gen[j]
+                if (gen[j] != 0) {
+                    nxt[j + 1] = nxt[j + 1] xor exp[log[gen[j]] + i]
+                }
+            }
+            gen = nxt
+        }
+
+        val ecc = IntArray(10)
+        for (cw in dataCw) {
+            val factor = cw xor ecc[0]
+            for (k in 0 until 9) ecc[k] = ecc[k + 1]
+            ecc[9] = 0
+            if (factor != 0) {
+                for (j in 0 until 10) {
+                    ecc[j] = ecc[j] xor exp[log[gen[j + 1]] + log[factor]]
+                }
+            }
+        }
+
+        val fullBits = ArrayList<Int>(360)
+        for (cw in dataCw) {
+            for (i in 7 downTo 0) fullBits.add((cw shr i) and 1)
+        }
+        for (cw in ecc) {
+            for (i in 7 downTo 0) fullBits.add((cw shr i) and 1)
+        }
+        repeat(7) { fullBits.add(0) }
+
+        var bitIdx = 0
+        var upward = true
+        var c = size - 1
+        while (c > 0) {
+            if (c == 6) c -= 1
+            val rowRange = if (upward) (size - 1 downTo 0) else (0 until size)
+            for (r in rowRange) {
+                for (dc in 0 downTo -1) {
+                    val cc = c + dc
+                    if (!reserved[r][cc]) {
+                        var b = if (bitIdx < fullBits.size) fullBits[bitIdx++] else 0
+                        if ((r + cc) % 2 == 0) b = b xor 1
+                        matrix[r][cc] = b
+                    }
+                }
+            }
+            upward = !upward
+            c -= 2
+        }
+
+        // Format info for Level L + Mask 0 -> 0x77C4
+        val fmt = 0x77C4
+        val tlRows = intArrayOf(8, 8, 8, 8, 8, 8, 8, 8, 7, 5, 4, 3, 2, 1, 0)
+        val tlCols = intArrayOf(0, 1, 2, 3, 4, 5, 7, 8, 8, 8, 8, 8, 8, 8, 8)
+        for (i in 0 until 15) {
+            matrix[tlRows[i]][tlCols[i]] = (fmt shr (14 - i)) and 1
+        }
+        val trBlRows = intArrayOf(24, 23, 22, 21, 20, 19, 18, 8, 8, 8, 8, 8, 8, 8, 8)
+        val trBlCols = intArrayOf(8, 8, 8, 8, 8, 8, 8, 17, 18, 19, 20, 21, 22, 23, 24)
+        for (i in 0 until 15) {
+            matrix[trBlRows[i]][trBlCols[i]] = (fmt shr (14 - i)) and 1
+        }
+
+        return matrix
+    }
+}
+
 @Composable
 fun QrMatrixVisualBox(seedText: String) {
-    val gridSize = 15
-    val hash = seedText.hashCode()
+    val qrMatrix = remember(seedText) {
+        IsoQrCodeV2Generator.encodeUrlTo25x25Matrix(seedText)
+    }
     Box(
         modifier = Modifier
-            .size(100.dp)
-            .clip(RoundedCornerShape(12.dp))
+            .size(104.dp)
+            .clip(RoundedCornerShape(10.dp))
             .background(Color.White)
-            .padding(8.dp)
+            .padding(6.dp)
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
+            val gridSize = 25
             val cellSize = size.width / gridSize
             for (r in 0 until gridSize) {
                 for (c in 0 until gridSize) {
-                    val isCorner = (r < 4 && c < 4) || (r < 4 && c >= gridSize - 4) || (r >= gridSize - 4 && c < 4)
-                    val bit = ((hash shr ((r * gridSize + c) % 28)) xor (r * 7 + c * 13)) and 1 == 1
-                    if (isCorner || bit) {
+                    if (qrMatrix[r][c] == 1) {
                         drawRect(
                             color = Color.Black,
                             topLeft = Offset(c * cellSize, r * cellSize),
-                            size = Size(cellSize * 0.92f, cellSize * 0.92f)
+                            size = Size(cellSize * 1.02f, cellSize * 1.02f)
                         )
                     }
                 }
@@ -6018,50 +6496,258 @@ fun QrMatrixVisualBox(seedText: String) {
     }
 }
 
+/**
+ * İki Aşamalı Android TV Input Kutusu (TvInputField):
+ * 1. Gezinme Modu (isEditing = false):
+ *    - Normal bir TV butonu gibi davranır (.focusable()).
+ *    - Kumandanın Yukarı (▲) ve Aşağı (▼) yön tuşları ASLA metin kutusu içinde sıkışmaz;
+ *      upFocusRequester / downFocusRequester ile doğrudan üstteki veya alttaki kutuya geçer!
+ * 2. Yazma Modu (isEditing = true):
+ *    - Kutu üzerindeyken OK tuşuna basıldığında açılır, Android TV klavyesini çağırır
+ *      ve tek tıkla "📋 Panodan Yapıştır", "https://", ".m3u8", "✓ Bitti" çiplerini gösterir.
+ */
 @Composable
 fun TvInputField(
     label: String,
     value: String,
     placeholder: String,
-    onValueChange: (String) -> Unit
+    onValueChange: (String) -> Unit,
+    focusRequester: FocusRequester? = null,
+    upFocusRequester: FocusRequester? = null,
+    downFocusRequester: FocusRequester? = null,
+    showUrlQuickChips: Boolean = false
 ) {
-    var isFocused by remember { mutableStateOf(false) }
-    Column {
-        Text(
-            text = label,
-            color = TvThemeColors.TextSecondary,
-            fontSize = 11.sp,
-            modifier = Modifier.padding(bottom = 3.dp)
-        )
-        BasicTextField(
-            value = value,
-            onValueChange = onValueChange,
-            singleLine = true,
-            textStyle = TextStyle(color = TvThemeColors.TextPrimary, fontSize = 13.sp),
-            cursorBrush = SolidColor(TvThemeColors.BullRedBright),
+    val context = LocalContext.current
+    val outerRequester = remember { focusRequester ?: FocusRequester() }
+    val innerTextRequester = remember { FocusRequester() }
+    var boxFocused by remember { mutableStateOf(false) }
+    var isEditing by remember { mutableStateOf(false) }
+
+    fun showAndroidTvSoftKeyboard() {
+        try {
+            val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+            imm?.toggleSoftInput(InputMethodManager.SHOW_FORCED, 0)
+        } catch (_: Exception) {}
+    }
+
+    fun pasteFromClipboard() {
+        try {
+            val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+            val clipText = cm?.primaryClip?.getItemAt(0)?.coerceToText(context)?.toString()?.trim()
+            if (!clipText.isNullOrEmpty()) {
+                onValueChange(clipText)
+            }
+        } catch (_: Exception) {}
+    }
+
+    LaunchedEffect(isEditing) {
+        if (isEditing) {
+            delay(40L)
+            try {
+                innerTextRequester.requestFocus()
+                showAndroidTvSoftKeyboard()
+            } catch (_: Exception) {}
+        }
+    }
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(10.dp))
-                .background(Color.Black.copy(alpha = 0.35f))
-                .border(
-                    width = if (isFocused) 2.dp else 1.dp,
-                    color = if (isFocused) TvThemeColors.BullRedBright else Color.White.copy(alpha = 0.14f),
-                    shape = RoundedCornerShape(10.dp)
-                )
-                .onFocusChanged { isFocused = it.isFocused }
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-            decorationBox = { innerTextField ->
-                if (value.isEmpty()) {
-                    Text(
-                        text = placeholder,
-                        color = TvThemeColors.TextSecondary.copy(alpha = 0.5f),
-                        fontSize = 13.sp,
-                        maxLines = 1
+                .padding(bottom = 3.dp)
+        ) {
+            Text(
+                text = label,
+                color = if (boxFocused || isEditing) TvThemeColors.BullRedBright else TvThemeColors.TextSecondary,
+                fontSize = 11.sp,
+                fontWeight = if (boxFocused || isEditing) FontWeight.Bold else FontWeight.Normal,
+                maxLines = 1
+            )
+            Text(
+                text = when {
+                    isEditing -> "⌨️ Yazma Modu Açık (▼/▲ veya Geri: Kutudan Çık)"
+                    boxFocused -> "OK: Yaz / Düzenle  •  ▲/▼: Diğer Kutuya Geç"
+                    else -> ""
+                },
+                color = if (isEditing) TvThemeColors.FavoriteGold else TvThemeColors.AccentCyan,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1
+            )
+        }
+
+        if (!isEditing) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(outerRequester)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(
+                        if (boxFocused) TvThemeColors.SurfaceElevated else Color.Black.copy(alpha = 0.38f)
                     )
-                }
-                innerTextField()
+                    .border(
+                        width = if (boxFocused) 2.dp else 1.dp,
+                        color = if (boxFocused) TvThemeColors.BullRedBright else Color.White.copy(alpha = 0.16f),
+                        shape = RoundedCornerShape(10.dp)
+                    )
+                    .onFocusChanged { boxFocused = it.isFocused }
+                    .onPreviewKeyEvent { event ->
+                        if (event.nativeKeyEvent.action == KeyEvent.ACTION_DOWN) {
+                            when (event.nativeKeyEvent.keyCode) {
+                                KeyEvent.KEYCODE_DPAD_DOWN -> {
+                                    if (downFocusRequester != null) {
+                                        try { downFocusRequester.requestFocus() } catch (_: Exception) {}
+                                        true
+                                    } else false
+                                }
+                                KeyEvent.KEYCODE_DPAD_UP -> {
+                                    if (upFocusRequester != null) {
+                                        try { upFocusRequester.requestFocus() } catch (_: Exception) {}
+                                        true
+                                    } else false
+                                }
+                                KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> {
+                                    isEditing = true
+                                    true
+                                }
+                                else -> false
+                            }
+                        } else false
+                    }
+                    .focusable()
+                    .clickable { isEditing = true }
+                    .padding(horizontal = 12.dp, vertical = 9.dp)
+            ) {
+                Text(
+                    text = value.ifEmpty { placeholder },
+                    color = if (value.isEmpty()) TvThemeColors.TextSecondary.copy(alpha = 0.55f) else TvThemeColors.TextPrimary,
+                    fontSize = 13.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = if (boxFocused) "⌨️ OK: Yaz" else "Düzenle",
+                    color = if (boxFocused) TvThemeColors.FavoriteGold else TvThemeColors.TextSecondary,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold
+                )
             }
-        )
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(TvThemeColors.SurfaceElevated)
+                    .border(2.dp, TvThemeColors.FavoriteGold, RoundedCornerShape(10.dp))
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
+            ) {
+                BasicTextField(
+                    value = value,
+                    onValueChange = onValueChange,
+                    singleLine = true,
+                    textStyle = TextStyle(color = TvThemeColors.TextPrimary, fontSize = 13.sp),
+                    cursorBrush = SolidColor(TvThemeColors.FavoriteGold),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(innerTextRequester)
+                        .onPreviewKeyEvent { event ->
+                            if (event.nativeKeyEvent.action == KeyEvent.ACTION_DOWN) {
+                                when (event.nativeKeyEvent.keyCode) {
+                                    KeyEvent.KEYCODE_DPAD_DOWN -> {
+                                        isEditing = false
+                                        try {
+                                            (downFocusRequester ?: outerRequester).requestFocus()
+                                        } catch (_: Exception) {}
+                                        true
+                                    }
+                                    KeyEvent.KEYCODE_DPAD_UP -> {
+                                        isEditing = false
+                                        try {
+                                            (upFocusRequester ?: outerRequester).requestFocus()
+                                        } catch (_: Exception) {}
+                                        true
+                                    }
+                                    KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER, KeyEvent.KEYCODE_BACK -> {
+                                        isEditing = false
+                                        try {
+                                            (downFocusRequester ?: outerRequester).requestFocus()
+                                        } catch (_: Exception) {}
+                                        true
+                                    }
+                                    else -> false
+                                }
+                            } else false
+                        },
+                    decorationBox = { innerTextField ->
+                        if (value.isEmpty()) {
+                            Text(
+                                text = placeholder,
+                                color = TvThemeColors.TextSecondary.copy(alpha = 0.5f),
+                                fontSize = 13.sp,
+                                maxLines = 1
+                            )
+                        }
+                        innerTextField()
+                    }
+                )
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    TvCompactChipButton(
+                        text = "✓ Bitti (Aşağı Geç)",
+                        icon = Icons.Rounded.CheckCircle,
+                        onClick = {
+                            isEditing = false
+                            try {
+                                (downFocusRequester ?: outerRequester).requestFocus()
+                            } catch (_: Exception) {}
+                        }
+                    )
+                    TvCompactChipButton(
+                        text = "📋 Yapıştır",
+                        icon = Icons.Rounded.InsertDriveFile,
+                        onClick = { pasteFromClipboard() }
+                    )
+                    if (showUrlQuickChips) {
+                        TvCompactChipButton(
+                            text = "https://",
+                            icon = Icons.Rounded.Public,
+                            onClick = {
+                                if (!value.startsWith("http")) onValueChange("https://$value")
+                            }
+                        )
+                        TvCompactChipButton(
+                            text = "http://",
+                            icon = Icons.Rounded.Public,
+                            onClick = {
+                                if (!value.startsWith("http")) onValueChange("http://$value")
+                            }
+                        )
+                        TvCompactChipButton(
+                            text = ".m3u8",
+                            icon = Icons.Rounded.Tag,
+                            onClick = {
+                                if (!value.endsWith(".m3u8")) onValueChange("$value.m3u8")
+                            }
+                        )
+                    }
+                    if (value.isNotEmpty()) {
+                        TvCompactChipButton(
+                            text = "Temizle",
+                            icon = Icons.Rounded.Clear,
+                            onClick = { onValueChange("") }
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 

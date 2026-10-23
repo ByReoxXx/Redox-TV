@@ -129,22 +129,19 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /**
- * GitHub Üzerinden Dinamik Kanal Listesi (`channels.json` ve `channels.m3u`) Yöneticisi.
+ * GitHub Üzerinden Dinamik Kanal Listesi (`channels.json`) Yöneticisi.
  *
  * - İlk açılışta (veya internet yokken) APK içindeki `assets/channels.json` ya da
  *   cihaz önbelleğindeki `github_channels_cached.json` dosyasını <10 ms içinde okur.
  * - Uygulama her açıldığında arka planda GitHub deposundaki güncel `channels.json`
- *   ve `channels.m3u` dosyalarını çeker. Böylece GitHub üzerinden çalışmayan bir kanal
- *   silindiğinde, yeni kanal eklendiğinde veya `.m3u8` linki değiştirildiğinde APK
- *   güncellemeye gerek kalmadan tüm kullanıcılarda kanal listesi otomatik güncellenir.
+ *   dosyasını çeker. Böylece GitHub üzerinden çalışmayan bir kanal silindiğinde,
+ *   yeni kanal eklendiğinde veya `.m3u8` linki değiştirildiğinde APK güncellemeye
+ *   gerek kalmadan tüm kullanıcılarda kanal listesi otomatik güncellenir.
  */
 object DynamicChannelsJsonService {
     const val DEFAULT_GITHUB_JSON_URL = "https://raw.githubusercontent.com/redox-baris/Redox-TV/main/channels.json"
     const val FALLBACK_GITHUB_JSON_URL = "https://raw.githubusercontent.com/redox-baris/Redox-TV/master/channels.json"
-    const val DEFAULT_GITHUB_M3U_URL = "https://raw.githubusercontent.com/redox-baris/Redox-TV/main/channels.m3u"
-    const val FALLBACK_GITHUB_M3U_URL = "https://raw.githubusercontent.com/redox-baris/Redox-TV/master/channels.m3u"
     private const val CACHED_JSON_FILENAME = "github_channels_cached.json"
-    private const val CACHED_REPO_M3U_FILENAME = "github_repo_channels_cached.m3u"
     private const val ASSET_JSON_FILENAME = "channels.json"
 
     fun loadInstantChannels(context: Context): List<TvChannel> {
@@ -167,41 +164,6 @@ object DynamicChannelsJsonService {
         }
     }
 
-    fun loadCachedRepoM3u(context: Context): String {
-        return try {
-            val f = File(context.filesDir, CACHED_REPO_M3U_FILENAME)
-            if (f.exists() && f.length() > 20L) f.readText() else ""
-        } catch (_: Exception) {
-            ""
-        }
-    }
-
-    suspend fun fetchAndCacheRemoteRepoM3u(context: Context): String = withContext(Dispatchers.IO) {
-        val cacheBuster = System.currentTimeMillis() / 30_000L
-        for (baseUrl in listOf(DEFAULT_GITHUB_M3U_URL, FALLBACK_GITHUB_M3U_URL)) {
-            try {
-                val fullUrl = "$baseUrl?cb=$cacheBuster"
-                val conn = (URL(fullUrl).openConnection() as HttpURLConnection).apply {
-                    connectTimeout = 7500
-                    readTimeout = 10000
-                    instanceFollowRedirects = true
-                    setRequestProperty("User-Agent", "RedoXTV/1.5.3 (Android TV; DynamicChannelsM3u)")
-                    setRequestProperty("Cache-Control", "no-cache")
-                }
-                if (conn.responseCode in 200..299) {
-                    val rawM3u = conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
-                    if (rawM3u.contains("#EXTINF", ignoreCase = true)) {
-                        try {
-                            File(context.filesDir, CACHED_REPO_M3U_FILENAME).writeText(rawM3u)
-                        } catch (_: Exception) {}
-                        return@withContext rawM3u
-                    }
-                }
-            } catch (_: Exception) {}
-        }
-        loadCachedRepoM3u(context)
-    }
-
     suspend fun fetchAndCacheRemoteChannelsJson(context: Context, customUrl: String = ""): List<TvChannel>? = withContext(Dispatchers.IO) {
         val candidateUrls = buildList {
             if (customUrl.isNotBlank()) add(customUrl.trim())
@@ -218,7 +180,7 @@ object DynamicChannelsJsonService {
                     connectTimeout = 7500
                     readTimeout = 10000
                     instanceFollowRedirects = true
-                    setRequestProperty("User-Agent", "RedoXTV/1.5.3 (Android TV; DynamicChannelsJson)")
+                    setRequestProperty("User-Agent", "RedoXTV/1.5.2 (Android TV; DynamicChannelsJson)")
                     setRequestProperty("Cache-Control", "no-cache")
                 }
                 if (conn.responseCode in 200..299) {

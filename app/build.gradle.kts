@@ -10,8 +10,8 @@ android {
         applicationId = "com.redoxtv.app"
         minSdk = 28
         targetSdk = 34
-        versionCode = 19
-        versionName = "1.5.3"
+        versionCode = 18
+        versionName = "1.5.2"
     }
     signingConfigs {
         create("release") {

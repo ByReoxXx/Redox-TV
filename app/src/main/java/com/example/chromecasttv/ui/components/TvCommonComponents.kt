@@ -877,10 +877,6 @@ fun Modifier.tvLongPressFavoriteModifier(
         }
 }
 
-/**
- * İki Aşamalı Android TV Input Kutusu (TvInputField):
- * 1. Gezinme Modu (isEditing = false):
- *    - Normal bir TV butonu gibi davranır (.focusable()).
  *    - Kumandanın Yukarı (▲) ve Aşağı (▼) yön tuşları ASLA metin kutusu içinde sıkışmaz;
  *      upFocusRequester / downFocusRequester ile doğrudan üstteki veya alttaki kutuya geçer!
  * 2. Yazma Modu (isEditing = true):

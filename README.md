@@ -14,24 +14,13 @@ Hem **TV kumandası (D-Pad)** hem de **dokunmatik ekran (Touch)** için özel ol
 
 ## 📸 Uygulama İçi Ekran Görüntüleri
 
-> 💡 *Not: Kendi ekran görüntülerinizi eklemek için deponuzda `screenshots/` klasörü oluşturup görselleri aşağıdaki dosya adlarıyla yükleyebilirsiniz.*
+<img width="1917" height="1078" alt="Ekran görüntüsü 2026-10-23 212649" src="https://github.com/user-attachments/assets/0e0b72d7-c446-4667-a536-b1f4c2291024" />
+<img width="1917" height="1078" alt="Ekran görüntüsü 2026-10-23 212814" src="https://github.com/user-attachments/assets/ddbcfaeb-71d6-4b3c-bb5d-71ac132878ed" />
+<img width="1917" height="1078" alt="Ekran görüntüsü 2026-10-23 213222" src="https://github.com/user-attachments/assets/7053e3f2-bd33-4d7c-b206-b3eb00c41c6e" />
+<img width="1917" height="1078" alt="Ekran görüntüsü 2026-10-23 213152" src="https://github.com/user-attachments/assets/4a2eb33f-927c-414f-82ef-b23d09972631" />
+<img width="1917" height="1078" alt="Ekran görüntüsü 2026-10-23 214506" src="https://github.com/user-attachments/assets/0c35f25f-a7b0-4937-b9fb-8c9434bc7bd1" />
+<img width="1917" height="1078" alt="Ekran görüntüsü 2026-10-23 214355" src="https://github.com/user-attachments/assets/04bc7e5f-5463-4855-8dcd-b21fe36093c9" />
 
-| Karşılama Ekranı (Landing Page) | Canlı TV & Kanal Vitrini |
-| :---: | :---: |
-| ![Karşılama Ekranı](screenshots/landing_screen.png) | ![Canlı TV Vitrini](screenshots/live_tv_grid.png) |
-| *3D Kırmızı Boğa amblemli hızlı başlangıç ekranı* | *Kategori filtreli kanal ızgarası ve canlı önizleme bandı* |
-
-| Tam Ekran Oynatıcı & OSD Barı | 4'lü Çoklu Ekran (2x2 Multi-View) |
-| :---: | :---: |
-| ![Tam Ekran Oynatıcı](screenshots/player_osd.png) | ![Çoklu Ekran](screenshots/multiview_2x2.png) |
-| *Çoklu kaynak seçici, canlı bitrate/çözünürlük ve hızlı kanal çekmecesi* | *Aynı anda 4 canlı yayını izleme ve bağımsız kanal kontrolü* |
-
-| QR Web Kumandası & M3U Yükleyici | Favori Sıralama & EPG Rehberi |
-| :---: | :---: |
-| ![QR Web Transfer](screenshots/qr_web_transfer.png) | ![Favori Sıralama](screenshots/favorites_reorder.png) |
-| *Telefondan QR kod okutarak kablosuz M3U/Xtream gönderimi* | *Kumanda ile Tut & Taşı favori sıralama ve yayın akışı* |
-
----
 
 ## ✨ Genel Özellikler
 

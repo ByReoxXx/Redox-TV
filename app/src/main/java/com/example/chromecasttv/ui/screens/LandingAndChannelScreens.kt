@@ -148,6 +148,14 @@ import androidx.media3.common.MimeTypes
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import org.json.JSONArray
 import org.json.JSONObject
+import android.util.Base64
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.ui.graphics.graphicsLayer
+import java.security.MessageDigest
+import javax.crypto.Cipher
+import javax.crypto.spec.IvParameterSpec
+import javax.crypto.spec.SecretKeySpec
 import java.security.SecureRandom
 import java.security.cert.X509Certificate
 import javax.net.ssl.HttpsURLConnection
@@ -221,7 +229,7 @@ fun RedoXLandingScreen(
                         onClick = onToggleAutoStart
                     )
                     Text(
-                        text = "TV • Tablet • Mobil • RedoX TV v1.6.1",
+                        text = "TV • Tablet • Mobil • RedoX TV v1.7.0",
                         color = TvThemeColors.BullRedBright,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold
@@ -344,11 +352,20 @@ fun LandingActionCard(
     modifier: Modifier = Modifier
 ) {
     var isFocused by remember { mutableStateOf(false) }
+    val cardScale by animateFloatAsState(
+        targetValue = if (isFocused) 1.06f else 1f,
+        animationSpec = tween(durationMillis = 140),
+        label = "landing_card_scale"
+    )
 
     Box(
         modifier = modifier
             .width(172.dp)
             .height(126.dp)
+            .graphicsLayer {
+                scaleX = cardScale
+                scaleY = cardScale
+            }
             .clip(RoundedCornerShape(18.dp))
             .background(
                 when {
@@ -1051,6 +1068,11 @@ fun TvChannelGridCard(
 ) {
     val catColor = if (isBroken) TvThemeColors.BrokenRed else TvThemeColors.categoryColor(channel.category)
     var cardFocused by remember { mutableStateOf(false) }
+    val cardScale by animateFloatAsState(
+        targetValue = if (cardFocused) 1.04f else 1f,
+        animationSpec = tween(durationMillis = 135),
+        label = "grid_card_scale"
+    )
 
     val focusBorderColor = when {
         isBroken -> TvThemeColors.BrokenRed
@@ -1058,13 +1080,14 @@ fun TvChannelGridCard(
         else -> TvThemeColors.BullRedBright
     }
 
-    // Evrensel TV (D-Pad) + Tablet/Telefon (Dokunmatik) Kart Bileşeni:
-    // combinedClickable sayesinde telefon ve tabletlerde tek dokunuşla açılır, basılı tutunca favoriye ekler;
-    // TV kumandasında ise D-Pad odağı ve OK kısa/uzun basma kusursuz çalışır.
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(118.dp)
+            .graphicsLayer {
+                scaleX = cardScale
+                scaleY = cardScale
+            }
             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
             .clip(RoundedCornerShape(14.dp))
             .background(if (cardFocused) TvThemeColors.SurfaceElevated else TvThemeColors.SurfaceCard)
@@ -1259,6 +1282,58 @@ fun ChannelSearchAndNumpadScreen(
         }
 
         Spacer(modifier = Modifier.height(8.dp))
+
+        // Chromecast 4K Kumandası İçin Ekran Üstü Sanal Rakam Tuş Takımı (0-9) + Hızlı Kategori Etiketleri
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(
+                text = "🔢 Numaratör:",
+                color = TvThemeColors.FavoriteGold,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold
+            )
+            (1..9).forEach { digit ->
+                TvCompactChipButton(
+                    text = digit.toString(),
+                    icon = Icons.Rounded.Tag,
+                    onClick = {
+                        val currentDigits = searchQuery.filter { it.isDigit() }
+                        onQueryChange((currentDigits + digit.toString()).take(4))
+                    }
+                )
+            }
+            TvCompactChipButton(
+                text = "0",
+                icon = Icons.Rounded.Tag,
+                onClick = {
+                    val currentDigits = searchQuery.filter { it.isDigit() }
+                    onQueryChange((currentDigits + "0").take(4))
+                }
+            )
+            TvCompactChipButton(
+                text = "⌫ Sil",
+                icon = Icons.Rounded.Clear,
+                onClick = {
+                    if (searchQuery.isNotEmpty()) onQueryChange(searchQuery.dropLast(1))
+                }
+            )
+            val exactNumberMatch = searchQuery.trim().toIntOrNull()?.let { num ->
+                allChannels.find { it.number == num }
+            }
+            if (exactNumberMatch != null) {
+                TvActionButton(
+                    text = "▶ CH ${exactNumberMatch.number} (${exactNumberMatch.name}) Aç",
+                    icon = Icons.Rounded.PlayArrow,
+                    isPrimary = true,
+                    onClick = { onPlayChannel(exactNumberMatch) }
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(6.dp))
 
         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             val quickTags = listOf("Ulusal", "Spor", "Haber", "Belgesel", "Müzik", "Kıbrıs", "Yerel", "Dünya")

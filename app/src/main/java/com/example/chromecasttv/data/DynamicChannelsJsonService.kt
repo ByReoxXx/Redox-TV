@@ -148,6 +148,14 @@ import androidx.media3.common.MimeTypes
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import org.json.JSONArray
 import org.json.JSONObject
+import android.util.Base64
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.ui.graphics.graphicsLayer
+import java.security.MessageDigest
+import javax.crypto.Cipher
+import javax.crypto.spec.IvParameterSpec
+import javax.crypto.spec.SecretKeySpec
 import java.security.SecureRandom
 import java.security.cert.X509Certificate
 import javax.net.ssl.HttpsURLConnection
@@ -156,77 +164,83 @@ import javax.net.ssl.TrustManager
 import javax.net.ssl.X509TrustManager
 
 /**
- * GitHub Üzerinden Dinamik Kanal Listesi (`channel/channels.json` ve `channel/channels.m3u`) Yöneticisi.
+ * GitHub Üzerinden AES-256 Şifreli Kanal Listesi (`channel/channels.enc`) Yöneticisi.
+ *
+ * - GitHub deposunda açık `.m3u` veya `.json` tutulmaz; yalnızca `AES-256-CBC` ile şifrelenmiş
+ *   `channel/channels.enc` dosyası bulunur (`REDOX_ENC_V1:<base64(iv + ciphertext)>`).
+ * - Uygulama açılışta `assets/channels.enc` (veya önbellekteki `github_channels_v17_cached.enc`)
+ *   dosyasını bellekte çözer, arka planda ise GitHub'daki güncel `channel/channels.enc`
+ *   dosyasını indirip çözer.
+ * - Şifrelenen içerik ister `.m3u` (`#EXTM3U`) ister `.json` formatında olsun otomatik tanınır!
  */
 object DynamicChannelsJsonService {
-    const val DEFAULT_GITHUB_JSON_URL = "https://raw.githubusercontent.com/redox-baris/Redox-TV/main/channel/channels.json"
-    const val FALLBACK_GITHUB_JSON_URL = "https://raw.githubusercontent.com/redox-baris/Redox-TV/master/channel/channels.json"
-    const val DEFAULT_GITHUB_M3U_URL = "https://raw.githubusercontent.com/redox-baris/Redox-TV/main/channel/channels.m3u"
-    const val FALLBACK_GITHUB_M3U_URL = "https://raw.githubusercontent.com/redox-baris/Redox-TV/master/channel/channels.m3u"
-    private const val CACHED_JSON_FILENAME = "github_channels_v16_cached.json"
-    private const val CACHED_REPO_M3U_FILENAME = "github_repo_channels_v16_cached.m3u"
-    private const val ASSET_JSON_FILENAME = "channels.json"
+    const val DEFAULT_GITHUB_ENC_URL = "https://raw.githubusercontent.com/redox-baris/Redox-TV/main/channel/channels.enc"
+    const val FALLBACK_GITHUB_ENC_URL = "https://raw.githubusercontent.com/redox-baris/Redox-TV/master/channel/channels.enc"
+    private const val CACHED_ENC_FILENAME = "github_channels_v17_cached.enc"
+    private const val ASSET_ENC_FILENAME = "channels.enc"
+    private const val DEFAULT_AES_SECRET = "RedoX_TV_2026_Secret_Key_4K"
+
+    fun decryptPayloadIfNeeded(rawContent: String, secretKey: String = DEFAULT_AES_SECRET): String {
+        val trimmed = rawContent.trim()
+        if (!trimmed.startsWith("REDOX_ENC_V1:")) return trimmed
+        return try {
+            val b64Part = trimmed.removePrefix("REDOX_ENC_V1:").trim()
+            val combined = Base64.decode(b64Part, Base64.DEFAULT)
+            if (combined.size <= 16) return ""
+            val keyBytes = MessageDigest.getInstance("SHA-256").digest(secretKey.toByteArray(Charsets.UTF_8))
+            val ivSpec = IvParameterSpec(combined, 0, 16)
+            val secretKeySpec = SecretKeySpec(keyBytes, "AES")
+            val cipher = Cipher.getInstance("AES/CBC/PKCS5Padding")
+            cipher.init(Cipher.DECRYPT_MODE, secretKeySpec, ivSpec)
+            val decryptedBytes = cipher.doFinal(combined, 16, combined.size - 16)
+            String(decryptedBytes, Charsets.UTF_8).trim()
+        } catch (_: Throwable) {
+            ""
+        }
+    }
+
+    fun parseDecryptedChannels(rawOrEncrypted: String): List<TvChannel> {
+        val plain = decryptPayloadIfNeeded(rawOrEncrypted)
+        if (plain.isEmpty()) return emptyList()
+        val first = plain.firstOrNull()
+        return if (first == '\u007B' || first == '[') {
+            parseChannelsJson(plain)
+        } else if (plain.contains("#EXTINF", ignoreCase = true)) {
+            M3uAndEpgParser.parseM3uContent(plain, "RedoX Yerleşik Paket", 1, false)
+        } else {
+            emptyList()
+        }
+    }
 
     fun loadInstantChannels(context: Context): List<TvChannel> {
-        val cachedFile = File(context.filesDir, CACHED_JSON_FILENAME)
+        val cachedFile = File(context.filesDir, CACHED_ENC_FILENAME)
         if (cachedFile.exists() && cachedFile.length() > 50L) {
             try {
-                val parsed = parseChannelsJson(cachedFile.readText())
+                val parsed = parseDecryptedChannels(cachedFile.readText())
                 if (parsed.isNotEmpty()) return parsed
-            } catch (_: Exception) {}
+            } catch (_: Throwable) {}
         }
         return loadBundledAssetChannels(context)
     }
 
     fun loadBundledAssetChannels(context: Context): List<TvChannel> {
         return try {
-            val raw = context.assets.open(ASSET_JSON_FILENAME).bufferedReader(Charsets.UTF_8).use { it.readText() }
-            parseChannelsJson(raw)
-        } catch (_: Exception) {
+            val raw = context.assets.open(ASSET_ENC_FILENAME).bufferedReader(Charsets.UTF_8).use { it.readText() }
+            parseDecryptedChannels(raw)
+        } catch (_: Throwable) {
             emptyList()
         }
     }
 
-    fun loadCachedRepoM3u(context: Context): String {
-        return try {
-            val f = File(context.filesDir, CACHED_REPO_M3U_FILENAME)
-            if (f.exists() && f.length() > 20L) f.readText() else ""
-        } catch (_: Exception) {
-            ""
-        }
-    }
+    fun loadCachedRepoM3u(context: Context): String = ""
 
-    suspend fun fetchAndCacheRemoteRepoM3u(context: Context): String = withContext(Dispatchers.IO) {
-        val cacheBuster = System.currentTimeMillis() / 30_000L
-        for (baseUrl in listOf(DEFAULT_GITHUB_M3U_URL, FALLBACK_GITHUB_M3U_URL)) {
-            try {
-                val fullUrl = "$baseUrl?cb=$cacheBuster"
-                val conn = (URL(fullUrl).openConnection() as HttpURLConnection).apply {
-                    connectTimeout = 7500
-                    readTimeout = 10000
-                    instanceFollowRedirects = true
-                    setRequestProperty("User-Agent", "RedoXTV/1.6.1 (Android TV; DynamicChannelsM3u)")
-                    setRequestProperty("Cache-Control", "no-cache")
-                }
-                if (conn.responseCode in 200..299) {
-                    val rawM3u = conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
-                    if (rawM3u.contains("#EXTINF", ignoreCase = true)) {
-                        try {
-                            File(context.filesDir, CACHED_REPO_M3U_FILENAME).writeText(rawM3u)
-                        } catch (_: Exception) {}
-                        return@withContext rawM3u
-                    }
-                }
-            } catch (_: Exception) {}
-        }
-        loadCachedRepoM3u(context)
-    }
+    suspend fun fetchAndCacheRemoteRepoM3u(context: Context): String = ""
 
     suspend fun fetchAndCacheRemoteChannelsJson(context: Context, customUrl: String = ""): List<TvChannel>? = withContext(Dispatchers.IO) {
         val candidateUrls = buildList {
             if (customUrl.isNotBlank()) add(customUrl.trim())
-            add(DEFAULT_GITHUB_JSON_URL)
-            add(FALLBACK_GITHUB_JSON_URL)
+            add(DEFAULT_GITHUB_ENC_URL)
+            add(FALLBACK_GITHUB_ENC_URL)
         }.distinct()
 
         val cacheBuster = System.currentTimeMillis() / 30_000L
@@ -238,20 +252,20 @@ object DynamicChannelsJsonService {
                     connectTimeout = 7500
                     readTimeout = 10000
                     instanceFollowRedirects = true
-                    setRequestProperty("User-Agent", "RedoXTV/1.6.1 (Android TV; DynamicChannelsJson)")
+                    setRequestProperty("User-Agent", "RedoXTV/1.7.0 (Android TV; EncryptedChannelSync)")
                     setRequestProperty("Cache-Control", "no-cache")
                 }
                 if (conn.responseCode in 200..299) {
-                    val rawJson = conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
-                    val parsed = parseChannelsJson(rawJson)
+                    val rawPayload = conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
+                    val parsed = parseDecryptedChannels(rawPayload)
                     if (parsed.isNotEmpty()) {
                         try {
-                            File(context.filesDir, CACHED_JSON_FILENAME).writeText(rawJson)
-                        } catch (_: Exception) {}
+                            File(context.filesDir, CACHED_ENC_FILENAME).writeText(rawPayload)
+                        } catch (_: Throwable) {}
                         return@withContext parsed
                     }
                 }
-            } catch (_: Exception) {}
+            } catch (_: Throwable) {}
         }
         null
     }

@@ -148,6 +148,14 @@ import androidx.media3.common.MimeTypes
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import org.json.JSONArray
 import org.json.JSONObject
+import android.util.Base64
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.ui.graphics.graphicsLayer
+import java.security.MessageDigest
+import javax.crypto.Cipher
+import javax.crypto.spec.IvParameterSpec
+import javax.crypto.spec.SecretKeySpec
 import java.security.SecureRandom
 import java.security.cert.X509Certificate
 import javax.net.ssl.HttpsURLConnection
@@ -193,6 +201,8 @@ fun RedoXPlayerScreen(
     var showOsd by remember { mutableStateOf(true) }
     var osdInteractiveFocused by remember { mutableStateOf(false) }
     var showChannelDrawer by remember { mutableStateOf(false) }
+    var showVirtualNumpadDialog by remember { mutableStateOf(false) }
+    val drawerActiveItemRequester = remember { FocusRequester() }
     var osdInteractionTick by remember { mutableIntStateOf(0) }
 
     var playbackError by remember { mutableStateOf<String?>(null) }
@@ -748,6 +758,12 @@ fun RedoXPlayerScreen(
             val listState = rememberLazyListState(
                 initialFirstVisibleItemIndex = (currentChannelIndex - 3).coerceAtLeast(0)
             )
+            LaunchedEffect(selectedDrawerCat) {
+                val idx = filteredDrawerChannels.indexOfFirst { it.id == playingChannel.id }.coerceAtLeast(0)
+                try { listState.scrollToItem((idx - 2).coerceAtLeast(0)) } catch (_: Exception) {}
+                delay(70L)
+                try { drawerActiveItemRequester.requestFocus() } catch (_: Exception) {}
+            }
 
             Column(
                 modifier = Modifier
@@ -820,6 +836,14 @@ fun RedoXPlayerScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .then(if (isCurrent) Modifier.focusRequester(drawerActiveItemRequester) else Modifier)
+                                .onPreviewKeyEvent { ev ->
+                                    if (ev.nativeKeyEvent.action == KeyEvent.ACTION_DOWN && ev.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
+                                        showChannelDrawer = false
+                                        try { playerSurfaceFocusRequester.requestFocus() } catch (_: Exception) {}
+                                        true
+                                    } else false
+                                }
                                 .clip(RoundedCornerShape(10.dp))
                                 .background(
                                     when {
@@ -1051,6 +1075,15 @@ fun RedoXPlayerScreen(
                     }
                     item {
                         TvCompactChipButton(
+                            text = "🔢 Kanal No (0-9)",
+                            icon = Icons.Rounded.Tag,
+                            onClick = {
+                                showVirtualNumpadDialog = true
+                            }
+                        )
+                    }
+                    item {
+                        TvCompactChipButton(
                             text = "✕ Kanaldan Çık",
                             icon = Icons.Rounded.Clear,
                             onClick = onExitPlayer
@@ -1171,6 +1204,121 @@ fun RedoXPlayerScreen(
                                 try { playerSurfaceFocusRequester.requestFocus() } catch (_: Exception) {}
                             }
                         )
+                    }
+                }
+            }
+        }
+ 
+        // CHROMECAST 4K KUMANDASI İÇİN EKRAN ÜSTÜ SANAL NUMARATÖR (0-9) PENCERESİ
+        if (showVirtualNumpadDialog) {
+            var dialDigits by remember { mutableStateOf("") }
+            val firstDigitRequester = remember { FocusRequester() }
+            val matchedChannel = remember(dialDigits, allChannels) {
+                dialDigits.toIntOrNull()?.let { num -> allChannels.find { it.number == num } }
+            }
+            LaunchedEffect(Unit) {
+                delay(60L)
+                try { firstDigitRequester.requestFocus() } catch (_: Exception) {}
+            }
+            Dialog(
+                onDismissRequest = { showVirtualNumpadDialog = false },
+                properties = DialogProperties(
+                    dismissOnBackPress = true,
+                    dismissOnClickOutside = true,
+                    usePlatformDefaultWidth = false
+                )
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.78f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier
+                            .width(420.dp)
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(TvThemeColors.SurfaceCard)
+                            .border(2.dp, TvThemeColors.BullRedBright, RoundedCornerShape(20.dp))
+                            .padding(22.dp)
+                    ) {
+                        Text(
+                            text = "🔢 Kanal Numarası Girin (Chromecast Kumandası)",
+                            color = TvThemeColors.TextPrimary,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(TvThemeColors.BackgroundDeep)
+                                .border(1.dp, TvThemeColors.AccentCyan.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                                .padding(vertical = 10.dp, horizontal = 14.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    text = if (dialDigits.isEmpty()) "CH ---" else "CH $dialDigits",
+                                    color = TvThemeColors.BullRedBright,
+                                    fontSize = 24.sp,
+                                    fontWeight = FontWeight.ExtraBold
+                                )
+                                Text(
+                                    text = matchedChannel?.let { "✅ ${it.name} (${it.category})" } ?: "Rakamları seçip 'Kanala Git'e basın",
+                                    color = if (matchedChannel != null) TvThemeColors.AccentEmerald else TvThemeColors.TextSecondary,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        }
+
+                        val rows = listOf(listOf(1, 2, 3), listOf(4, 5, 6), listOf(7, 8, 9))
+                        rows.forEachIndexed { rIdx, rowNums ->
+                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                rowNums.forEachIndexed { cIdx, num ->
+                                    TvCompactChipButton(
+                                        text = "   $num   ",
+                                        icon = Icons.Rounded.Tag,
+                                        onClick = {
+                                            if (dialDigits.length < 4) dialDigits += num.toString()
+                                        },
+                                        modifier = if (rIdx == 0 && cIdx == 0) Modifier.focusRequester(firstDigitRequester) else Modifier
+                                    )
+                                }
+                            }
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            TvCompactChipButton(
+                                text = "⌫ Sil",
+                                icon = Icons.Rounded.Clear,
+                                onClick = { if (dialDigits.isNotEmpty()) dialDigits = dialDigits.dropLast(1) }
+                            )
+                            TvCompactChipButton(
+                                text = "   0   ",
+                                icon = Icons.Rounded.Tag,
+                                onClick = { if (dialDigits.length < 4) dialDigits += "0" }
+                            )
+                            TvCompactChipButton(
+                                text = "✕ Kapat",
+                                icon = Icons.Rounded.Clear,
+                                onClick = { showVirtualNumpadDialog = false }
+                            )
+                        }
+                        if (matchedChannel != null) {
+                            TvActionButton(
+                                text = "▶ CH ${matchedChannel.number} — ${matchedChannel.name} Kanalına Git",
+                                icon = Icons.Rounded.PlayArrow,
+                                isPrimary = true,
+                                onClick = {
+                                    showVirtualNumpadDialog = false
+                                    showOsd = false
+                                    onSelectChannelDirect(matchedChannel)
+                                }
+                            )
+                        }
                     }
                 }
             }

@@ -148,6 +148,14 @@ import androidx.media3.common.MimeTypes
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import org.json.JSONArray
 import org.json.JSONObject
+import android.util.Base64
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.ui.graphics.graphicsLayer
+import java.security.MessageDigest
+import javax.crypto.Cipher
+import javax.crypto.spec.IvParameterSpec
+import javax.crypto.spec.SecretKeySpec
 import java.security.SecureRandom
 import java.security.cert.X509Certificate
 import javax.net.ssl.HttpsURLConnection
@@ -619,39 +627,45 @@ class TvViewModel(private val repository: TvRepository) : ViewModel() {
             var failCount = 0
             var scannedCount = 0
 
-            pool.chunked(16).forEach { batch ->
-                val results = coroutineScope {
-                    batch.map { ch ->
-                        async(Dispatchers.IO) {
-                            ch.id to repository.probeChannelStreamHealth(ch)
-                        }
-                    }.awaitAll()
-                }
-                results.forEach { (id, isOk) ->
-                    if (isOk) {
-                        healthy.add(id)
-                        broken.remove(id)
-                        okCount += 1
-                    } else {
-                        healthy.remove(id)
-                        broken.add(id)
-                        failCount += 1
+            try {
+                pool.chunked(16).forEach { batch ->
+                    val results = coroutineScope {
+                        batch.map { ch ->
+                            async(Dispatchers.IO) {
+                                val ok = kotlinx.coroutines.withTimeoutOrNull(2_800L) {
+                                    repository.probeChannelStreamHealth(ch)
+                                } ?: false
+                                ch.id to ok
+                            }
+                        }.awaitAll()
                     }
+                    results.forEach { (id, isOk) ->
+                        if (isOk) {
+                            healthy.add(id)
+                            broken.remove(id)
+                            okCount += 1
+                        } else {
+                            healthy.remove(id)
+                            broken.add(id)
+                            failCount += 1
+                        }
+                    }
+                    scannedCount += batch.size
+                    _extraState.value = _extraState.value.copy(
+                        healthyChannelIds = healthy.toSet(),
+                        healthScanProgress = "${scannedCount.coerceAtMost(pool.size)}/${pool.size}"
+                    )
+                    _brokenIds.value = broken.toSet()
                 }
-                scannedCount += batch.size
+                repository.saveBrokenChannelIds(broken)
+                _statusMessage.value = "✅ Tüm kanallar tarandı (${pool.size}/${pool.size}): 🟢 $okCount Aktif • ⚠️ $failCount Yanıt Vermiyor"
+            } finally {
                 _extraState.value = _extraState.value.copy(
                     healthyChannelIds = healthy.toSet(),
-                    healthScanProgress = "$scannedCount/${pool.size}"
+                    isScanningHealth = false,
+                    healthScanProgress = ""
                 )
-                _brokenIds.value = broken.toSet()
             }
-            repository.saveBrokenChannelIds(broken)
-            _extraState.value = _extraState.value.copy(
-                healthyChannelIds = healthy.toSet(),
-                isScanningHealth = false,
-                healthScanProgress = ""
-            )
-            _statusMessage.value = "🩺 Tüm kanallar tarandı (${pool.size}): 🟢 $okCount Aktif • ⚠️ $failCount Yanıt Vermiyor"
         }
     }
 

@@ -148,6 +148,14 @@ import androidx.media3.common.MimeTypes
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import org.json.JSONArray
 import org.json.JSONObject
+import android.util.Base64
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.ui.graphics.graphicsLayer
+import java.security.MessageDigest
+import javax.crypto.Cipher
+import javax.crypto.spec.IvParameterSpec
+import javax.crypto.spec.SecretKeySpec
 import java.security.SecureRandom
 import java.security.cert.X509Certificate
 import javax.net.ssl.HttpsURLConnection
@@ -169,6 +177,23 @@ fun MultiViewPlayerCell(
 ) {
     val context = LocalContext.current
     var isFocused by remember { mutableStateOf(false) }
+    // Chromecast 4K kumandasında CH+/CH- tuşu olmadığı için:
+    // Hücre üzerindeyken OK tuşuna basınca hücre içi kontrol menüsü (Tam Ekran / Kanal+ / Kanal- / Kaynak) açılır!
+    var showSlotMenu by remember { mutableStateOf(false) }
+    val slotFullBtnRequester = remember { FocusRequester() }
+    val cellBoxRequester = remember { FocusRequester() }
+
+    val focusScale by animateFloatAsState(
+        targetValue = if (isFocused || showSlotMenu) 1.018f else 1f,
+        animationSpec = tween(durationMillis = 135),
+        label = "mv_cell_scale"
+    )
+    val borderColor by animateColorAsState(
+        targetValue = if (isFocused || showSlotMenu) TvThemeColors.BullRedBright else Color.White.copy(alpha = 0.18f),
+        animationSpec = tween(durationMillis = 135),
+        label = "mv_cell_border"
+    )
+
     var currentSourceIdx by remember(channel.id) {
         mutableIntStateOf(preferredSourceIndex.coerceIn(0, (channel.sources.size - 1).coerceAtLeast(0)))
     }
@@ -190,6 +215,13 @@ fun MultiViewPlayerCell(
 
     LaunchedEffect(isAudioActive) {
         exoPlayer.volume = if (isAudioActive) 1f else 0f
+    }
+
+    LaunchedEffect(showSlotMenu) {
+        if (showSlotMenu) {
+            delay(50L)
+            try { slotFullBtnRequester.requestFocus() } catch (_: Exception) {}
+        }
     }
 
     DisposableEffect(exoPlayer, channel.id, currentSourceIdx) {
@@ -221,7 +253,7 @@ fun MultiViewPlayerCell(
             exoPlayer.prepare()
             exoPlayer.play()
         }
-        delay(3200L)
+        delay(3000L)
         if (isBuffering && exoPlayer.playbackState != Player.STATE_READY && channel.sources.size > 1 && autoTried + 1 < channel.sources.size) {
             autoTried += 1
             currentSourceIdx = (currentSourceIdx + 1) % channel.sources.size
@@ -234,34 +266,47 @@ fun MultiViewPlayerCell(
 
     Box(
         modifier = modifier
+            .graphicsLayer {
+                scaleX = focusScale
+                scaleY = focusScale
+            }
+            .focusRequester(cellBoxRequester)
             .clip(RoundedCornerShape(14.dp))
             .background(Color.Black)
             .border(
-                width = if (isFocused) 3.dp else 1.dp,
-                color = if (isFocused) TvThemeColors.BullRedBright else Color.White.copy(alpha = 0.18f),
+                width = if (isFocused || showSlotMenu) 3.dp else 1.dp,
+                color = borderColor,
                 shape = RoundedCornerShape(14.dp)
             )
             .onFocusChanged {
                 isFocused = it.isFocused || it.hasFocus
                 if (it.isFocused || it.hasFocus) onFocused()
+                if (!it.isFocused && !it.hasFocus) showSlotMenu = false
             }
             .onPreviewKeyEvent { event ->
-                // ÖNEMLİ: DPAD_UP ve DPAD_DOWN burada Tüketilmez! Böylece kumanda ile üstteki 2 ekrandan
-                // alttaki 2 ekrana (3. ve 4. ekran) serbestçe geçiş yapılır!
-                if (event.nativeKeyEvent.action == KeyEvent.ACTION_DOWN && event.nativeKeyEvent.repeatCount == 0 && isFocused) {
+                if (event.nativeKeyEvent.action == KeyEvent.ACTION_DOWN && event.nativeKeyEvent.repeatCount == 0) {
                     when (event.nativeKeyEvent.keyCode) {
                         KeyEvent.KEYCODE_CHANNEL_UP, KeyEvent.KEYCODE_PAGE_UP -> { onZapSlot(+1); true }
                         KeyEvent.KEYCODE_CHANNEL_DOWN, KeyEvent.KEYCODE_PAGE_DOWN -> { onZapSlot(-1); true }
-                        KeyEvent.KEYCODE_MEDIA_NEXT -> { onZapSlot(+1); true }
-                        KeyEvent.KEYCODE_MEDIA_PREVIOUS -> { onZapSlot(-1); true }
+                        KeyEvent.KEYCODE_BACK -> {
+                            if (showSlotMenu) {
+                                showSlotMenu = false
+                                try { cellBoxRequester.requestFocus() } catch (_: Exception) {}
+                                true
+                            } else false
+                        }
                         else -> false
                     }
                 } else false
             }
-            .clickable { onExpand() }
+            .clickable {
+                if (!showSlotMenu) {
+                    showSlotMenu = true
+                } else {
+                    onExpand()
+                }
+            }
     ) {
-        // TextureView tabanlı PlayerView: Android TV Box'larda 4'lü ekranda SurfaceView çakışmasını
-        // ve alttaki 2 ekranın siyah kalmasını tamamen engeller!
         AndroidView(
             factory = { ctx ->
                 val pv = android.view.LayoutInflater.from(ctx)
@@ -310,57 +355,73 @@ fun MultiViewPlayerCell(
             )
         }
 
-        // Alt Kontrol Çubuğu: Hem Tablet/Telefon Dokunmatik hem Kumanda için Hızlı Kanal & Kaynak Değiştirme
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
+        // Chromecast 4K Kumandası İçin Hücre İçi Hızlı Kontrol Çubuğu (OK tuşuna basınca aktifleşir)
+        AnimatedVisibility(
+            visible = showSlotMenu || isFocused,
+            enter = fadeIn(tween(130)) + slideInVertically(tween(130), initialOffsetY = { it / 2 }),
+            exit = fadeOut(tween(110)),
             modifier = Modifier
                 .fillMaxWidth()
                 .align(Alignment.BottomCenter)
-                .background(Color.Black.copy(alpha = if (isFocused) 0.78f else 0.45f))
-                .padding(horizontal = 8.dp, vertical = 4.dp)
         ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(TvThemeColors.SurfaceElevated)
-                        .clickable { onZapSlot(-1) }
-                        .padding(horizontal = 7.dp, vertical = 3.dp)
-                ) {
-                    Text("⏮ Kanal-", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-                }
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(TvThemeColors.SurfaceElevated)
-                        .clickable { onZapSlot(+1) }
-                        .padding(horizontal = 7.dp, vertical = 3.dp)
-                ) {
-                    Text("Kanal+ ⏭", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-                }
-                if (channel.sources.size > 1) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(TvThemeColors.SurfaceElevated)
-                            .clickable {
-                                autoTried = 0
-                                currentSourceIdx = (currentSourceIdx + 1) % channel.sources.size
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color.Black.copy(alpha = if (showSlotMenu) 0.88f else 0.65f))
+                    .padding(horizontal = 8.dp, vertical = 6.dp)
+            ) {
+                if (showSlotMenu) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        TvCompactChipButton(
+                            text = "📺 Tam Ekran",
+                            icon = Icons.Rounded.SmartDisplay,
+                            onClick = {
+                                showSlotMenu = false
+                                onExpand()
+                            },
+                            modifier = Modifier.focusRequester(slotFullBtnRequester)
+                        )
+                        TvCompactChipButton(
+                            text = "⏭ Kanal+",
+                            icon = Icons.Rounded.SwapHoriz,
+                            onClick = { onZapSlot(+1) }
+                        )
+                        TvCompactChipButton(
+                            text = "⏮ Kanal-",
+                            icon = Icons.Rounded.SwapHoriz,
+                            onClick = { onZapSlot(-1) }
+                        )
+                        if (channel.sources.size > 1) {
+                            TvCompactChipButton(
+                                text = "🔄 Akış ${currentSourceIdx + 1}/${channel.sources.size}",
+                                icon = Icons.Rounded.Refresh,
+                                onClick = {
+                                    autoTried = 0
+                                    currentSourceIdx = (currentSourceIdx + 1) % channel.sources.size
+                                }
+                            )
+                        }
+                        TvCompactChipButton(
+                            text = "✕",
+                            icon = Icons.Rounded.Clear,
+                            onClick = {
+                                showSlotMenu = false
+                                try { cellBoxRequester.requestFocus() } catch (_: Exception) {}
                             }
-                            .padding(horizontal = 7.dp, vertical = 3.dp)
-                    ) {
-                        Text("🔄 Akış ${currentSourceIdx + 1}/${channel.sources.size}", color = TvThemeColors.AccentCyan, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                        )
                     }
+                } else {
+                    Text(
+                        text = "OK: Bu Ekranı Yönet (Tam Ekran / Kanal+ / Kanal- / Yedek Akış)",
+                        color = TvThemeColors.FavoriteGold,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1
+                    )
                 }
             }
-            Text(
-                text = if (isFocused) "OK / Dokun: Tam Ekran • CH+/CH-: Kanal" else "Seçmek İçin Gelin",
-                color = if (isFocused) TvThemeColors.FavoriteGold else TvThemeColors.TextSecondary,
-                fontSize = 9.sp,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1
-            )
         }
     }
 }
@@ -686,10 +747,19 @@ fun TvCompactChipButton(
     modifier: Modifier = Modifier
 ) {
     var isFocused by remember { mutableStateOf(false) }
+    val chipScale by animateFloatAsState(
+        targetValue = if (isFocused) 1.05f else 1f,
+        animationSpec = tween(durationMillis = 125),
+        label = "chip_scale"
+    )
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = modifier
+            .graphicsLayer {
+                scaleX = chipScale
+                scaleY = chipScale
+            }
             .clip(RoundedCornerShape(9.dp))
             .background(if (isFocused) TvThemeColors.BullRedBright else TvThemeColors.SurfaceCard)
             .border(
@@ -757,7 +827,7 @@ fun TvSideNavigationRail(
                         maxLines = 1
                     )
                     Text(
-                        text = "v1.6.1 • TV & Tablet",
+                        text = "v1.7.0 • TV & Tablet",
                         color = TvThemeColors.BullRedBright,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.SemiBold,
@@ -885,9 +955,18 @@ fun TvActionButton(
     modifier: Modifier = Modifier
 ) {
     var isFocused by remember { mutableStateOf(false) }
+    val btnScale by animateFloatAsState(
+        targetValue = if (isFocused) 1.05f else 1f,
+        animationSpec = tween(durationMillis = 125),
+        label = "action_btn_scale"
+    )
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = modifier
+            .graphicsLayer {
+                scaleX = btnScale
+                scaleY = btnScale
+            }
             .clip(RoundedCornerShape(10.dp))
             .background(
                 when {

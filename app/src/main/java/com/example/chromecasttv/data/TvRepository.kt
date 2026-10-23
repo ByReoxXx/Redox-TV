@@ -148,6 +148,14 @@ import androidx.media3.common.MimeTypes
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import org.json.JSONArray
 import org.json.JSONObject
+import android.util.Base64
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.ui.graphics.graphicsLayer
+import java.security.MessageDigest
+import javax.crypto.Cipher
+import javax.crypto.spec.IvParameterSpec
+import javax.crypto.spec.SecretKeySpec
 import java.security.SecureRandom
 import java.security.cert.X509Certificate
 import javax.net.ssl.HttpsURLConnection
@@ -302,26 +310,57 @@ class TvRepository(private val appContext: Context) {
         }
     }
 
-    suspend fun probeChannelStreamHealth(channel: TvChannel): Boolean = withContext(Dispatchers.IO) {
-        for (src in channel.sources) {
-            val urlStr = src.url.trim()
-            if (urlStr.isBlank()) continue
-            var conn: HttpURLConnection? = null
+    private suspend fun probeSingleUrlWithHardTimeout(urlStr: String, timeoutMs: Long = 1_400L): Boolean {
+        if (urlStr.isBlank()) return false
+        // SHOUTcast / Icecast radyo akışları (; ile bitenler) sonsuz byte gönderdiği için
+        // HttpURLConnection.responseCode içinde takılı kalmasını önle!
+        if (urlStr.endsWith(";") || urlStr.startsWith("rtmp://", ignoreCase = true) || urlStr.startsWith("rtsp://", ignoreCase = true)) {
+            return true
+        }
+        val deferred = kotlinx.coroutines.CompletableDeferred<Boolean>()
+        var connRef: HttpURLConnection? = null
+        val worker = Thread {
             try {
-                conn = (URL(urlStr).openConnection() as HttpURLConnection).apply {
-                    connectTimeout = 1_800
-                    readTimeout = 1_800
+                installPermissiveSslForRegionalStreams()
+                val c = (URL(urlStr).openConnection() as HttpURLConnection).apply {
+                    connectTimeout = 1_200
+                    readTimeout = 1_200
                     instanceFollowRedirects = true
                     requestMethod = "GET"
                     setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/125.0.0.0")
+                    setRequestProperty("Range", "bytes=0-128")
+                    setRequestProperty("Connection", "close")
                 }
-                val code = conn.responseCode
-                if (code in 200..399) {
-                    return@withContext true
-                }
-            } catch (_: Exception) {
+                connRef = c
+                val code = c.responseCode
+                deferred.complete(code in 200..399)
+            } catch (_: Throwable) {
+                deferred.complete(false)
             } finally {
-                try { conn?.disconnect() } catch (_: Exception) {}
+                try { connRef?.disconnect() } catch (_: Throwable) {}
+            }
+        }.apply {
+            isDaemon = true
+            start()
+        }
+
+        val ok = kotlinx.coroutines.withTimeoutOrNull(timeoutMs) {
+            deferred.await()
+        } ?: false
+
+        if (!deferred.isCompleted) {
+            try { connRef?.disconnect() } catch (_: Throwable) {}
+            try { worker.interrupt() } catch (_: Throwable) {}
+        }
+        return ok
+    }
+
+    suspend fun probeChannelStreamHealth(channel: TvChannel): Boolean = withContext(Dispatchers.IO) {
+        // Her kanal için en fazla ilk 2 kaynağı kesin zaman aşımıyla (1.4 sn) test et;
+        // böylece 308+ kanal taraması asla DNS/SSL veya radyo akışında takılı kalmaz!
+        for (src in channel.sources.take(2)) {
+            if (probeSingleUrlWithHardTimeout(src.url.trim(), 1_400L)) {
+                return@withContext true
             }
         }
         false

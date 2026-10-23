@@ -1,36 +1,38 @@
-# 📱 M3U, Xtream Codes ve QR Web Yükleme Rehberi
+# 📡 M3U, Xtream Codes API ve Telefondan QR ile Yükleme
 
-RedoX TV'ye kendi M3U listelerinizi veya Xtream Codes hesaplarınızı 4 farklı yöntemle ekleyebilirsiniz. Eklenen tüm listeler sol menüdeki **Özel M3U Kanalları** sekmesinde kategorilerine ayrılmış olarak listelenir.
+**RedoX TV**, dahili 361 kanalın yanı sıra kendi özel `.m3u` / `.m3u8` listelerinizi ve **Xtream Codes API** aboneliklerinizi kolayca ekleyebilmeniz için 4 farklı yöntem sunar. Eklediğiniz tüm kanallar sol menüdeki **Özel M3U Kanalları** sekmesinde listelenir.
 
----
-
-## 1. QR Kod İle Telefondan Kablosuz Gönderim (Önerilen)
-
-TV kumandasıyla uzun URL veya şifre yazmak yerine telefonunuzu kullanabilirsiniz:
-1. Sol menüden **M3U & Dosya Yükle** sekmesine girin.
-2. İlk sekme olan **QR Web Kumandası** ekranındaki QR kodu telefonunuzun kamerasıyla okutun (veya telefon tarayıcısına ekranda yazan `http://192.168.x.x:8585` adresini girin).
-   *(Not: Telefonunuz ve TV'niz aynı Wi-Fi ağında olmalıdır.)*
-3. Telefonunuzda açılan **🐂 RedoX TV Uzaktan Yükleyici** sayfasından:
-   - **M3U URL veya Dosya İçeriği:** M3U linkinizi yapıştırabilir veya telefonunuzdaki `.m3u` dosyasının içeriğini doğrudan gönderebilirsiniz.
-   - **Xtream Codes Bağlantısı:** Sunucu adresi (`http://...`), kullanıcı adı ve şifrenizi girip **Xtream Bağla** butonuna basabilirsiniz.
-   - **Yedek Alma & Geri Yükleme:** TV'deki tüm favori, PIN ve M3U ayarlarınızı telefonunuza indirebilir veya telefondan geri yükleyebilirsiniz.
+![RedoX TV M3U ve QR Yükleme](https://raw.githubusercontent.com/ByReoxXx/Redox-TV/main/screenshots/06-m3u-xtream-ve-qr-yukleme.jpg)
 
 ---
 
-## 2. Dahili TV Dosya Gezgini İle Cihazdan / USB'den M3U Seçimi
+## 1. 📱 Telefondan QR Kod ile Saniyeler İçinde Yükleme (En Pratik Yöntem)
 
-Google TV / Chromecast 4K cihazlarında sistem dosya seçicisi bulunmasa bile RedoX TV'nin kendi dahili dosya seçicisini kullanabilirsiniz:
-1. **M3U & Dosya Yükle** -> **Dosya Seç** sekmesine gelip **Dosyadan M3U Seç** butonuna basın.
-2. Açılan pencerede:
-   - **Bulunan M3U'lar:** Cihazdaki `Download`, `Documents`, `Ana Dizin` ve takılı **USB Belleklerde** otomatik bulunan tüm `.m3u` / `.m3u8` dosyaları listelenir; üzerine gelip `OK` tuşuna basmanız yeterlidir.
-   - **Klasör Gezgini:** `Download Klasörü`, `Ana Dizin (/sdcard)` veya `USB / Depolama` sekmelerinden klasörler içinde gezerek istediğiniz dosyayı seçebilirsiniz.
+TV kumandasıyla uzun M3U linkleri yazmakla uğraşmanıza gerek yoktur:
+1. Televizyonunuz ve telefonunuzun **aynı Wi-Fi ağında** olduğundan emin olun.
+2. **M3U & Dosya Yükle** ekranının sağ panelinde yer alan **QR Kodu** telefonunuzun kamerasıyla okutun (veya altında yazan `http://192.168.x.x...` yerel adresini telefon tarayıcınızda açın).
+3. Telefon ekranınızda açılan arayüzden `.m3u` dosyanızı veya URL bağlantınızı gönderin; liste anında televizyonunuza eklenecektir!
+4. Bağlantı yenilenirse **🔄 QR Yenile** butonuna basarak yeni kod oluşturabilirsiniz.
+
+---
+
+## 2. 📁 Cihaz Hafızasından Dosya Seçme (`.m3u` / `.m3u8`)
+
+* **📁 Dosyadan M3U Seç:** Cihazınızın dahili hafızasına veya bağlı USB belleğe göz atarak `.m3u` / `.m3u8` uzantılı dosyaları doğrudan içe aktarın.
+* **🔍 Download Klasörünü Tara:** TV veya kutunuzun `Download` (İndirilenler) klasörüne indirdiğiniz tüm M3U dosyalarını otomatik olarak bulur ve listeler.
 
 ---
 
-## 3. M3U URL veya Xtream Codes Hesabını Kumandayla Ekleme
+## 3. 🛡️ Xtream Codes API ve ☁️ M3U URL Girişi
 
-- **M3U URL Sekmesi:** Liste adını ve `http://...` / `https://...` uzantılı M3U adresinizi girip **M3U URL Kaydet ve Kanalları Yükle** butonuna basın.
-- **Xtream Codes Sekmesi:** Sağlayıcınızın verdiği `Sunucu URL`, `Kullanıcı Adı` ve `Şifre` bilgilerini girip **Xtream Hesabını Bağla** butonuna basın.
+* **🛡️ Xtream Codes API Sekmesi:** Sunucu adresi (`http://...`), Kullanıcı Adı ve Şifre bilgilerinizi girerek IPTV sağlayıcınızın canlı kanallarını içe aktarabilirsiniz.
+* **☁️ M3U URL Sekmesi:** Uzak bir sunucuda barındırılan `.m3u` veya `.m3u8` bağlantısını doğrudan yapıştırarak ekleyebilirsiniz.
 
 ---
-⬅️ **[Wiki Ana Sayfasına Dön](https://github.com/ByReoxXx/Redox-TV/blob/main/wiki/Home.md)**
+
+## 4. 💾 Yedekleme ve Geri Yükleme
+
+Ayarlarınızı ve eklediğiniz özel listeleri kaybetmemek için ekranın altındaki araçları kullanabilirsiniz:
+* **☁️ 💾 Yedek Al (Download):** Tüm özel M3U listelerinizi ve favori ayarlarınızı cihazın `Download` klasörüne yedekler.
+* **🔄 ♻️ Yedekten Geri Yükle:** Daha önce aldığınız yedeği tek tuşla geri yükler.
+* **🔄 Tüm Kaynakları Yenile:** Ekli olan tüm M3U URL ve Xtream kaynaklarını yeniden senkronize eder.

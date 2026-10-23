@@ -1,50 +1,25 @@
-# 🐂 RedoX TV Wiki — Resmi Kullanım ve Geliştirici Kılavuzu
+# 🐂 RedoX TV Wiki — Resmi Kullanım ve Dokümantasyon Merkezi
 
-**RedoX TV** resmi Wiki sayfasına hoş geldiniz! Bu dokümantasyon; **Google TV (Chromecast 4K/HD)**, **Android TV Box**, **Akıllı TV'ler**, **Android Tablet** ve **Telefonlarda** RedoX TV'yi en verimli şekilde kurmanız, kullanmanız ve geliştirmeniz için hazırlanmıştır.
+**RedoX TV (v1.7.2)** resmi Wiki dokümantasyonuna hoş geldiniz! Bu rehberde uygulamanın **Android TV, Google TV (Chromecast), TV Box, Tablet ve Mobil** cihazlara kurulumunu, canlı TV özelliklerini, 2x2 bölünmüş ekran (Multi-View) modunu ve telefondan QR kod ile M3U yükleme adımlarını ekran görüntüleriyle bulabilirsiniz.
 
----
-
-## 🔗 Hızlı Bağlantılar
-- **GitHub Ana Deposu:** [https://github.com/ByReoxXx/Redox-TV](https://github.com/ByReoxXx/Redox-TV)
-- **Son Sürüm APK İndir (Releases):** [https://github.com/ByReoxXx/Redox-TV/releases](https://github.com/ByReoxXx/Redox-TV/releases)
-- **Hata Bildirimi & Öneriler (Issues):** [https://github.com/ByReoxXx/Redox-TV/issues](https://github.com/ByReoxXx/Redox-TV/issues)
+![RedoX TV Hızlı Başlangıç Ekranı](https://raw.githubusercontent.com/ByReoxXx/Redox-TV/main/screenshots/01-hizli-baslangic-ekrani.jpg)
 
 ---
 
-## 📚 Wiki İçindekiler
+## 🧭 Hızlı Gezinme Menüsü
 
-1. **[🚀 Kurulum Rehberi](https://github.com/ByReoxXx/Redox-TV/blob/main/wiki/Kurulum-Rehberi.md)**
-   - Android TV / Chromecast 4K / TV Box kurulumu (Downloader, SFTTV ve USB yöntemleri)
-   - Android Tablet ve Telefon kurulumu
-   - Depolama ve dosya erişim izinlerinin açılması
-2. **[🎮 Kumanda (D-Pad) ve Dokunmatik Kontroller](https://github.com/ByReoxXx/Redox-TV/blob/main/wiki/Kumanda-ve-Dokunmatik-Kontroller.md)**
-   - Chromecast 4K kumandası (rakamsız ve `CH+/CH-` tuşsuz kumandalar) için tam rehber
-   - Ekran üstü sanal numaratör (`0-9`) kullanımı
-   - Tablet ve telefon dokunmatik hareketleri
-3. **[📱 M3U, Xtream Codes ve QR Web Yükleme Rehberi](https://github.com/ByReoxXx/Redox-TV/blob/main/wiki/M3U-Xtream-ve-QR-Yukleme.md)**
-   - Telefondan QR kod ile kablosuz M3U/Xtream/Yedek gönderimi (`:8585`)
-   - Dahili TV Dosya Gezgini ile `Download` ve USB bellekten `.m3u` seçimi
-   - Yedek alma ve geri yükleme (`redox_tv_backup.txt`)
-4. **[📺 Akıllı Oynatıcı, Otomatik Yedek Geçişi ve 2x2 Çoklu Ekran](https://github.com/ByReoxXx/Redox-TV/blob/main/wiki/Coklu-Ekran-ve-Oynatici.md)**
-   - Çoklu yayın kaynağı (Multi-Source) ve Auto-Failover nasıl çalışır?
-   - 4'lü Çoklu Ekran (2x2 Multi-View) ve PiP (Resim İçinde Resim) kullanımı
-   - Favori sıralama (Tut & Taşı) ve PIN korumalı Ebeveyn Kilidi
-5. **[🛠️ Teknik Mimari ve Geliştirici Rehberi](https://github.com/ByReoxXx/Redox-TV/blob/main/wiki/Teknik-Mimari-ve-Gelistirici-Rehberi.md)**
-   - 13 dosyalı katmanlı Kotlin & Jetpack Compose mimarisi
-   - AES-256-CBC şifreli kanal altyapısı (`channel/channels.enc`)
-   - Media3 ExoPlayer, `TextureView` ve `DecoderFallback` optimizasyonları
-6. **[❓ Sıkça Sorulan Sorular ve Sorun Giderme (SSS)](https://github.com/ByReoxXx/Redox-TV/blob/main/wiki/Sikca-Sorulan-Sorular-SSS.md)**
-   - Yayın açılmama, siyah ekran, dosya seçici izni ve kumanda ipuçları
-
----
-
-## 🌟 Öne Çıkan Özellikler Özeti
-
-| Özellik | Açıklama |
+| Wiki Sayfası | İçerik Özeti |
 | :--- | :--- |
-| **Evrensel Platform Desteği** | Android TV, Google TV, TV Box, Android Tablet ve Telefonlarda tek APK ile çalışır |
-| **Çoklu Kaynak & Auto-Failover** | Her kanal altında 3-6 yedek akış; ana yayın yanıt vermezse saniyeler içinde otomatik yedek yayına geçer |
-| **Chromecast 4K Kumanda Uyumu** | `CH+/CH-` veya `0-9` tuşu olmayan kumandalar için sanal numaratör ve hücre içi kontrol menüleri |
-| **QR Web Kumandası (`:8585`)** | Telefondan QR kod okutarak kablosuz M3U dosyası, URL, Xtream hesabı ve yedek gönderimi |
-| **4'lü Çoklu Ekran (2x2)** | `TextureView` ve `DecoderFallback` destekli, aynı anda 4 canlı kanalı izleme modu |
-| **AES-256 Şifreli Kanal Paketi** | `https://raw.githubusercontent.com/ByReoxXx/Redox-TV/main/channel/channels.enc` üzerinden dinamik güncellenen şifreli kanal veritabanı |
+| 📦 **[Kurulum ve İlk Başlangıç](Kurulum-ve-Baslangic)** | APK indirme, X-plore ile Android TV / TV Box kurulumu ve Hızlı Başlangıç ekranı ayarları |
+| 📺 **[Özellikler ve Kullanım Rehberi](Ozellikler-ve-Kullanim-Rehberi)** | Canlı TV arayüzü, 1184+ yedek akış sistemi, `Tümünü Test Et` taraması, EPG, favoriler ve kanal kilitleme |
+| ⊞ **[Bölünmüş Ekran (Multi-View)](Bolunmus-Ekran-MultiView)** | Aynı anda 2 veya 4 kanalı (2x2) izleme, otomatik ses geçişi ve pencere yönetimi |
+| 📡 **[M3U, Xtream ve QR Yükleme](M3U-Xtream-ve-QR-Yukleme)** | Telefondan QR kod okutarak liste gönderme, yerel dosya seçimi, Xtream Codes API ve yedekleme |
+| 🎮 **[Kumanda Kısayolları ve SSS](Kumanda-Kisa-Yollari-ve-SSS)** | TV kumandası tuş kombinasyonları, ekran numaratörü ve açılmayan kanallar için çözüm adımları |
+
+---
+
+## 🎯 Neden RedoX TV?
+
+1. **Eski ve Yeni Tüm Cihazlarda Akıcı Performans:** Düşük RAM ve işlemciye sahip eski TV Box modellerinde bile takılmadan çalışan sade ve optimize edilmiş arayüz.
+2. **Çoklu Yedek Akış Mimarisi (`2x` - `6x`):** Tek bir yayın adresine bağlı kalmaz; her kanal için birden fazla alternatif akış barındırır (361 kanal için 1184+ yedek akış).
+3. ** %100 Kumanda Uyumlu Tasarım:** Uzun kanal URL'lerini kumanda ile yazmak yerine telefon kamerasıyla QR kod okutarak saniyeler içinde aktarım yapabilirsiniz.

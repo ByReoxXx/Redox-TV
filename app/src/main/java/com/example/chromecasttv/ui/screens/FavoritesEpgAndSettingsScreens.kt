@@ -1,4 +1,8 @@
-@file:OptIn(androidx.tv.material3.ExperimentalTvMaterial3Api::class)
+@file:OptIn(
+    androidx.tv.material3.ExperimentalTvMaterial3Api::class,
+    androidx.compose.foundation.ExperimentalFoundationApi::class,
+    androidx.compose.ui.ExperimentalComposeUiApi::class
+)
 
 package com.example.chromecasttv
 
@@ -129,9 +133,27 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.provider.Settings
+import android.view.TextureView
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.lazy.grid.LazyGridState
+import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
+import androidx.media3.common.MimeTypes
+import androidx.media3.exoplayer.DefaultRenderersFactory
 import org.json.JSONArray
 import org.json.JSONObject
+import java.security.SecureRandom
+import java.security.cert.X509Certificate
+import javax.net.ssl.HttpsURLConnection
+import javax.net.ssl.SSLContext
+import javax.net.ssl.TrustManager
+import javax.net.ssl.X509TrustManager
 
 @Composable
 fun FavoritesReorderScreen(
@@ -402,7 +424,6 @@ fun FavoritesReorderScreen(
                                     false
                                 }
                             }
-                            .focusable()
                             .clickable {
                                 if (isGrabbed) grabbedChannelId = null else onPlayChannel(channel)
                             }
@@ -498,6 +519,7 @@ fun FavoritesReorderScreen(
 }
 
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 @Composable
 fun MultiViewSplitScreen(
     state: TvUiState,
@@ -505,12 +527,15 @@ fun MultiViewSplitScreen(
     onChangeSlotChannel: (slotIndex: Int, delta: Int) -> Unit,
     onExpandSlotToFull: (TvChannel) -> Unit
 ) {
+    val allPool = remember(state.builtInChannels, state.customM3uChannels) {
+        (state.builtInChannels + state.customM3uChannels).ifEmpty { state.builtInChannels }
+    }
     val slotCount = if (state.isMultiViewFourGrid) 4 else 2
-    val slots = remember(state.multiViewChannels, state.builtInChannels, slotCount) {
-        val base = state.multiViewChannels.ifEmpty { state.builtInChannels.take(4) }
+    val slots = remember(state.multiViewChannels, allPool, slotCount) {
+        val base = state.multiViewChannels.ifEmpty { allPool.take(4) }
         List(slotCount) { idx ->
             base.getOrElse(idx) {
-                state.builtInChannels.getOrElse(idx % state.builtInChannels.size.coerceAtLeast(1)) {
+                allPool.getOrElse(idx % allPool.size.coerceAtLeast(1)) {
                     TvChannel("empty_$idx", idx + 1, "Kanal", "TV", 0xFF1E3A8AL, 0xFF3B82F6L, "Genel", sources = emptyList())
                 }
             }
@@ -518,6 +543,7 @@ fun MultiViewSplitScreen(
     }
 
     var activeAudioSlot by remember { mutableIntStateOf(0) }
+    val slotRequesters = remember { List(4) { FocusRequester() } }
 
     Column(modifier = Modifier.fillMaxSize()) {
         Row(
@@ -525,20 +551,34 @@ fun MultiViewSplitScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(34.dp)
+                .height(36.dp)
                 .padding(bottom = 6.dp)
         ) {
             Text(
-                text = "Seçili ekranın sesi otomatik açılır • ▲/▼: Kanal Değiştir • OK: Tam Ekran",
+                text = "Seçili ekranın sesi otomatik açılır • Yön Tuşları (◄/►/▲/▼): 4 Ekran Arası Geçiş • OK/Dokun: Tam Ekran • CH+/CH-: Kanal Değiştir",
                 color = TvThemeColors.TextSecondary,
                 fontSize = 11.sp,
-                maxLines = 1
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f).padding(end = 8.dp)
             )
-            TvCompactChipButton(
-                text = if (state.isMultiViewFourGrid) "Görünüm: 4'lü (2x2)" else "Görünüm: 2'li Yan Yana",
-                icon = Icons.Rounded.GridView,
-                onClick = onToggleGridMode
-            )
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                TvCompactChipButton(
+                    text = "⏮ Seçili Kanal-",
+                    icon = Icons.Rounded.SwapHoriz,
+                    onClick = { onChangeSlotChannel(activeAudioSlot, -1) }
+                )
+                TvCompactChipButton(
+                    text = "Seçili Kanal+ ⏭",
+                    icon = Icons.Rounded.SwapHoriz,
+                    onClick = { onChangeSlotChannel(activeAudioSlot, +1) }
+                )
+                TvCompactChipButton(
+                    text = if (state.isMultiViewFourGrid) "Görünüm: 4'lü (2x2)" else "Görünüm: 2'li Yan Yana",
+                    icon = Icons.Rounded.GridView,
+                    onClick = onToggleGridMode
+                )
+            }
         }
 
         if (state.isMultiViewFourGrid) {
@@ -551,18 +591,38 @@ fun MultiViewSplitScreen(
                     modifier = Modifier.weight(1f).fillMaxWidth()
                 ) {
                     MultiViewPlayerCell(
-                        slotIndex = 0, channel = slots[0], isAudioActive = activeAudioSlot == 0,
+                        slotIndex = 0,
+                        channel = slots[0],
+                        isAudioActive = activeAudioSlot == 0,
+                        preferredSourceIndex = state.preferredSources[slots[0].id] ?: 0,
                         onFocused = { activeAudioSlot = 0 },
                         onZapSlot = { d -> onChangeSlotChannel(0, d) },
                         onExpand = { onExpandSlotToFull(slots[0]) },
-                        modifier = Modifier.weight(1f).fillMaxHeight()
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .focusRequester(slotRequesters[0])
+                            .focusProperties {
+                                right = slotRequesters[1]
+                                down = slotRequesters[2]
+                            }
                     )
                     MultiViewPlayerCell(
-                        slotIndex = 1, channel = slots[1], isAudioActive = activeAudioSlot == 1,
+                        slotIndex = 1,
+                        channel = slots[1],
+                        isAudioActive = activeAudioSlot == 1,
+                        preferredSourceIndex = state.preferredSources[slots[1].id] ?: 0,
                         onFocused = { activeAudioSlot = 1 },
                         onZapSlot = { d -> onChangeSlotChannel(1, d) },
                         onExpand = { onExpandSlotToFull(slots[1]) },
-                        modifier = Modifier.weight(1f).fillMaxHeight()
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .focusRequester(slotRequesters[1])
+                            .focusProperties {
+                                left = slotRequesters[0]
+                                down = slotRequesters[3]
+                            }
                     )
                 }
                 Row(
@@ -570,18 +630,38 @@ fun MultiViewSplitScreen(
                     modifier = Modifier.weight(1f).fillMaxWidth()
                 ) {
                     MultiViewPlayerCell(
-                        slotIndex = 2, channel = slots[2], isAudioActive = activeAudioSlot == 2,
+                        slotIndex = 2,
+                        channel = slots[2],
+                        isAudioActive = activeAudioSlot == 2,
+                        preferredSourceIndex = state.preferredSources[slots[2].id] ?: 0,
                         onFocused = { activeAudioSlot = 2 },
                         onZapSlot = { d -> onChangeSlotChannel(2, d) },
                         onExpand = { onExpandSlotToFull(slots[2]) },
-                        modifier = Modifier.weight(1f).fillMaxHeight()
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .focusRequester(slotRequesters[2])
+                            .focusProperties {
+                                up = slotRequesters[0]
+                                right = slotRequesters[3]
+                            }
                     )
                     MultiViewPlayerCell(
-                        slotIndex = 3, channel = slots[3], isAudioActive = activeAudioSlot == 3,
+                        slotIndex = 3,
+                        channel = slots[3],
+                        isAudioActive = activeAudioSlot == 3,
+                        preferredSourceIndex = state.preferredSources[slots[3].id] ?: 0,
                         onFocused = { activeAudioSlot = 3 },
                         onZapSlot = { d -> onChangeSlotChannel(3, d) },
                         onExpand = { onExpandSlotToFull(slots[3]) },
-                        modifier = Modifier.weight(1f).fillMaxHeight()
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .focusRequester(slotRequesters[3])
+                            .focusProperties {
+                                up = slotRequesters[1]
+                                left = slotRequesters[2]
+                            }
                     )
                 }
             }
@@ -591,18 +671,32 @@ fun MultiViewSplitScreen(
                 modifier = Modifier.weight(1f).fillMaxWidth()
             ) {
                 MultiViewPlayerCell(
-                    slotIndex = 0, channel = slots[0], isAudioActive = activeAudioSlot == 0,
+                    slotIndex = 0,
+                    channel = slots[0],
+                    isAudioActive = activeAudioSlot == 0,
+                    preferredSourceIndex = state.preferredSources[slots[0].id] ?: 0,
                     onFocused = { activeAudioSlot = 0 },
                     onZapSlot = { d -> onChangeSlotChannel(0, d) },
                     onExpand = { onExpandSlotToFull(slots[0]) },
-                    modifier = Modifier.weight(1f).fillMaxHeight()
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .focusRequester(slotRequesters[0])
+                        .focusProperties { right = slotRequesters[1] }
                 )
                 MultiViewPlayerCell(
-                    slotIndex = 1, channel = slots[1], isAudioActive = activeAudioSlot == 1,
+                    slotIndex = 1,
+                    channel = slots[1],
+                    isAudioActive = activeAudioSlot == 1,
+                    preferredSourceIndex = state.preferredSources[slots[1].id] ?: 0,
                     onFocused = { activeAudioSlot = 1 },
                     onZapSlot = { d -> onChangeSlotChannel(1, d) },
                     onExpand = { onExpandSlotToFull(slots[1]) },
-                    modifier = Modifier.weight(1f).fillMaxHeight()
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .focusRequester(slotRequesters[1])
+                        .focusProperties { left = slotRequesters[0] }
                 )
             }
         }
@@ -623,7 +717,7 @@ fun EpgTimelineGuideScreen(
             verticalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.weight(1f).fillMaxWidth()
         ) {
-            items(channels, key = { it.id }) { channel ->
+            itemsIndexed(channels, key = { idx, ch -> "epg_${ch.id}_$idx" }) { _, channel ->
                 val programs = epgMap[channel.epgChannelId].orEmpty()
                 var rowFocused by remember { mutableStateOf(false) }
                 val isFavorite = favoriteIds.contains(channel.id)
@@ -646,7 +740,6 @@ fun EpgTimelineGuideScreen(
                             onShortClick = { onPlayChannel(channel) },
                             onLongPress = { onToggleFavorite(channel.id) }
                         )
-                        .focusable()
                         .clickable { onPlayChannel(channel) }
                         .padding(10.dp)
                 ) {
@@ -1280,7 +1373,7 @@ fun M3uPlaylistManagerScreen(
                 }
             } else {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(state.playlists, key = { it.id }) { item ->
+                    itemsIndexed(state.playlists, key = { idx, it -> "pl_${it.id}_$idx" }) { _, item ->
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier

@@ -1,4 +1,8 @@
-@file:OptIn(androidx.tv.material3.ExperimentalTvMaterial3Api::class)
+@file:OptIn(
+    androidx.tv.material3.ExperimentalTvMaterial3Api::class,
+    androidx.compose.foundation.ExperimentalFoundationApi::class,
+    androidx.compose.ui.ExperimentalComposeUiApi::class
+)
 
 package com.example.chromecasttv
 
@@ -129,9 +133,27 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.provider.Settings
+import android.view.TextureView
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.lazy.grid.LazyGridState
+import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
+import androidx.media3.common.MimeTypes
+import androidx.media3.exoplayer.DefaultRenderersFactory
 import org.json.JSONArray
 import org.json.JSONObject
+import java.security.SecureRandom
+import java.security.cert.X509Certificate
+import javax.net.ssl.HttpsURLConnection
+import javax.net.ssl.SSLContext
+import javax.net.ssl.TrustManager
+import javax.net.ssl.X509TrustManager
 
 class TvRepository(private val appContext: Context) {
     private val prefs = appContext.getSharedPreferences("redoxtv_clean_prefs_v5", Context.MODE_PRIVATE)
@@ -433,7 +455,7 @@ class TvRepository(private val appContext: Context) {
                 locationOrUrl = targetFile.absolutePath,
                 isLocalFile = true
             )
-        } catch (_: Exception) {
+        } catch (_: Throwable) {
             null
         }
     }
@@ -593,7 +615,7 @@ class TvRepository(private val appContext: Context) {
                 connectTimeout = 9000
                 readTimeout = 12000
                 instanceFollowRedirects = true
-                setRequestProperty("User-Agent", "RedoXTV/1.4 (Android TV; Chromecast 4K)")
+                setRequestProperty("User-Agent", "RedoXTV/1.6.0 (Android TV; Chromecast 4K)")
             }
             val sb = StringBuilder("#EXTM3U\n")
             var matchedCount = 0
@@ -649,7 +671,7 @@ class TvRepository(private val appContext: Context) {
         val lower = channelName.lowercase(Locale.getDefault())
         return when {
             lower.contains("spor") || lower.contains("tjk") || lower.contains("tay ") || lower.contains("fb ") || lower.contains("gs ") -> "Spor"
-            lower.contains("haber") || lower.contains("ntv") || lower.contains("cnn") || lower.contains("ulke") || lower.contains("ülke") || lower.contains("tele 1") || lower.contains("halk") || lower.contains("sözcü") || lower.contains("sozcu") || lower.contains("ekol") || lower.contains("tbmm") || lower.contains("meclis") || lower.contains("bloomberg") -> "Haber"
+            lower.contains("haber") || lower.contains("ntv") || lower.contains("cnn") || lower.contains("ulke") || lower.contains("ülke") || lower.contains("tele 1") || lower.contains("halk") || lower.contains("sözcü") || lower.contains("sozcu") || lower.contains("ekol") || lower.contains("koza") || lower.contains("tbmm") || lower.contains("meclis") || lower.contains("bloomberg") -> "Haber"
             lower.contains("cocuk") || lower.contains("çocuk") || lower.contains("baby") || lower.contains("minika") || lower.contains("cartoon") || lower.contains("zarok") -> "Çocuk"
             lower.contains("kral") || lower.contains("power") || lower.contains("nr1") || lower.contains("dream") || lower.contains("tatlises") || lower.contains("müzik") || lower.contains("muzik") || lower.contains("akustik") -> "Müzik"
             lower.contains("belgesel") || lower.contains("tarih") || lower.contains("yaban") || lower.contains("çiftçi") || lower.contains("ciftci") || lower.contains("trt 2") -> "Belgesel"

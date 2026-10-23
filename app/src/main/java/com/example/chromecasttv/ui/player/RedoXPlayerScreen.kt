@@ -1,4 +1,8 @@
-@file:OptIn(androidx.tv.material3.ExperimentalTvMaterial3Api::class)
+@file:OptIn(
+    androidx.tv.material3.ExperimentalTvMaterial3Api::class,
+    androidx.compose.foundation.ExperimentalFoundationApi::class,
+    androidx.compose.ui.ExperimentalComposeUiApi::class
+)
 
 package com.example.chromecasttv
 
@@ -129,9 +133,27 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.provider.Settings
+import android.view.TextureView
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.lazy.grid.LazyGridState
+import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
+import androidx.media3.common.MimeTypes
+import androidx.media3.exoplayer.DefaultRenderersFactory
 import org.json.JSONArray
 import org.json.JSONObject
+import java.security.SecureRandom
+import java.security.cert.X509Certificate
+import javax.net.ssl.HttpsURLConnection
+import javax.net.ssl.SSLContext
+import javax.net.ssl.TrustManager
+import javax.net.ssl.X509TrustManager
 
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 @Composable
@@ -177,7 +199,7 @@ fun RedoXPlayerScreen(
     var autoFailoverBanner by remember { mutableStateOf<String?>(null) }
     var isBuffering by remember { mutableStateOf(true) }
     var isPausedByTimeshift by remember(playingChannel.id) { mutableStateOf(false) }
-    var forceMaxBitrate by remember { mutableStateOf(true) }
+    var forceMaxBitrate by remember { mutableStateOf(false) }
     var scaleMode by remember(playingChannel.id) {
         val savedScale = preferredScales[playingChannel.id]?.let { name ->
             PlayerScaleMode.entries.find { it.name == name }
@@ -459,7 +481,7 @@ fun RedoXPlayerScreen(
             exoPlayer.prepare()
             exoPlayer.play()
         }
-        delay(3200L)
+        delay(2500L)
         if (isBuffering && exoPlayer.playbackState != Player.STATE_READY && playingChannel.sources.size > 1 && autoTriedCount + 1 < playingChannel.sources.size) {
             autoTriedCount += 1
             val nextIdx = (currentSourceIndex + 1) % playingChannel.sources.size
@@ -582,7 +604,17 @@ fun RedoXPlayerScreen(
                 view.keepScreenOn = true
                 view.resizeMode = scaleMode.resizeMode
             },
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier
+                .fillMaxSize()
+                .clickable {
+                    if (showChannelDrawer) {
+                        showChannelDrawer = false
+                    } else if (showOsd) {
+                        showOsd = false
+                    } else {
+                        bumpOsdTimer(focusControls = true)
+                    }
+                }
         )
 
         if (typedChannelDigits.isNotEmpty()) {
@@ -777,7 +809,7 @@ fun RedoXPlayerScreen(
                     verticalArrangement = Arrangement.spacedBy(5.dp),
                     modifier = Modifier.weight(1f).fillMaxWidth()
                 ) {
-                    itemsIndexed(filteredDrawerChannels, key = { _, ch -> "drawer_${ch.id}" }) { _, ch ->
+                    itemsIndexed(filteredDrawerChannels, key = { idx, ch -> "drawer_${ch.id}_$idx" }) { _, ch ->
                         var itemFocused by remember { mutableStateOf(false) }
                         val isCurrent = ch.id == playingChannel.id
                         val isFav = favoriteIds.contains(ch.id)
@@ -819,7 +851,6 @@ fun RedoXPlayerScreen(
                                         }
                                     }
                                 )
-                                .focusable()
                                 .clickable {
                                     onSelectChannelDirect(ch)
                                     showChannelDrawer = false
@@ -992,6 +1023,37 @@ fun RedoXPlayerScreen(
                             icon = Icons.Rounded.Refresh,
                             onClick = { switchToNextSourceManually() },
                             modifier = Modifier.focusRequester(primaryActionFocusRequester)
+                        )
+                    }
+                    item {
+                        TvCompactChipButton(
+                            text = "📺 Kanal Listesi",
+                            icon = Icons.Rounded.LiveTv,
+                            onClick = {
+                                showChannelDrawer = true
+                                showOsd = false
+                            }
+                        )
+                    }
+                    item {
+                        TvCompactChipButton(
+                            text = "⏮ Önceki Kanal",
+                            icon = Icons.Rounded.SwapHoriz,
+                            onClick = { onZapChannel(-1) }
+                        )
+                    }
+                    item {
+                        TvCompactChipButton(
+                            text = "Sonraki Kanal ⏭",
+                            icon = Icons.Rounded.SwapHoriz,
+                            onClick = { onZapChannel(+1) }
+                        )
+                    }
+                    item {
+                        TvCompactChipButton(
+                            text = "✕ Kanaldan Çık",
+                            icon = Icons.Rounded.Clear,
+                            onClick = onExitPlayer
                         )
                     }
                     if (previousChannel != null) {

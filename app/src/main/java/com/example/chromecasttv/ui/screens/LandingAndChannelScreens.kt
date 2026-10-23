@@ -1,4 +1,8 @@
-@file:OptIn(androidx.tv.material3.ExperimentalTvMaterial3Api::class)
+@file:OptIn(
+    androidx.tv.material3.ExperimentalTvMaterial3Api::class,
+    androidx.compose.foundation.ExperimentalFoundationApi::class,
+    androidx.compose.ui.ExperimentalComposeUiApi::class
+)
 
 package com.example.chromecasttv
 
@@ -129,9 +133,27 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.provider.Settings
+import android.view.TextureView
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.lazy.grid.LazyGridState
+import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
+import androidx.media3.common.MimeTypes
+import androidx.media3.exoplayer.DefaultRenderersFactory
 import org.json.JSONArray
 import org.json.JSONObject
+import java.security.SecureRandom
+import java.security.cert.X509Certificate
+import javax.net.ssl.HttpsURLConnection
+import javax.net.ssl.SSLContext
+import javax.net.ssl.TrustManager
+import javax.net.ssl.X509TrustManager
 
 // ============================================================================
 // HAFİF VE ANINDA AÇILAN KIRMIZI BOĞA KARŞILAMA EKRANI (LANDING PAGE)
@@ -199,7 +221,7 @@ fun RedoXLandingScreen(
                         onClick = onToggleAutoStart
                     )
                     Text(
-                        text = "Chromecast 4K • RedoX TV v1.5.2 Release",
+                        text = "TV • Tablet • Mobil • RedoX TV v1.6.0",
                         color = TvThemeColors.BullRedBright,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold
@@ -321,30 +343,31 @@ fun LandingActionCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Card(
-        onClick = onClick,
-        scale = CardDefaults.scale(focusedScale = 1.05f),
-        border = CardDefaults.border(
-            focusedBorder = Border(
-                border = BorderStroke(2.5.dp, Color.White),
-                shape = RoundedCornerShape(18.dp)
-            ),
-            border = Border(
-                border = BorderStroke(1.dp, accentColor.copy(alpha = 0.45f)),
-                shape = RoundedCornerShape(18.dp)
-            )
-        ),
-        colors = CardDefaults.colors(
-            containerColor = if (isPrimary) TvThemeColors.BullRedDark.copy(alpha = 0.50f) else TvThemeColors.SurfaceCard,
-            focusedContainerColor = accentColor.copy(alpha = 0.30f)
-        ),
+    var isFocused by remember { mutableStateOf(false) }
+
+    Box(
         modifier = modifier
             .width(172.dp)
             .height(126.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .background(
+                when {
+                    isFocused -> accentColor.copy(alpha = 0.32f)
+                    isPrimary -> TvThemeColors.BullRedDark.copy(alpha = 0.50f)
+                    else -> TvThemeColors.SurfaceCard
+                }
+            )
+            .border(
+                width = if (isFocused) 2.5.dp else 1.dp,
+                color = if (isFocused) Color.White else accentColor.copy(alpha = 0.45f),
+                shape = RoundedCornerShape(18.dp)
+            )
+            .onFocusChanged { isFocused = it.isFocused || it.hasFocus }
+            .clickable { onClick() }
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
+            verticalArrangement = Alignment.Center,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(12.dp)
@@ -394,6 +417,10 @@ fun RedoXTvRootScreen(
     val state by viewModel.uiState.collectAsState()
 
     var showBuiltInFilePicker by remember { mutableStateOf(false) }
+    var lastWatchedChannelId by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(state.activePlayingChannel?.id) {
+        state.activePlayingChannel?.id?.let { lastWatchedChannelId = it }
+    }
 
     if (state.activePlayingChannel != null) {
         RedoXPlayerScreen(
@@ -493,6 +520,7 @@ fun RedoXTvRootScreen(
                                 healthyIds = state.healthyChannelIds,
                                 hiddenCount = state.hiddenChannelIds.size,
                                 recentChannels = state.recentChannels,
+                                lastWatchedChannelId = lastWatchedChannelId,
                                 onSelectCategory = { viewModel.selectCategory(it) },
                                 onPlayChannel = { viewModel.requestPlayChannel(it) },
                                 onToggleFavorite = { viewModel.toggleFavorite(it) },
@@ -524,6 +552,7 @@ fun RedoXTvRootScreen(
                                 healthyIds = state.healthyChannelIds,
                                 hiddenCount = state.hiddenChannelIds.size,
                                 recentChannels = emptyList(),
+                                lastWatchedChannelId = lastWatchedChannelId,
                                 onSelectCategory = { viewModel.selectCategory(it) },
                                 onPlayChannel = { viewModel.requestPlayChannel(it) },
                                 onToggleFavorite = { viewModel.toggleFavorite(it) },
@@ -667,6 +696,7 @@ fun ChannelShowcaseScreen(
     healthyIds: Set<String> = emptySet(),
     hiddenCount: Int = 0,
     recentChannels: List<TvChannel>,
+    lastWatchedChannelId: String? = null,
     onSelectCategory: (String) -> Unit,
     onPlayChannel: (TvChannel) -> Unit,
     onToggleFavorite: (String) -> Unit,
@@ -681,7 +711,31 @@ fun ChannelShowcaseScreen(
     }
 
     var localFocusedChannel by remember(filtered) {
-        mutableStateOf(filtered.firstOrNull())
+        val initial = if (lastWatchedChannelId != null) {
+            filtered.find { it.id == lastWatchedChannelId } ?: filtered.firstOrNull()
+        } else {
+            filtered.firstOrNull()
+        }
+        mutableStateOf(initial)
+    }
+
+    val gridState = rememberLazyGridState()
+    val cardFocusRequesters = remember { HashMap<String, FocusRequester>() }
+
+    // Kanaldan çıkıp (Geri tuşu) listeye döndüğümüzde sol menü yerine doğrudan son izlenen
+    // kanalın kartına kaydır ve kumanda odağını (Focus) o kanalın üstüne ver!
+    LaunchedEffect(lastWatchedChannelId, filtered.size, selectedCategory) {
+        if (filtered.isNotEmpty()) {
+            val targetId = lastWatchedChannelId ?: localFocusedChannel?.id ?: filtered.first().id
+            val targetIdx = filtered.indexOfFirst { it.id == targetId }.coerceAtLeast(0)
+            try {
+                gridState.scrollToItem(targetIdx)
+            } catch (_: Exception) {}
+            delay(60L)
+            try {
+                cardFocusRequesters[filtered[targetIdx].id]?.requestFocus()
+            } catch (_: Exception) {}
+        }
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -710,7 +764,7 @@ fun ChannelShowcaseScreen(
                     .fillMaxWidth()
                     .height(34.dp)
             ) {
-                items(categories, key = { "cat_$it" }) { category ->
+                itemsIndexed(categories, key = { idx, c -> "cat_${c}_$idx" }) { _, category ->
                     var isFocused by remember { mutableStateOf(false) }
                     val isSelected = selectedCategory == category
                     val catColor = TvThemeColors.categoryColor(category)
@@ -737,8 +791,7 @@ fun ChannelShowcaseScreen(
                                 },
                                 shape = RoundedCornerShape(50)
                             )
-                            .onFocusChanged { isFocused = it.isFocused }
-                            .focusable()
+                            .onFocusChanged { isFocused = it.isFocused || it.hasFocus }
                             .clickable { onSelectCategory(category) }
                             .padding(horizontal = 12.dp, vertical = 5.dp)
                     ) {
@@ -782,6 +835,7 @@ fun ChannelShowcaseScreen(
             }
         } else {
             LazyVerticalGrid(
+                state = gridState,
                 columns = GridCells.Adaptive(minSize = 190.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -789,14 +843,16 @@ fun ChannelShowcaseScreen(
                     .weight(1f)
                     .fillMaxWidth()
             ) {
-                items(filtered, key = { it.id }) { channel ->
+                itemsIndexed(filtered, key = { idx, ch -> "${ch.id}_$idx" }) { _, channel ->
                     val isBroken = brokenIds.contains(channel.id) || channel.isBroken
+                    val requester = cardFocusRequesters.getOrPut(channel.id) { FocusRequester() }
                     TvChannelGridCard(
                         channel = channel,
                         isFavorite = favoriteIds.contains(channel.id),
                         isLocked = lockedIds.contains(channel.id),
                         isBroken = isBroken,
                         isHealthy = healthyIds.contains(channel.id),
+                        focusRequester = requester,
                         onFocused = { localFocusedChannel = channel },
                         onClick = { onPlayChannel(channel) },
                         onLongClick = { onToggleFavorite(channel.id) }
@@ -988,6 +1044,7 @@ fun TvChannelGridCard(
     isLocked: Boolean = false,
     isBroken: Boolean = false,
     isHealthy: Boolean = false,
+    focusRequester: FocusRequester? = null,
     onFocused: () -> Unit,
     onClick: () -> Unit,
     onLongClick: () -> Unit = {}
@@ -995,37 +1052,39 @@ fun TvChannelGridCard(
     val catColor = if (isBroken) TvThemeColors.BrokenRed else TvThemeColors.categoryColor(channel.category)
     var cardFocused by remember { mutableStateOf(false) }
 
-    Card(
-        onClick = onClick,
-        scale = CardDefaults.scale(focusedScale = 1.03f),
-        border = CardDefaults.border(
-            focusedBorder = Border(
-                border = BorderStroke(
-                    2.dp,
-                    when {
-                        isBroken -> TvThemeColors.BrokenRed
-                        isFavorite -> TvThemeColors.FavoriteGold
-                        else -> TvThemeColors.BullRedBright
-                    }
-                ),
-                shape = RoundedCornerShape(14.dp)
-            )
-        ),
-        colors = CardDefaults.colors(
-            containerColor = TvThemeColors.SurfaceCard,
-            focusedContainerColor = TvThemeColors.SurfaceElevated
-        ),
+    val focusBorderColor = when {
+        isBroken -> TvThemeColors.BrokenRed
+        isFavorite -> TvThemeColors.FavoriteGold
+        else -> TvThemeColors.BullRedBright
+    }
+
+    // Evrensel TV (D-Pad) + Tablet/Telefon (Dokunmatik) Kart Bileşeni:
+    // combinedClickable sayesinde telefon ve tabletlerde tek dokunuşla açılır, basılı tutunca favoriye ekler;
+    // TV kumandasında ise D-Pad odağı ve OK kısa/uzun basma kusursuz çalışır.
+    Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(118.dp)
+            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
+            .clip(RoundedCornerShape(14.dp))
+            .background(if (cardFocused) TvThemeColors.SurfaceElevated else TvThemeColors.SurfaceCard)
+            .border(
+                width = if (cardFocused) 2.5.dp else 1.dp,
+                color = if (cardFocused) focusBorderColor else Color.White.copy(alpha = 0.08f),
+                shape = RoundedCornerShape(14.dp)
+            )
             .onFocusChanged {
-                cardFocused = it.isFocused
-                if (it.isFocused) onFocused()
+                cardFocused = it.isFocused || it.hasFocus
+                if (it.isFocused || it.hasFocus) onFocused()
             }
             .tvLongPressFavoriteModifier(
                 itemKey = channel.id,
                 onShortClick = onClick,
                 onLongPress = onLongClick
+            )
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
             )
     ) {
         Column(
@@ -1118,7 +1177,7 @@ fun TvChannelGridCard(
                     Text(
                         text = when {
                             isBroken -> "⚠️ Yeni M3U8 Akışı Bekleniyor"
-                            cardFocused -> if (isFavorite) "⭐ Favoride • Uzun Bas: Çıkar" else "OK Basılı Tut: ⭐ Favoriye Ekle"
+                            cardFocused -> if (isFavorite) "⭐ Favoride • Uzun Bas: Çıkar" else "OK / Dokun: İzle • Uzun Bas: ⭐ Favori"
                             else -> channel.currentProgramTitle
                         },
                         color = when {
@@ -1220,7 +1279,7 @@ fun ChannelSearchAndNumpadScreen(
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             modifier = Modifier.weight(1f).fillMaxWidth()
         ) {
-            items(results, key = { "search_${it.id}" }) { ch ->
+            itemsIndexed(results, key = { idx, ch -> "search_${ch.id}_$idx" }) { _, ch ->
                 TvChannelGridCard(
                     channel = ch,
                     isFavorite = favoriteIds.contains(ch.id),

@@ -1,5 +1,5 @@
 {
-  "version": "1.5.6",
+  "version": "1.6.0",
   "updatedAt": "2026-10-23",
   "description": "RedoX TV Dinamik Kanal Listesi — Buradaki m3u8 linklerini veya kanalları düzenlediğinizde uygulama açılışta otomatik güncellenir.",
   "remoteUrl": "https://raw.githubusercontent.com/redox-baris/Redox-TV/main/channel/channels.json",
@@ -16,23 +16,23 @@
       "logoUrl": "https://i.imgur.com/agn47sQ.png",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
-          "url": "https://turkmedya-live.ercdn.net/tv360/tv360_1080p.m3u8",
-          "type": "HLS"
-        },
-        {
-          "label": "HD 720p",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://turkmedya-live.ercdn.net/tv360/tv360.m3u8",
-          "type": "HLS"
-        },
-        {
-          "label": "Alternatif Akış 3",
-          "url": "https://turkmedya-live.ercdn.net/tv360/tv360_720p.m3u8",
           "type": "HLS"
         },
         {
           "label": "Alternatif Akış 4",
           "url": "https://tv.ensonhaber.com/tv360/tv360.m3u8",
+          "type": "HLS"
+        },
+        {
+          "label": "Yedek Akış 3",
+          "url": "https://turkmedya-live.ercdn.net/tv360/tv360_1080p.m3u8",
+          "type": "HLS"
+        },
+        {
+          "label": "Alternatif Akış 3",
+          "url": "https://turkmedya-live.ercdn.net/tv360/tv360_720p.m3u8",
           "type": "HLS"
         },
         {
@@ -54,13 +54,18 @@
       "logoUrl": "https://iatv.tmgrup.com.tr/site/v2/a2tv/i/a2tv-logo.png",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
-          "url": "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/a2tv/a2tv_1080p.m3u8",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
+          "url": "https://trkvz-live.ercdn.net/a2tv/a2tv.m3u8",
           "type": "HLS"
         },
         {
-          "label": "FHD 1080p (En Yüksek Bitrate)",
+          "label": "Alternatif Akış (Adaptif)",
           "url": "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/a2tv/a2tv.m3u8",
+          "type": "HLS"
+        },
+        {
+          "label": "Yedek Akış 3",
+          "url": "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/a2tv/a2tv_1080p.m3u8",
           "type": "HLS"
         },
         {
@@ -87,13 +92,23 @@
       "logoUrl": "https://i.imgur.com/HyVUwFC.png",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
-          "url": "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/atv/atv_1080p.m3u8",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
+          "url": "https://trkvz-live.ercdn.net/atvhd/atvhd.m3u8",
           "type": "HLS"
         },
         {
-          "label": "Yedek Akış",
+          "label": "Alternatif Akış (Adaptif)",
           "url": "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/atv/atv.m3u8",
+          "type": "HLS"
+        },
+        {
+          "label": "Yedek Akış 3",
+          "url": "http://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/atv/atv.m3u8",
+          "type": "HLS"
+        },
+        {
+          "label": "FHD 1080p (En Yüksek Bitrate)",
+          "url": "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/atv/atv_1080p.m3u8",
           "type": "HLS"
         },
         {
@@ -104,16 +119,6 @@
         {
           "label": "HD 720p Hızlı Akış",
           "url": "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/atv/atv_720p.m3u8",
-          "type": "HLS"
-        },
-        {
-          "label": "SD 480p Yedek Akış",
-          "url": "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/atv/atv_480p.m3u8",
-          "type": "HLS"
-        },
-        {
-          "label": "FHD 1080p Akış",
-          "url": "http://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/atv/atv_1080p.m3u8",
           "type": "HLS"
         }
       ]
@@ -130,13 +135,13 @@
       "logoUrl": "https://i.imgur.com/uykIdML.png",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
-          "url": "https://beyaztv-live.daioncdn.net/beyaztv/beyaztv_1080p.m3u8",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
+          "url": "https://beyaztv-live.daioncdn.net/beyaztv/beyaztv.m3u8",
           "type": "HLS"
         },
         {
-          "label": "Yedek Akış",
-          "url": "https://beyaztv-live.daioncdn.net/beyaztv/beyaztv.m3u8",
+          "label": "FHD 1080p (En Yüksek Bitrate)",
+          "url": "https://beyaztv-live.daioncdn.net/beyaztv/beyaztv_1080p.m3u8",
           "type": "HLS"
         },
         {
@@ -163,7 +168,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://panel.5gtvhosting.com/hls/cemtv/cemtv.m3u8",
           "type": "HLS"
         },
@@ -186,13 +191,13 @@
       "logoUrl": "https://i.ibb.co/zhxTBMR/cine1.png",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
-          "url": "https://canliyayin.cine1.com.tr/memfs/cbaef080-a742-4644-9e9e-2b9f6a5103c3.m3u8",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
+          "url": "https://live.artidijitalmedya.com/artidijital_cine1/cine1/playlist.m3u8",
           "type": "HLS"
         },
         {
-          "label": "Standart Akış",
-          "url": "https://live.artidijitalmedya.com/artidijital_cine1/cine1/playlist.m3u8",
+          "label": "Yedek Akış",
+          "url": "https://canliyayin.cine1.com.tr/memfs/cbaef080-a742-4644-9e9e-2b9f6a5103c3.m3u8",
           "type": "HLS"
         },
         {
@@ -219,7 +224,7 @@
       "logoUrl": "https://i.ibb.co/7vNbSyP/cine5.png",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://cdn-cine5tv.yayin.com.tr/cine5tv/cine5tv/playlist.m3u8",
           "type": "HLS"
         },
@@ -252,7 +257,7 @@
       "logoUrl": "https://s.cnbce.com/dist/images/logo-nav.png",
       "sources": [
         {
-          "label": "FHD 1080p (En Yüksek Bitrate)",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://hnpsechtsc.turknet.ercdn.net/xpnvudnlsv/cnbc-e/cnbc-e.m3u8?tv=1",
           "type": "HLS"
         },
@@ -295,7 +300,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/dizi-tv/playlist/0.m3u8",
           "type": "HLS"
         },
@@ -318,8 +323,8 @@
       "logoUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/98/DMAX_BLACK.svg/512px-DMAX_BLACK.svg.png",
       "sources": [
         {
-          "label": "HD 720p",
-          "url": "https://dogus-live.daioncdn.net/dmax/dmax_720p.m3u8",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
+          "url": "https://dogus-live.daioncdn.net/dmax/dmax.m3u8",
           "type": "HLS"
         },
         {
@@ -328,13 +333,13 @@
           "type": "HLS"
         },
         {
-          "label": "FHD 1080p Akış",
-          "url": "https://dogus-live.daioncdn.net/dmax/dmax_1080p.m3u8",
+          "label": "HD 720p",
+          "url": "https://dogus-live.daioncdn.net/dmax/dmax_720p.m3u8",
           "type": "HLS"
         },
         {
-          "label": "Adaptif Ana Akış",
-          "url": "https://dogus-live.daioncdn.net/dmax/dmax.m3u8",
+          "label": "FHD 1080p Akış",
+          "url": "https://dogus-live.daioncdn.net/dmax/dmax_1080p.m3u8",
           "type": "HLS"
         },
         {
@@ -356,7 +361,7 @@
       "logoUrl": "https://i.ibb.co/jMQTJmh/euro-d.png",
       "sources": [
         {
-          "label": "HD 720p",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://live.duhnet.tv/S2/HLS_LIVE/eurodnp/playlist.m3u8",
           "type": "HLS"
         },
@@ -394,7 +399,7 @@
       "logoUrl": "https://i.ibb.co/CbdPSX6/euro-star.png",
       "sources": [
         {
-          "label": "HD 720p",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://xrklj56s.rocketcdn.com/eurostar.smil/chunklist.sltur.m3u8",
           "type": "HLS"
         },
@@ -417,13 +422,13 @@
       "logoUrl": "https://i.imgur.com/L0NHKBM.png",
       "sources": [
         {
-          "label": "HD 720p",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://mn-nl.mncdn.com/blutv_flashtv/live.m3u8",
           "type": "HLS"
         },
         {
-          "label": "Alternatif Akış 2",
-          "url": "https://flashhaber-live.ercdn.net/flashhaber/flashhaber_720p.m3u8",
+          "label": "Yedek Akış 2",
+          "url": "https://flashhaber-live.ercdn.net/flashhaber/flashhaber.m3u8",
           "type": "HLS"
         },
         {
@@ -432,13 +437,13 @@
           "type": "HLS"
         },
         {
-          "label": "FHD 1080p Akış",
-          "url": "https://flashhaber-live.ercdn.net/flashhaber/flashhaber_1080p.m3u8",
+          "label": "Alternatif Akış 2",
+          "url": "https://flashhaber-live.ercdn.net/flashhaber/flashhaber_720p.m3u8",
           "type": "HLS"
         },
         {
-          "label": "Adaptif Ana Akış",
-          "url": "https://flashhaber-live.ercdn.net/flashhaber/flashhaber.m3u8",
+          "label": "FHD 1080p Akış",
+          "url": "https://flashhaber-live.ercdn.net/flashhaber/flashhaber_1080p.m3u8",
           "type": "HLS"
         },
         {
@@ -460,18 +465,18 @@
       "logoUrl": "https://i.imgur.com/0gq9xOm.png",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
-          "url": "https://kanal7-live.daioncdn.net/kanal7/kanal7_1080p.m3u8",
-          "type": "HLS"
-        },
-        {
-          "label": "FHD 1080p (En Yüksek Bitrate)",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://kanal7-live.daioncdn.net/kanal7/kanal7.m3u8",
           "type": "HLS"
         },
         {
           "label": "Alternatif Akış 3",
           "url": "https://kanal7.daioncdn.net/kanal7/kanal7.m3u8?app=f99587ad-1637-494d-8255-da35b09d17a1",
+          "type": "HLS"
+        },
+        {
+          "label": "Yedek Akış 3",
+          "url": "https://kanal7-live.daioncdn.net/kanal7/kanal7_1080p.m3u8",
           "type": "HLS"
         },
         {
@@ -503,7 +508,7 @@
       "logoUrl": "https://i.ibb.co/F4P8ddm/kanal-7-avrupa.png",
       "sources": [
         {
-          "label": "HD 720p",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://livetv.radyotvonline.net/kanal7live/kanal7avr/playlist.m3u8",
           "type": "HLS"
         },
@@ -531,8 +536,13 @@
       "logoUrl": "https://i.imgur.com/9o1atM6.png",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
-          "url": "https://ackaxsqacw.turknet.ercdn.net/ozfkfbbjba/kanald/kanald_1080p.m3u8",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
+          "url": "https://demiroren.daioncdn.net/kanald/kanald.m3u8?app=kanald_web",
+          "type": "HLS"
+        },
+        {
+          "label": "Alternatif Akış (Duhnet)",
+          "url": "https://live.duhnet.tv/S2/HLS_LIVE/kanalddainp/playlist.m3u8",
           "type": "HLS"
         },
         {
@@ -541,23 +551,18 @@
           "type": "HLS"
         },
         {
+          "label": "Yedek Akış 4",
+          "url": "https://ackaxsqacw.turknet.ercdn.net/ozfkfbbjba/kanald/kanald.m3u8",
+          "type": "HLS"
+        },
+        {
           "label": "Alternatif Akış 3",
           "url": "https://demiroren.daioncdn.net/kanald/kanald.m3u8?app=da2109ea-5dfe-4107-89ab-23593336ed61",
           "type": "HLS"
         },
         {
-          "label": "Alternatif Akış 4",
-          "url": "https://live.duhnet.tv/S2/HLS_LIVE/kanalddainp/playlist.m3u8",
-          "type": "HLS"
-        },
-        {
-          "label": "Alternatif Akış 5",
-          "url": "https://demiroren.daioncdn.net/kanald/kanald.m3u8?app=kanald_web",
-          "type": "HLS"
-        },
-        {
-          "label": "Alternatif Akış 6",
-          "url": "https://ackaxsqacw.turknet.ercdn.net/ozfkfbbjba/kanald/kanald.m3u8",
+          "label": "Yedek Akış 6",
+          "url": "https://ackaxsqacw.turknet.ercdn.net/ozfkfbbjba/kanald/kanald_1080p.m3u8",
           "type": "HLS"
         }
       ]
@@ -574,7 +579,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://vhxyrsly.rocketcdn.com/meltemtv/chunklist.m3u8",
           "type": "HLS"
         },
@@ -602,18 +607,23 @@
       "logoUrl": "https://i.imgur.com/5EYjWK7.png",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
-          "url": "https://uycyyuuzyh.turknet.ercdn.net/nphindgytw/nowtv/nowtv_720p.m3u8",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
+          "url": "https://nowtv-live.daioncdn.net/nowtv/nowtv.m3u8",
           "type": "HLS"
         },
         {
-          "label": "HD 720p",
+          "label": "Alternatif Akış (ERCdn Adaptif)",
           "url": "https://uycyyuuzyh.turknet.ercdn.net/nphindgytw/nowtv/nowtv.m3u8",
           "type": "HLS"
         },
         {
           "label": "Alternatif Akış 3",
           "url": "http://uycyyuuzyh.turknet.ercdn.net/nphindgytw/nowtv/nowtv.m3u8",
+          "type": "HLS"
+        },
+        {
+          "label": "Yedek Akış 4",
+          "url": "https://uycyyuuzyh.turknet.ercdn.net/nphindgytw/nowtv/nowtv_720p.m3u8",
           "type": "HLS"
         },
         {
@@ -624,11 +634,6 @@
         {
           "label": "SD 480p Yedek Akış",
           "url": "https://uycyyuuzyh.turknet.ercdn.net/nphindgytw/nowtv/nowtv_480p.m3u8",
-          "type": "HLS"
-        },
-        {
-          "label": "FHD 1080p Akış",
-          "url": "http://uycyyuuzyh.turknet.ercdn.net/nphindgytw/nowtv/nowtv_1080p.m3u8",
           "type": "HLS"
         }
       ]
@@ -645,7 +650,7 @@
       "logoUrl": "https://i.ibb.co/qJnvXJQ/show-max.png",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "http://rmtftbjlne.turknet.ercdn.net/bpeytmnqyp/showmax/showmax.m3u8",
           "type": "HLS"
         },
@@ -688,18 +693,13 @@
       "logoUrl": "https://i.ibb.co/Rv0rWhZ/show.png",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
-          "url": "https://rmtftbjlne.turknet.ercdn.net/bpeytmnqyp/showtv/showtv_1080p.m3u8",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
+          "url": "https://ciner-live.daioncdn.net/showtv/showtv.m3u8",
           "type": "HLS"
         },
         {
-          "label": "Alternatif Akış 2",
-          "url": "https://rmtftbjlne.turknet.ercdn.net:443/bpeytmnqyp/showtv/showtv_1080p.m3u8",
-          "type": "HLS"
-        },
-        {
-          "label": "FHD 1080p (En Yüksek Bitrate)",
-          "url": "https://ciner-live.daioncdn.net/showtv/showtv_1080p.m3u8",
+          "label": "Alternatif Akış (Ciner Web)",
+          "url": "https://ciner.daioncdn.net/showtv/showtv.m3u8?app=4bc856ef-4c68-4a94-bc87-37df466558a8",
           "type": "HLS"
         },
         {
@@ -708,13 +708,18 @@
           "type": "HLS"
         },
         {
-          "label": "Alternatif Akış 5",
-          "url": "https://ciner.daioncdn.net/showtv/showtv_1080p.m3u8?ex=1664766175&st=RBzhSuGauna0OGld-DJUVA&tv=1&sid=88iye2ldl2ew&app=4bc856ef-4c68-4a94-bc87-37dfaaa66558&ce=3",
+          "label": "Yedek Akış 4",
+          "url": "https://rmtftbjlne.turknet.ercdn.net/bpeytmnqyp/showtv/showtv.m3u8",
           "type": "HLS"
         },
         {
-          "label": "Alternatif Akış 6",
-          "url": "https://rmtftbjlne.turknet.ercdn.net/bpeytmnqyp/showtv/showtv.m3u8",
+          "label": "Yedek Akış 5",
+          "url": "https://rmtftbjlne.turknet.ercdn.net:443/bpeytmnqyp/showtv/showtv.m3u8",
+          "type": "HLS"
+        },
+        {
+          "label": "Yedek Akış 6",
+          "url": "https://ciner.daioncdn.net/showtv/showtv.m3u8?ex=1664766175&st=RBzhSuGauna0OGld-DJUVA&tv=1&sid=88iye2ldl2ew&app=4bc856ef-4c68-4a94-bc87-37dfaaa66558&ce=3",
           "type": "HLS"
         }
       ]
@@ -731,13 +736,18 @@
       "logoUrl": "https://i.imgur.com/9O3DHRB.png",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
-          "url": "https://dogus.daioncdn.net/startv/startv.m3u8?ce=3&app=1740db13-3ee9-4858-8d2c-b1a9cfaa3718",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
+          "url": "https://dogus-live.daioncdn.net/startv/startv.m3u8",
           "type": "HLS"
         },
         {
-          "label": "HD 720p",
-          "url": "https://dogus.daioncdn.net/startv/startv_720p.m3u8?&sid=8l4w3lst4co5&app=a20ac41e-bdc3-4aa1-934d-26b484480ac9&ce=3",
+          "label": "Alternatif Akış (Doğuş Web)",
+          "url": "https://dogus.daioncdn.net/startv/startv.m3u8?ce=3&app=1740db13-3ee9-4858-8789-0793b21923c6",
+          "type": "HLS"
+        },
+        {
+          "label": "Yedek Akış 3",
+          "url": "https://dogus.daioncdn.net/startv/startv.m3u8?&sid=8l4w3lst4co5&app=a20ac41e-bdc3-4aa1-934d-26b484480ac9&ce=3",
           "type": "HLS"
         },
         {
@@ -746,18 +756,13 @@
           "type": "HLS"
         },
         {
+          "label": "Yedek Akış 5",
+          "url": "https://dogus.daioncdn.net/startv/startv.m3u8?ce=3&app=1740db13-3ee9-4858-8d2c-b1a9cfaa3718",
+          "type": "HLS"
+        },
+        {
           "label": "Alternatif Akış 4",
           "url": "http://176.65.153.66:6001/play/a01u/index.m3u8",
-          "type": "HLS"
-        },
-        {
-          "label": "Alternatif Akış 5",
-          "url": "http://dygvideo.dygdigital.com/live/hls/stardai?m3u8",
-          "type": "HLS"
-        },
-        {
-          "label": "Alternatif Akış 6",
-          "url": "https://dogus.daioncdn.net/startv/startv.m3u8?app=a20ac41e-bdc3-4aa1-934d-26b484480ac9",
           "type": "HLS"
         }
       ]
@@ -774,13 +779,23 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
-          "url": "https://ceokzokgtd.erbvr.com/tabiitv/tabiitv_1080p.m3u8",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
+          "url": "https://ceokzokgtd.fdc.ercdn.net/giuqlxwlrl/tabiitv/tabiitv.m3u8",
           "type": "HLS"
         },
         {
-          "label": "FHD 1080p (En Yüksek Bitrate)",
-          "url": "https://ceokzokgtd.fdc.ercdn.net/giuqlxwlrl/tabiitv/tabiitv.m3u8",
+          "label": "Yedek Akış 2",
+          "url": "https://ceokzokgtd.erbvr.com/tabiitv/tabiitv.m3u8",
+          "type": "HLS"
+        },
+        {
+          "label": "Yedek Akış 3",
+          "url": "http://ceokzokgtd.erbvr.com/tabiitv/tabiitv.m3u8",
+          "type": "HLS"
+        },
+        {
+          "label": "Yedek Akış 4",
+          "url": "https://ceokzokgtd.erbvr.com/tabiitv/tabiitv_1080p.m3u8",
           "type": "HLS"
         },
         {
@@ -791,16 +806,6 @@
         {
           "label": "FHD 1080p Akış",
           "url": "https://ceokzokgtd.fdc.ercdn.net/giuqlxwlrl/tabiitv/tabiitv_1080p.m3u8",
-          "type": "HLS"
-        },
-        {
-          "label": "HD 720p Hızlı Akış",
-          "url": "https://ceokzokgtd.fdc.ercdn.net/giuqlxwlrl/tabiitv/tabiitv_720p.m3u8",
-          "type": "HLS"
-        },
-        {
-          "label": "SD 480p Yedek Akış",
-          "url": "https://ceokzokgtd.fdc.ercdn.net/giuqlxwlrl/tabiitv/tabiitv_480p.m3u8",
           "type": "HLS"
         }
       ]
@@ -817,12 +822,7 @@
       "logoUrl": "https://i.imgur.com/rsoSLih.png",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
-          "url": "https://ackaxsqacw.turknet.ercdn.net/ozfkfbbjba/teve2/teve2_1080p.m3u8",
-          "type": "HLS"
-        },
-        {
-          "label": "FHD 1080p (En Yüksek Bitrate)",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://demiroren-live.daioncdn.net/teve2/teve2.m3u8",
           "type": "HLS"
         },
@@ -845,6 +845,11 @@
           "label": "Alternatif Akış 6",
           "url": "https://teve2.duhnet.tv/S2/HLS_LIVE/teve2np/playlist.m3u8",
           "type": "HLS"
+        },
+        {
+          "label": "Yedek Akış 6",
+          "url": "https://ackaxsqacw.turknet.ercdn.net/ozfkfbbjba/teve2/teve2_1080p.m3u8",
+          "type": "HLS"
         }
       ]
     },
@@ -860,13 +865,8 @@
       "logoUrl": "https://i.ibb.co/MCXCRcn/tgrteu1.png",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://tgrt-live.ercdn.net/tgrteu/tgrteu.m3u8",
-          "type": "HLS"
-        },
-        {
-          "label": "Alternatif Akış 2",
-          "url": "http://umperisn.mywire.org/index.php?id=594199&token=DeaTHLesS",
           "type": "HLS"
         },
         {
@@ -898,7 +898,7 @@
       "logoUrl": "https://i.ibb.co/9H3DMWz/tivi6.png",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://live.artidijitalmedya.com/artidijital_tivi6/tivi6/playlist.m3u8",
           "type": "HLS"
         },
@@ -931,7 +931,7 @@
       "logoUrl": "https://i.imgur.com/8m3PMUf.png",
       "sources": [
         {
-          "label": "HD 720p",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://dogus-live.daioncdn.net/tlc/tlc.m3u8",
           "type": "HLS"
         },
@@ -969,13 +969,18 @@
       "logoUrl": "https://i.imgur.com/j786OLG.png",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
-          "url": "http://89.187.191.41/TRT-1-HD-TR/video.m3u8",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
+          "url": "https://tv-trt1.medya.trt.com.tr/master.m3u8",
           "type": "HLS"
         },
         {
-          "label": "FHD 1080p (En Yüksek Bitrate)",
-          "url": "https://tv-trt1.medya.trt.com.tr/master.m3u8",
+          "label": "FHD 1080p (TRT Resmi CDN)",
+          "url": "https://tv-trt1.medya.trt.com.tr/master_1080.m3u8",
+          "type": "HLS"
+        },
+        {
+          "label": "HD 720p (TRT Resmi CDN)",
+          "url": "https://tv-trt1.medya.trt.com.tr/master_720.m3u8",
           "type": "HLS"
         },
         {
@@ -989,12 +994,7 @@
           "type": "HLS"
         },
         {
-          "label": "Alternatif Akış 5",
-          "url": "https://trt.daioncdn.net/trt-1/master_720p.m3u8?app=web",
-          "type": "HLS"
-        },
-        {
-          "label": "Alternatif Akış 6",
+          "label": "Yedek Akış 6",
           "url": "https://trt.daioncdn.net/trt-1/master.m3u8?app=web",
           "type": "HLS"
         }
@@ -1012,18 +1012,13 @@
       "logoUrl": "https://i.imgur.com/lNWrOE2.png",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
-          "url": "https://tv-trt2.medya.trt.com.tr/master_1080.m3u8",
-          "type": "HLS"
-        },
-        {
-          "label": "FHD 1080p (En Yüksek Bitrate)",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://tv-trt2.medya.trt.com.tr/master.m3u8",
           "type": "HLS"
         },
         {
-          "label": "Alternatif Akış 3",
-          "url": "http://umperisn.mywire.org/index.php?id=1846&token=DeaTHLesS",
+          "label": "Yedek Akış 2",
+          "url": "https://tv-trt2.medya.trt.com.tr/master_1080.m3u8",
           "type": "HLS"
         },
         {
@@ -1050,13 +1045,13 @@
       "logoUrl": "https://i.imgur.com/UpsQsbd.png",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
-          "url": "https://turkmedya-live.ercdn.net/tv4/tv4_1080p.m3u8",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
+          "url": "https://turkmedya-live.ercdn.net/tv4/tv4.m3u8",
           "type": "HLS"
         },
         {
-          "label": "HD 720p",
-          "url": "https://turkmedya-live.ercdn.net/tv4/tv4.m3u8",
+          "label": "Yedek Akış 2",
+          "url": "https://turkmedya-live.ercdn.net/tv4/tv4_1080p.m3u8",
           "type": "HLS"
         },
         {
@@ -1083,13 +1078,13 @@
       "logoUrl": "https://upload.wikimedia.org/wikipedia/tr/thumb/6/68/Tv8_Yeni_Logo.png/960px-Tv8_Yeni_Logo.png",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
-          "url": "https://tv8.daioncdn.net/tv8/tv8_1080p.m3u8?&sid=8sx8v82ropt3&app=7ddc255a-ef47-4e81-ab14-c0e5f2949788&ce=3",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
+          "url": "https://tv8-live.daioncdn.net/tv8/tv8.m3u8",
           "type": "HLS"
         },
         {
-          "label": "Alternatif Akış 2",
-          "url": "https://rkhubpaomb.turknet.ercdn.net/fwjkgpasof/tv8/tv8_1080p.m3u8",
+          "label": "Alternatif Akış (TV8 Web)",
+          "url": "https://tv8.daioncdn.net/tv8/tv8.m3u8?app=7ddc255a-ef47-4e81-ab14-c0e5f2949788",
           "type": "HLS"
         },
         {
@@ -1098,18 +1093,18 @@
           "type": "HLS"
         },
         {
-          "label": "Alternatif Akış 4",
-          "url": "https://tv8.daioncdn.net/tv8/tv8.m3u8?app=7ddc255a-ef47-4e81-ab14-c0e5f2949788",
+          "label": "Yedek Akış 4",
+          "url": "https://tv8.daioncdn.net/tv8/tv8.m3u8?&sid=8sx8v82ropt3&app=7ddc255a-ef47-4e81-ab14-c0e5f2949788&ce=3",
           "type": "HLS"
         },
         {
-          "label": "Alternatif Akış 5",
-          "url": "https://tv8.daioncdn.net/tv8/tv8_1080p.m3u8?&sid=6q8954bl1bhp&app=7ddc255a-ef47-4e81-ab14-c0e5f2949788&ce=3",
-          "type": "HLS"
-        },
-        {
-          "label": "Alternatif Akış 6",
+          "label": "Yedek Akış 5",
           "url": "https://rkhubpaomb.turknet.ercdn.net/fwjkgpasof/tv8/tv8.m3u8",
+          "type": "HLS"
+        },
+        {
+          "label": "Yedek Akış 6",
+          "url": "https://tv8.daioncdn.net/tv8/tv8.m3u8?&sid=6q8954bl1bhp&app=7ddc255a-ef47-4e81-ab14-c0e5f2949788&ce=3",
           "type": "HLS"
         }
       ]
@@ -1126,8 +1121,23 @@
       "logoUrl": "https://i.ibb.co/6PRYHdW/tv85.png",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
-          "url": "https://rkhubpaomb.turknet.ercdn.net/fwjkgpasof/tv8bucuk/tv8bucuk_1080p.m3u8",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
+          "url": "https://tv8-live.daioncdn.net/tv8bucuk/tv8bucuk.m3u8",
+          "type": "HLS"
+        },
+        {
+          "label": "Alternatif Akış (ERCdn Adaptif)",
+          "url": "https://rkhubpaomb.turknet.ercdn.net/fwjkgpasof/tv8bucuk/tv8bucuk.m3u8",
+          "type": "HLS"
+        },
+        {
+          "label": "Yedek Akış 3",
+          "url": "https://tv8.daioncdn.net/tv8bucuk/tv8bucuk.m3u8?app=tv8bucuk_web&ce=3",
+          "type": "HLS"
+        },
+        {
+          "label": "Yedek Akış 4",
+          "url": "https://tv8.daioncdn.net/tv8bucuk/tv8bucuk.m3u8?&sid=7tra76g4cefx&app=bf58ab52-4865-4c81-b223-26b41009801e&ce=3",
           "type": "HLS"
         },
         {
@@ -1136,23 +1146,8 @@
           "type": "HLS"
         },
         {
-          "label": "Alternatif Akış 3",
-          "url": "https://rkhubpaomb.turknet.ercdn.net/fwjkgpasof/tv8bucuk/tv8bucuk.m3u8",
-          "type": "HLS"
-        },
-        {
-          "label": "Alternatif Akış 4",
-          "url": "https://tv8.daioncdn.net/tv8bucuk/tv8bucuk_1080p.m3u8?&sid=7tra76g4cefx&app=bf58ab52-4865-4c81-b223-26b41009801e&ce=3",
-          "type": "HLS"
-        },
-        {
-          "label": "HD 720p Hızlı Akış",
-          "url": "https://rkhubpaomb.turknet.ercdn.net/fwjkgpasof/tv8bucuk/tv8bucuk_720p.m3u8",
-          "type": "HLS"
-        },
-        {
-          "label": "SD 480p Yedek Akış",
-          "url": "https://rkhubpaomb.turknet.ercdn.net/fwjkgpasof/tv8bucuk/tv8bucuk_480p.m3u8",
+          "label": "Yedek Akış 6",
+          "url": "https://rkhubpaomb.turknet.ercdn.net/fwjkgpasof/tv8bucuk/tv8bucuk_1080p.m3u8",
           "type": "HLS"
         }
       ]
@@ -1168,6 +1163,16 @@
       "badge": "FHD",
       "logoUrl": "https://i.ibb.co/bHTjDyk/woman-tv.png",
       "sources": [
+        {
+          "label": "Ana Yayın (Adaptif FHD/HD)",
+          "url": "https://s01.webcaster.cloud/wmtv/live.m3u8",
+          "type": "HLS"
+        },
+        {
+          "label": "Yedek Akış 2",
+          "url": "http://s01.webcaster.cloud/wmtv/live.m3u8",
+          "type": "HLS"
+        },
         {
           "label": "FHD 1080p (En Yüksek Bitrate)",
           "url": "https://s01.webcaster.cloud/wmtv/live_1080p.m3u8",
@@ -1192,13 +1197,18 @@
       "logoUrl": "https://i.imgur.com/ZhkZzLf.png",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
-          "url": "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/aspor/aspor_1080p.m3u8",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
+          "url": "https://trkvz-live.ercdn.net/asporhd/asporhd.m3u8",
           "type": "HLS"
         },
         {
-          "label": "FHD 1080p (En Yüksek Bitrate)",
+          "label": "Alternatif Akış (Adaptif)",
           "url": "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/aspor/aspor.m3u8",
+          "type": "HLS"
+        },
+        {
+          "label": "Yedek Akış 3",
+          "url": "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/aspor/aspor_1080p.m3u8",
           "type": "HLS"
         },
         {
@@ -1225,7 +1235,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://redbox-beinsports-xumo.amagi.tv/playlist.m3u8",
           "type": "HLS"
         },
@@ -1253,7 +1263,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "FHD 1080p (En Yüksek Bitrate)",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://bein-xtra-bein.amagi.tv/playlist.m3u8",
           "type": "HLS"
         },
@@ -1286,7 +1296,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "FHD 1080p (En Yüksek Bitrate)",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://mn-nl.mncdn.com/cbcsports_live/cbcsports/chunklist.m3u8",
           "type": "HLS"
         },
@@ -1309,7 +1319,7 @@
       "logoUrl": "https://i.ibb.co/315SYpK/fb-tv.png",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://fbtv.fenerbahce.org/fenerbahcetv.stream_720p/playlist.m3u8",
           "type": "HLS"
         },
@@ -1347,7 +1357,7 @@
       "logoUrl": "https://i.ibb.co/6RqMpGT/gs-tv.png",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://owifavo5.rocketcdn.com/gstv/gstv.smil/chunklist_b1828000_sltur.m3u8",
           "type": "HLS"
         },
@@ -1370,7 +1380,7 @@
       "logoUrl": "https://www.htspor.com/images/manifest/social-share-logo.png",
       "sources": [
         {
-          "label": "FHD 1080p (En Yüksek Bitrate)",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://ciner.daioncdn.net/ht-spor/ht-spor.m3u8?app=web",
           "type": "HLS"
         },
@@ -1413,7 +1423,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "FHD 1080p (En Yüksek Bitrate)",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://alchimie-mmatv-samsung.amagi.tv/playlist.m3u8",
           "type": "HLS"
         },
@@ -1441,7 +1451,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "FHD 1080p (En Yüksek Bitrate)",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://alchimie-motosport-tv-rakuten.amagi.tv/playlist.m3u8",
           "type": "HLS"
         },
@@ -1469,7 +1479,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "FHD 1080p (En Yüksek Bitrate)",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://cinedigm-rmtv-lg.amagi.tv/playlist.m3u8",
           "type": "HLS"
         },
@@ -1497,7 +1507,7 @@
       "logoUrl": "https://i.ibb.co/4Rm7Z6Z/sports22.png",
       "sources": [
         {
-          "label": "FHD 1080p (En Yüksek Bitrate)",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://live.sportstv.com.tr/hls/low/sportstv_fhd/index.m3u8",
           "type": "HLS"
         },
@@ -1525,13 +1535,8 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://ahr7chck.rocketcdn.com/sifirtv.stream/chunklist.m3u8",
-          "type": "HLS"
-        },
-        {
-          "label": "Alternatif Akış 2",
-          "url": "http://umperisn.mywire.org/index.php?id=611874&token=DeaTHLesS",
           "type": "HLS"
         },
         {
@@ -1553,7 +1558,7 @@
       "logoUrl": "https://cms-tabii-public-image.tabii.com/int/w300/43020.jpeg",
       "sources": [
         {
-          "label": "HD 720p",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://vbtob9hyq58eiophct5qctxr2.medya.trt.com.tr/master.m3u8",
           "type": "HLS"
         },
@@ -1586,7 +1591,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "FHD 1080p (En Yüksek Bitrate)",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://tennischannel-intl-samsung-uk.amagi.tv/playlist.m3u8",
           "type": "HLS"
         },
@@ -1614,23 +1619,23 @@
       "logoUrl": "https://i.ibb.co/PrkXrRn/tjk-tv.png",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
-          "url": "https://tjktv-live.tjk.org/tjktv_1080p.m3u8",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
+          "url": "https://tjktv-live.tjk.org/tjktv.m3u8",
           "type": "HLS"
         },
         {
-          "label": "Alternatif Akış 2",
-          "url": "https://tjktv-live.tjk.org/tjktv.m3u8",
+          "label": "Yedek Akış 2",
+          "url": "http://tjktv-live.tjk.org/tjktv.m3u8",
+          "type": "HLS"
+        },
+        {
+          "label": "FHD 1080p (En Yüksek Bitrate)",
+          "url": "https://tjktv-live.tjk.org/tjktv_1080p.m3u8",
           "type": "HLS"
         },
         {
           "label": "Alternatif Akış 3",
           "url": "http://tjktv-live.tjk.org/tjktv_1080p.m3u8",
-          "type": "HLS"
-        },
-        {
-          "label": "Alternatif Akış 4",
-          "url": "http://tjktv-live.tjk.org/tjktv.m3u8",
           "type": "HLS"
         }
       ]
@@ -1646,6 +1651,16 @@
       "badge": "FHD",
       "logoUrl": "https://i.ibb.co/PrkXrRn/tjk-tv.png",
       "sources": [
+        {
+          "label": "Ana Yayın (Adaptif FHD/HD)",
+          "url": "https://tjktv-live.tjk.org/tjktv2/tjktv2.m3u8",
+          "type": "HLS"
+        },
+        {
+          "label": "Yedek Akış 2",
+          "url": "http://tjktv-live.tjk.org/tjktv2/tjktv2.m3u8",
+          "type": "HLS"
+        },
         {
           "label": "FHD 1080p (En Yüksek Bitrate)",
           "url": "https://tjktv-live.tjk.org/tjktv2/tjktv2_1080p.m3u8",
@@ -1670,7 +1685,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "FHD 1080p (En Yüksek Bitrate)",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://trace-sportstars-tcl.amagi.tv/playlist.m3u8",
           "type": "HLS"
         },
@@ -1698,12 +1713,7 @@
       "logoUrl": "https://i.imgur.com/N2wGZyf.png",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
-          "url": "https://tv-trtspor1.medya.trt.com.tr/master_1080.m3u8",
-          "type": "HLS"
-        },
-        {
-          "label": "FHD 1080p (En Yüksek Bitrate)",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://tv-trtspor1.medya.trt.com.tr/master.m3u8",
           "type": "HLS"
         },
@@ -1713,8 +1723,8 @@
           "type": "HLS"
         },
         {
-          "label": "Alternatif Akış 4",
-          "url": "http://umperisn.mywire.org/index.php?id=2016&token=DeaTHLesS",
+          "label": "Yedek Akış 3",
+          "url": "https://tv-trtspor1.medya.trt.com.tr/master_1080.m3u8",
           "type": "HLS"
         },
         {
@@ -1741,23 +1751,13 @@
       "logoUrl": "https://i.imgur.com/ysKteM8.png",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
-          "url": "https://tv-trtspor2.medya.trt.com.tr/master_1080p.m3u8",
-          "type": "HLS"
-        },
-        {
-          "label": "FHD 1080p (En Yüksek Bitrate)",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://tv-trtspor2.medya.trt.com.tr/master.m3u8",
           "type": "HLS"
         },
         {
           "label": "Yedek Akış",
           "url": "https://trt.daioncdn.net/trtspor-yildiz/master.m3u8?app=web",
-          "type": "HLS"
-        },
-        {
-          "label": "Alternatif Akış 4",
-          "url": "http://umperisn.mywire.org/index.php?id=2019&token=DeaTHLesS",
           "type": "HLS"
         },
         {
@@ -1768,6 +1768,11 @@
         {
           "label": "HD 720p (Hızlı Yedek)",
           "url": "https://tv-trtspor2.medya.trt.com.tr/master_720.m3u8",
+          "type": "HLS"
+        },
+        {
+          "label": "Yedek Akış 5",
+          "url": "https://tv-trtspor2.medya.trt.com.tr/master_1080p.m3u8",
           "type": "HLS"
         }
       ]
@@ -1784,13 +1789,8 @@
       "logoUrl": "https://i.imgur.com/8FO41es.png",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
-          "url": "https://turkmedya-live.ercdn.net/tv24/tv24_1080p.m3u8",
-          "type": "HLS"
-        },
-        {
-          "label": "HD 720p",
-          "url": "https://turkmedya-live.ercdn.net/tv24/tv24_720p.m3u8",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
+          "url": "https://turkmedya-live.ercdn.net/tv24/tv24.m3u8",
           "type": "HLS"
         },
         {
@@ -1799,13 +1799,18 @@
           "type": "HLS"
         },
         {
-          "label": "Alternatif Akış 4",
-          "url": "https://turkmedya-live.ercdn.net/tv24/tv24.m3u8",
+          "label": "Alternatif Akış 5",
+          "url": "https://ensonhaber-live.ercdn.net/tv24/tv24.m3u8",
           "type": "HLS"
         },
         {
-          "label": "Alternatif Akış 5",
-          "url": "https://ensonhaber-live.ercdn.net/tv24/tv24.m3u8",
+          "label": "HD 720p",
+          "url": "https://turkmedya-live.ercdn.net/tv24/tv24_720p.m3u8",
+          "type": "HLS"
+        },
+        {
+          "label": "Yedek Akış 5",
+          "url": "https://turkmedya-live.ercdn.net/tv24/tv24_1080p.m3u8",
           "type": "HLS"
         },
         {
@@ -1827,18 +1832,18 @@
       "logoUrl": "https://upload.wikimedia.org/wikipedia/commons/7/7c/Ahaber_Logo.png",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
-          "url": "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/ahaber/ahaber_1080p.m3u8",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
+          "url": "https://trkvz-live.ercdn.net/ahaberhd/ahaberhd.m3u8",
           "type": "HLS"
         },
         {
-          "label": "FHD 1080p (En Yüksek Bitrate)",
+          "label": "Alternatif Akış (Adaptif)",
           "url": "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/ahaber/ahaber.m3u8",
           "type": "HLS"
         },
         {
-          "label": "Alternatif Akış 3",
-          "url": "https://trkvz-live.ercdn.net/ahaberhd/ahaberhd.m3u8",
+          "label": "Yedek Akış 3",
+          "url": "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/ahaber/ahaber_1080p.m3u8",
           "type": "HLS"
         },
         {
@@ -1870,7 +1875,7 @@
       "logoUrl": "https://i.ibb.co/KwXzY6B/apara.png",
       "sources": [
         {
-          "label": "FHD 1080p (En Yüksek Bitrate)",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://trkvz-live.ercdn.net/aparahd/aparahd.m3u8",
           "type": "HLS"
         },
@@ -1903,7 +1908,7 @@
       "logoUrl": "https://i.ibb.co/jLd8Fcb/aa.png",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "http://mtulqxgomrllive.mediatriple.net/mtulqxgomrllive/broadcast_59f9c0c785b88.smil/playlist.m3u8",
           "type": "HLS"
         },
@@ -1931,18 +1936,23 @@
       "logoUrl": "https://i.ibb.co/CHWhMvQ/bengu-turk.png",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
-          "url": "https://tv.ensonhaber.com/benguturk/benguturk_720p.m3u8",
-          "type": "HLS"
-        },
-        {
-          "label": "FHD 1080p (En Yüksek Bitrate)",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://ensonhaber-live.ercdn.net/benguturk/benguturk.m3u8",
           "type": "HLS"
         },
         {
-          "label": "Alternatif Akış 3",
+          "label": "Yedek Akış 2",
           "url": "https://tv.ensonhaber.com/benguturk/benguturk.m3u8",
+          "type": "HLS"
+        },
+        {
+          "label": "Yedek Akış 3",
+          "url": "http://tv.ensonhaber.com/benguturk/benguturk.m3u8",
+          "type": "HLS"
+        },
+        {
+          "label": "Yedek Akış 4",
+          "url": "https://tv.ensonhaber.com/benguturk/benguturk_720p.m3u8",
           "type": "HLS"
         },
         {
@@ -1953,11 +1963,6 @@
         {
           "label": "FHD 1080p Akış",
           "url": "https://ensonhaber-live.ercdn.net/benguturk/benguturk_1080p.m3u8",
-          "type": "HLS"
-        },
-        {
-          "label": "HD 720p Hızlı Akış",
-          "url": "https://ensonhaber-live.ercdn.net/benguturk/benguturk_720p.m3u8",
           "type": "HLS"
         }
       ]
@@ -1974,17 +1979,12 @@
       "logoUrl": "https://i.imgur.com/bmkXfIE.png",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
-          "url": "https://tv.ensonhaber.com/bloomberght/bloomberght_720p.m3u8",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
+          "url": "https://ciner-live.daioncdn.net/bloomberght/bloomberght.m3u8",
           "type": "HLS"
         },
         {
-          "label": "HD 720p",
-          "url": "https://ciner-live.daioncdn.net/bloomberght/bloomberght_720p.m3u8",
-          "type": "HLS"
-        },
-        {
-          "label": "Alternatif Akış 3",
+          "label": "Yedek Akış 2",
           "url": "https://tv.ensonhaber.com/bloomberght/bloomberght.m3u8",
           "type": "HLS"
         },
@@ -1999,8 +1999,13 @@
           "type": "HLS"
         },
         {
-          "label": "FHD 1080p Akış",
-          "url": "https://ciner-live.daioncdn.net/bloomberght/bloomberght_1080p.m3u8",
+          "label": "HD 720p",
+          "url": "https://ciner-live.daioncdn.net/bloomberght/bloomberght_720p.m3u8",
+          "type": "HLS"
+        },
+        {
+          "label": "Yedek Akış 6",
+          "url": "https://tv.ensonhaber.com/bloomberght/bloomberght_720p.m3u8",
           "type": "HLS"
         }
       ]
@@ -2017,7 +2022,7 @@
       "logoUrl": "https://i.ibb.co/K6BKFqY/dha.png",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://603c568fccdf5.streamlock.net/live/dhaweb1_C5efC/playlist.m3u8",
           "type": "HLS"
         },
@@ -2050,18 +2055,18 @@
       "logoUrl": "https://i.ibb.co/Ln92Dj2/Ekoltv.png",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
-          "url": "https://ekoltv-live.ercdn.net/ekoltv/ekoltv_1080p.m3u8",
-          "type": "HLS"
-        },
-        {
-          "label": "FHD 1080p (En Yüksek Bitrate)",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://ekoltv-live.ercdn.net/ekoltv/ekoltv.m3u8",
           "type": "HLS"
         },
         {
           "label": "Alternatif Akış 3",
           "url": "https://helga.iptv2022.com/sh/ekol_tv/index.m3u8",
+          "type": "HLS"
+        },
+        {
+          "label": "Yedek Akış 3",
+          "url": "https://ekoltv-live.ercdn.net/ekoltv/ekoltv_1080p.m3u8",
           "type": "HLS"
         },
         {
@@ -2088,7 +2093,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "FHD 1080p (En Yüksek Bitrate)",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://alchimie-euronews-uk-lg.amagi.tv/playlist.m3u8",
           "type": "HLS"
         },
@@ -2116,8 +2121,8 @@
       "logoUrl": "https://i.ibb.co/4ZpZWkf/haber-global.png",
       "sources": [
         {
-          "label": "HD 720p",
-          "url": "https://tv.ensonhaber.com/haberglobal/haberglobal_720p.m3u8",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
+          "url": "https://tv.ensonhaber.com/haberglobal/haberglobal.m3u8",
           "type": "HLS"
         },
         {
@@ -2126,8 +2131,13 @@
           "type": "HLS"
         },
         {
-          "label": "Alternatif Akış 3",
-          "url": "https://tv.ensonhaber.com/haberglobal/haberglobal.m3u8",
+          "label": "Yedek Akış 3",
+          "url": "http://tv.ensonhaber.com/haberglobal/haberglobal.m3u8",
+          "type": "HLS"
+        },
+        {
+          "label": "HD 720p",
+          "url": "https://tv.ensonhaber.com/haberglobal/haberglobal_720p.m3u8",
           "type": "HLS"
         },
         {
@@ -2138,11 +2148,6 @@
         {
           "label": "FHD 1080p Akış",
           "url": "https://ensonhaber-live.ercdn.net/haberglobal/haberglobal_1080p.m3u8",
-          "type": "HLS"
-        },
-        {
-          "label": "HD 720p Hızlı Akış",
-          "url": "https://ensonhaber-live.ercdn.net/haberglobal/haberglobal_720p.m3u8",
           "type": "HLS"
         }
       ]
@@ -2159,13 +2164,8 @@
       "logoUrl": "https://i.imgur.com/6Tw3rUp.png",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
-          "url": "https://rmtftbjlne.turknet.ercdn.net/bpeytmnqyp/haberturktv/haberturktv_1080p.m3u8",
-          "type": "HLS"
-        },
-        {
-          "label": "FHD 1080p (En Yüksek Bitrate)",
-          "url": "https://ciner-live.daioncdn.net/haberturktv/haberturktv_1080p.m3u8",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
+          "url": "https://ciner-live.daioncdn.net/haberturktv/haberturktv.m3u8",
           "type": "HLS"
         },
         {
@@ -2184,8 +2184,13 @@
           "type": "HLS"
         },
         {
-          "label": "HD 720p Hızlı Akış",
-          "url": "https://rmtftbjlne.turknet.ercdn.net/bpeytmnqyp/haberturktv/haberturktv_720p.m3u8",
+          "label": "FHD 1080p (En Yüksek Bitrate)",
+          "url": "https://ciner-live.daioncdn.net/haberturktv/haberturktv_1080p.m3u8",
+          "type": "HLS"
+        },
+        {
+          "label": "Yedek Akış 6",
+          "url": "https://rmtftbjlne.turknet.ercdn.net/bpeytmnqyp/haberturktv/haberturktv_1080p.m3u8",
           "type": "HLS"
         }
       ]
@@ -2202,18 +2207,18 @@
       "logoUrl": "https://i.imgur.com/xM0HA30.png",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
-          "url": "https://halktv-live.daioncdn.net/halktv/halktv_1080p.m3u8",
-          "type": "HLS"
-        },
-        {
-          "label": "Alternatif Akış 2",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://halktv-live.daioncdn.net/halktv/halktv.m3u8",
           "type": "HLS"
         },
         {
           "label": "Alternatif Akış 3",
           "url": "https://halktv.daioncdn.net/halktv/halktv.m3u8?app=c86957d3-74a7-44da-9ad2-dc358c769609",
+          "type": "HLS"
+        },
+        {
+          "label": "FHD 1080p (En Yüksek Bitrate)",
+          "url": "https://halktv-live.daioncdn.net/halktv/halktv_1080p.m3u8",
           "type": "HLS"
         },
         {
@@ -2245,13 +2250,18 @@
       "logoUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0c/NTV_%28Turkey%29_logo.svg/960px-NTV_%28Turkey%29_logo.svg.png",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
-          "url": "https://dogus.daioncdn.net/ntv/ntv_1080p.m3u8",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
+          "url": "https://dogus-live.daioncdn.net/ntv/ntv.m3u8",
           "type": "HLS"
         },
         {
-          "label": "HD 720p",
+          "label": "Alternatif Akış (NTV Web)",
           "url": "https://dogus.daioncdn.net/ntv/ntv.m3u8?app=ntv_web",
+          "type": "HLS"
+        },
+        {
+          "label": "Yedek Akış 3",
+          "url": "https://dogus.daioncdn.net/ntv/ntv.m3u8",
           "type": "HLS"
         },
         {
@@ -2260,13 +2270,8 @@
           "type": "HLS"
         },
         {
-          "label": "Alternatif Akış 4",
-          "url": "https://tatatam.trt1sultanfatihss.workers.dev/http://dogus.daioncdn.net/ntv/ntv_1080p.m3u8?&sid=8chq5o7vxulf&app=7c4bb802-0c41-409e-8cd2-799984995694&ce=3",
-          "type": "HLS"
-        },
-        {
-          "label": "Alternatif Akış 5",
-          "url": "https://dogus.daioncdn.net/ntv/ntv_720p.m3u8",
+          "label": "Yedek Akış 5",
+          "url": "https://tatatam.trt1sultanfatihss.workers.dev/http://dogus.daioncdn.net/ntv/ntv.m3u8?&sid=8chq5o7vxulf&app=7c4bb802-0c41-409e-8cd2-799984995694&ce=3",
           "type": "HLS"
         },
         {
@@ -2288,7 +2293,7 @@
       "logoUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/S%C3%B6zc%C3%BC_TV_logo.svg/960px-S%C3%B6zc%C3%BC_TV_logo.svg.png",
       "sources": [
         {
-          "label": "FHD 1080p (Ana Yayın)",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "http://45.88.139.156/yt1/szctv.m3u8",
           "type": "HLS"
         },
@@ -2300,8 +2305,36 @@
       ]
     },
     {
-      "id": "ch_65_tbmm_tv",
+      "id": "ch_koza_tv",
       "number": 66,
+      "name": "KOZA TV",
+      "logoText": "KOZA\nTV",
+      "c1": "0xFFC2410C",
+      "c2": "0xFFF97316",
+      "cat": "Haber",
+      "badge": "HD",
+      "logoUrl": "",
+      "sources": [
+        {
+          "label": "Ana Yayın (Adaptif FHD/HD)",
+          "url": "http://176.65.153.35:6003/play/a019/index.m3u8",
+          "type": "HLS"
+        },
+        {
+          "label": "Yedek Akış (Playlist)",
+          "url": "http://176.65.153.35:6003/play/a019/playlist.m3u8",
+          "type": "HLS"
+        },
+        {
+          "label": "Yedek Akış (Master)",
+          "url": "http://176.65.153.35:6003/play/a019/master.m3u8",
+          "type": "HLS"
+        }
+      ]
+    },
+    {
+      "id": "ch_65_tbmm_tv",
+      "number": 67,
       "name": "TBMM TV",
       "logoText": "TBMM",
       "c1": "0xFF047857",
@@ -2311,18 +2344,18 @@
       "logoUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/TBMM_TV_logo.svg/960px-TBMM_TV_logo.svg.png",
       "sources": [
         {
-          "label": "HD 720p",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://meclistv-live.ercdn.net/meclistv/meclistv.m3u8",
-          "type": "HLS"
-        },
-        {
-          "label": "Alternatif Akış 2",
-          "url": "https://meclistv-live.ercdn.net/meclistv/meclistv_720p.m3u8",
           "type": "HLS"
         },
         {
           "label": "Alternatif Akış 3",
           "url": "http://meclistv-live.ercdn.net/meclistv/meclistv.m3u8",
+          "type": "HLS"
+        },
+        {
+          "label": "Alternatif Akış 2",
+          "url": "https://meclistv-live.ercdn.net/meclistv/meclistv_720p.m3u8",
           "type": "HLS"
         },
         {
@@ -2344,7 +2377,7 @@
     },
     {
       "id": "ch_66_tele_1",
-      "number": 67,
+      "number": 68,
       "name": "Tele 1",
       "logoText": "TELE\n1",
       "c1": "0xFF6B21A8",
@@ -2354,7 +2387,7 @@
       "logoUrl": "https://upload.wikimedia.org/wikipedia/tr/4/43/Tele1_logosu.png",
       "sources": [
         {
-          "label": "FHD 1080p (En Yüksek Bitrate)",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://tele1-live.ercdn.net/tele1/tele1.m3u8",
           "type": "HLS"
         },
@@ -2377,7 +2410,7 @@
     },
     {
       "id": "ch_67_telenews",
-      "number": 68,
+      "number": 69,
       "name": "Telenews",
       "logoText": "TELENE",
       "c1": "0xFFC2410C",
@@ -2387,13 +2420,13 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
-          "url": "https://cdn-telenews.yayin.com.tr/telenews/tracks-v1a1/mono.m3u8",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
+          "url": "https://cdn-telenews.yayin.com.tr/telenews/index.m3u8",
           "type": "HLS"
         },
         {
-          "label": "Standart Akış",
-          "url": "https://cdn-telenews.yayin.com.tr/telenews/index.m3u8",
+          "label": "Yedek Akış 2",
+          "url": "https://cdn-telenews.yayin.com.tr/telenews/tracks-v1a1/mono.m3u8",
           "type": "HLS"
         },
         {
@@ -2410,7 +2443,7 @@
     },
     {
       "id": "ch_68_tgrt_haber_hd",
-      "number": 69,
+      "number": 70,
       "name": "TGRT Haber HD",
       "logoText": "TGRT\nHABER",
       "c1": "0xFF0E7490",
@@ -2420,23 +2453,23 @@
       "logoUrl": "https://i.ibb.co/K5frjVY/tgrt-haber.png",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
-          "url": "https://tgrthaber-live.daioncdn.net/tgrthaber/tgrthaber_1080p.m3u8",
-          "type": "HLS"
-        },
-        {
-          "label": "Alternatif Akış 2",
-          "url": "https://canli.tgrthaber.com/tgrt.m3u8",
-          "type": "HLS"
-        },
-        {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://tgrthaber-live.daioncdn.net/tgrthaber/tgrthaber.m3u8",
+          "type": "HLS"
+        },
+        {
+          "label": "Yedek Akış",
+          "url": "https://canli.tgrthaber.com/tgrt.m3u8",
           "type": "HLS"
         },
         {
           "label": "Alternatif Akış 4",
           "url": "https://b01c02nl.mediatriple.net/videoonlylive/mtsxxkzwwuqtglive/broadcast_5fe4598be8e5d.smil/playlist.m3u8",
+          "type": "HLS"
+        },
+        {
+          "label": "Yedek Akış 4",
+          "url": "https://tgrthaber-live.daioncdn.net/tgrthaber/tgrthaber_1080p.m3u8",
           "type": "HLS"
         },
         {
@@ -2453,7 +2486,7 @@
     },
     {
       "id": "ch_69_th_t_rk_haber_tv",
-      "number": 70,
+      "number": 71,
       "name": "TH Türk Haber TV",
       "logoText": "TH\nTÜRK",
       "c1": "0xFFBE185D",
@@ -2463,7 +2496,7 @@
       "logoUrl": "https://i.ibb.co/ySv65wg/turk-haber.png",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://edge1.socialsmart.tv/turkhaber/bant1/chunks.m3u8",
           "type": "HLS"
         },
@@ -2486,7 +2519,7 @@
     },
     {
       "id": "ch_70_trt_haber",
-      "number": 71,
+      "number": 72,
       "name": "TRT Haber",
       "logoText": "TRT\nHABER",
       "c1": "0xFF1F2937",
@@ -2496,13 +2529,13 @@
       "logoUrl": "https://i.imgur.com/OVfo8Ab.png",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
-          "url": "https://tv-trthaber.medya.trt.com.tr/master_1080.m3u8",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
+          "url": "https://tv-trthaber.medya.trt.com.tr/master.m3u8",
           "type": "HLS"
         },
         {
-          "label": "HD 720p",
-          "url": "https://tv-trthaber.medya.trt.com.tr/master.m3u8",
+          "label": "Yedek Akış 2",
+          "url": "https://tv-trthaber.medya.trt.com.tr/master_1080.m3u8",
           "type": "HLS"
         },
         {
@@ -2529,7 +2562,7 @@
     },
     {
       "id": "ch_71_tvnet",
-      "number": 72,
+      "number": 73,
       "name": "TVNET",
       "logoText": "TVNET",
       "c1": "0xFFB45309",
@@ -2539,7 +2572,7 @@
       "logoUrl": "https://i.imgur.com/mQo8yWQ.png",
       "sources": [
         {
-          "label": "FHD 1080p (En Yüksek Bitrate)",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://mn-nl.mncdn.com/tvnet/tvnet/playlist.m3u8",
           "type": "HLS"
         },
@@ -2562,7 +2595,7 @@
     },
     {
       "id": "ch_72_tyt_t_rk",
-      "number": 73,
+      "number": 74,
       "name": "TYT Türk",
       "logoText": "TYT\nTÜRK",
       "c1": "0xFFB91C1C",
@@ -2572,7 +2605,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "FHD 1080p (En Yüksek Bitrate)",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://tytturk-live.ercdn.net/tytturk/tytturk.m3u8",
           "type": "HLS"
         },
@@ -2595,7 +2628,7 @@
     },
     {
       "id": "ch_73__lke_tv",
-      "number": 74,
+      "number": 75,
       "name": "Ülke TV",
       "logoText": "ÜLKE",
       "c1": "0xFF1E3A8A",
@@ -2605,13 +2638,13 @@
       "logoUrl": "https://i.imgur.com/wdWR7Qk.png",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
-          "url": "https://livetv.radyotvonline.net/kanal7live/ulketv/chunklist.m3u8",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
+          "url": "https://livetv.radyotvonline.net/kanal7live/ulketv/playlist.m3u8",
           "type": "HLS"
         },
         {
-          "label": "HD 720p",
-          "url": "https://livetv.radyotvonline.net/kanal7live/ulketv/playlist.m3u8",
+          "label": "Yedek Akış 2",
+          "url": "https://livetv.radyotvonline.net/kanal7live/ulketv/chunklist.m3u8",
           "type": "HLS"
         },
         {
@@ -2628,7 +2661,7 @@
     },
     {
       "id": "ch_74_agro_tv",
-      "number": 75,
+      "number": 76,
       "name": "Agro TV",
       "logoText": "AGRO",
       "c1": "0xFF047857",
@@ -2638,7 +2671,7 @@
       "logoUrl": "https://i.ibb.co/1RnLJpf/agro.png",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://yayin30.haber100.com/live/agrotv/playlist.m3u8",
           "type": "HLS"
         },
@@ -2656,7 +2689,7 @@
     },
     {
       "id": "ch_75_bizimev_tv",
-      "number": 76,
+      "number": 77,
       "name": "Bizimev TV",
       "logoText": "BIZIME",
       "c1": "0xFF6B21A8",
@@ -2666,7 +2699,7 @@
       "logoUrl": "https://i.imgur.com/eJa6sFY.png",
       "sources": [
         {
-          "label": "HD 720p",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://mn-nl.mncdn.com/blutv_bizimev/bizimev_sd.smil/playlist.m3u8",
           "type": "HLS"
         },
@@ -2684,7 +2717,7 @@
     },
     {
       "id": "ch_76_cgtn_documentary",
-      "number": 77,
+      "number": 78,
       "name": "CGTN Documentary",
       "logoText": "CGTN\nDOCUM",
       "c1": "0xFFC2410C",
@@ -2694,7 +2727,7 @@
       "logoUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d6/CGTN_Documentary_logo.png/960px-CGTN_Documentary_logo.png",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://mn-nl.mncdn.com/dogusdyg_drone/cgtn/playlist.m3u8",
           "type": "HLS"
         },
@@ -2712,7 +2745,7 @@
     },
     {
       "id": "ch_77_gzt_tv",
-      "number": 78,
+      "number": 79,
       "name": "GZT TV",
       "logoText": "GZT",
       "c1": "0xFF0E7490",
@@ -2722,7 +2755,7 @@
       "logoUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ef/GZT_logo.svg/960px-GZT_logo.svg.png",
       "sources": [
         {
-          "label": "FHD 1080p (En Yüksek Bitrate)",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://gzttv-live.lg.mncdn.com/gzttv-live/gzttv/playlist.m3u8",
           "type": "HLS"
         },
@@ -2740,7 +2773,7 @@
     },
     {
       "id": "ch_78_love_nature_hd",
-      "number": 79,
+      "number": 80,
       "name": "Love Nature HD",
       "logoText": "LOVE\nNATUR",
       "c1": "0xFFBE185D",
@@ -2750,7 +2783,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "FHD 1080p (En Yüksek Bitrate)",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://lovenatureus-eng-plex.amagi.tv/playlist.m3u8",
           "type": "HLS"
         },
@@ -2768,7 +2801,7 @@
     },
     {
       "id": "ch_79_national_geographic",
-      "number": 80,
+      "number": 81,
       "name": "National Geographic",
       "logoText": "NATIO\nGEOGR",
       "c1": "0xFF1F2937",
@@ -2778,7 +2811,7 @@
       "logoUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/Natgeologo.svg/960px-Natgeologo.svg.png",
       "sources": [
         {
-          "label": "FHD 1080p (En Yüksek Bitrate)",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://saran-live.ercdn.net/natgeohd/index.m3u8",
           "type": "HLS"
         },
@@ -2796,7 +2829,7 @@
     },
     {
       "id": "ch_80_national_geographic_",
-      "number": 81,
+      "number": 82,
       "name": "National Geographic Wild",
       "logoText": "NATIO\nGEOGR",
       "c1": "0xFFB45309",
@@ -2806,7 +2839,7 @@
       "logoUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/27/National_Geographic_Wild_logo.svg/960px-National_Geographic_Wild_logo.svg.png",
       "sources": [
         {
-          "label": "FHD 1080p (En Yüksek Bitrate)",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://saran-live.ercdn.net/natgeowild/index.m3u8",
           "type": "HLS"
         },
@@ -2824,7 +2857,7 @@
     },
     {
       "id": "ch_81_tgrt_belgesel",
-      "number": 82,
+      "number": 83,
       "name": "TGRT Belgesel",
       "logoText": "TGRT\nBELGE",
       "c1": "0xFFB91C1C",
@@ -2834,7 +2867,7 @@
       "logoUrl": "https://i.ibb.co/JHH0xcX/tgrtbel22.png",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://tgrt-live.ercdn.net/tgrtbelgesel/tgrtbelgesel.m3u8",
           "type": "HLS"
         },
@@ -2862,7 +2895,7 @@
     },
     {
       "id": "ch_82_trt_belgesel",
-      "number": 83,
+      "number": 84,
       "name": "TRT Belgesel",
       "logoText": "TRT\nBELGE",
       "c1": "0xFF1E3A8A",
@@ -2872,18 +2905,18 @@
       "logoUrl": "https://i.imgur.com/MGO87pe.png",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
-          "url": "https://tv-trtbelgesel.medya.trt.com.tr/master_1080.m3u8",
-          "type": "HLS"
-        },
-        {
-          "label": "FHD 1080p (En Yüksek Bitrate)",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://tv-trtbelgesel-dai.medya.trt.com.tr/master.m3u8",
           "type": "HLS"
         },
         {
           "label": "Yedek Akış",
           "url": "https://tv-trtbelgesel.medya.trt.com.tr/master.m3u8",
+          "type": "HLS"
+        },
+        {
+          "label": "Yedek Akış 3",
+          "url": "https://tv-trtbelgesel.medya.trt.com.tr/master_1080.m3u8",
           "type": "HLS"
         },
         {
@@ -2905,7 +2938,7 @@
     },
     {
       "id": "ch_83_wild_earth_tv",
-      "number": 84,
+      "number": 85,
       "name": "Wild Earth TV",
       "logoText": "WILD\nEARTH",
       "c1": "0xFF047857",
@@ -2915,7 +2948,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "FHD 1080p (En Yüksek Bitrate)",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://wildearth-adsfree-ono.amagi.tv/playlist.m3u8",
           "type": "HLS"
         },
@@ -2933,7 +2966,7 @@
     },
     {
       "id": "ch_84_yaban_tv",
-      "number": 85,
+      "number": 86,
       "name": "Yaban TV",
       "logoText": "YABAN",
       "c1": "0xFF6B21A8",
@@ -2943,7 +2976,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "HD 720p",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://59cba4d34b678.streamlock.net/live1/yabantv/playlist.m3u8",
           "type": "HLS"
         },
@@ -2966,7 +2999,7 @@
     },
     {
       "id": "ch_85__ift_i_tv",
-      "number": 86,
+      "number": 87,
       "name": "Çiftçi TV",
       "logoText": "ÇIFTÇI",
       "c1": "0xFFC2410C",
@@ -2976,13 +3009,13 @@
       "logoUrl": "https://i.ibb.co/vHwMgx0/ciftci.png",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
-          "url": "https://live.artidijitalmedya.com/artidijital_ciftcitv/ciftcitv/playlist.m3u8",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
+          "url": "https://live.artidijitalmedya.com/artidijital_ciftcitv/ciftcitv/chunks.m3u8",
           "type": "HLS"
         },
         {
-          "label": "Standart Akış",
-          "url": "https://live.artidijitalmedya.com/artidijital_ciftcitv/ciftcitv/chunks.m3u8",
+          "label": "Yedek Akış 2",
+          "url": "https://live.artidijitalmedya.com/artidijital_ciftcitv/ciftcitv/playlist.m3u8",
           "type": "HLS"
         },
         {
@@ -2999,7 +3032,7 @@
     },
     {
       "id": "ch_86_dream_t_rk",
-      "number": 87,
+      "number": 88,
       "name": "Dream Türk",
       "logoText": "DREAM\nTÜRK",
       "c1": "0xFF0E7490",
@@ -3009,7 +3042,7 @@
       "logoUrl": "https://i.ibb.co/fxRrKmB/dream-turk.png",
       "sources": [
         {
-          "label": "HD 720p",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://live.duhnet.tv/S2/HLS_LIVE/dreamturknp/playlist.m3u8",
           "type": "HLS"
         },
@@ -3032,7 +3065,7 @@
     },
     {
       "id": "ch_87_kral_pop_tv",
-      "number": 88,
+      "number": 89,
       "name": "Kral Pop TV",
       "logoText": "KRAL\nPOP",
       "c1": "0xFFBE185D",
@@ -3042,7 +3075,7 @@
       "logoUrl": "https://i.imgur.com/ch365lh.png",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://dogus-live.daioncdn.net/kralpoptv/playlist.m3u8",
           "type": "HLS"
         },
@@ -3075,7 +3108,7 @@
     },
     {
       "id": "ch_88_number_1_a_k",
-      "number": 89,
+      "number": 90,
       "name": "Number 1 Aşk",
       "logoText": "NUMBE\n1",
       "c1": "0xFF1F2937",
@@ -3085,7 +3118,7 @@
       "logoUrl": "https://i.ibb.co/5cJ0KtQ/nr1-ask.png",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/u_stream_5c9e18f9cea15_1/playlist.m3u8",
           "type": "HLS"
         },
@@ -3108,7 +3141,7 @@
     },
     {
       "id": "ch_89_number_1_damar",
-      "number": 90,
+      "number": 91,
       "name": "Number 1 Damar",
       "logoText": "NUMBE\n1",
       "c1": "0xFFB45309",
@@ -3118,7 +3151,7 @@
       "logoUrl": "https://i.ibb.co/2yCF7ms/nr1-damar.png",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/u_stream_5c9e198784bdc_1/playlist.m3u8",
           "type": "HLS"
         },
@@ -3141,7 +3174,7 @@
     },
     {
       "id": "ch_90_number_1_dance",
-      "number": 91,
+      "number": 92,
       "name": "Number 1 Dance",
       "logoText": "NUMBE\n1",
       "c1": "0xFFB91C1C",
@@ -3151,7 +3184,7 @@
       "logoUrl": "https://i.ibb.co/kXFSFTN/nr1-dance.png",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/u_stream_5c9e2aa8acf44_1/playlist.m3u8",
           "type": "HLS"
         },
@@ -3174,7 +3207,7 @@
     },
     {
       "id": "ch_91_number_1_tv_hd",
-      "number": 92,
+      "number": 93,
       "name": "Number 1 TV HD",
       "logoText": "NUMBE\n1",
       "c1": "0xFF1E3A8A",
@@ -3184,7 +3217,7 @@
       "logoUrl": "https://i.ibb.co/sybLTBG/nr1.png",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/u_stream_5c9e17cd6360b_1/playlist.m3u8",
           "type": "HLS"
         },
@@ -3207,7 +3240,7 @@
     },
     {
       "id": "ch_92_number_1_t_rk",
-      "number": 93,
+      "number": 94,
       "name": "Number 1 Türk",
       "logoText": "NUMBE\n1",
       "c1": "0xFF047857",
@@ -3217,7 +3250,7 @@
       "logoUrl": "https://i.imgur.com/18zjk3q.png",
       "sources": [
         {
-          "label": "HD 720p",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://mn-nl.mncdn.com/blutv_nr1turk2/live.m3u8",
           "type": "HLS"
         },
@@ -3240,7 +3273,7 @@
     },
     {
       "id": "ch_93_power_dance",
-      "number": 94,
+      "number": 95,
       "name": "Power Dance",
       "logoText": "POWER\nDANCE",
       "c1": "0xFF6B21A8",
@@ -3250,7 +3283,7 @@
       "logoUrl": "https://i.ibb.co/5hwZ7xw/power-dance.png",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://listen.powerapp.com.tr/dance/dance.smil/playlist.m3u8",
           "type": "HLS"
         },
@@ -3273,7 +3306,7 @@
     },
     {
       "id": "ch_94_power_love",
-      "number": 95,
+      "number": 96,
       "name": "Power Love",
       "logoText": "POWER\nLOVE",
       "c1": "0xFFC2410C",
@@ -3283,7 +3316,7 @@
       "logoUrl": "https://i.ibb.co/bJL1VnX/power-love.png",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://listen.powerapp.com.tr/plove/love.smil/playlist.m3u8",
           "type": "HLS"
         },
@@ -3306,7 +3339,7 @@
     },
     {
       "id": "ch_95_power_tv",
-      "number": 96,
+      "number": 97,
       "name": "Power TV",
       "logoText": "POWER",
       "c1": "0xFF0E7490",
@@ -3316,7 +3349,7 @@
       "logoUrl": "https://i.ibb.co/JrXDQJy/power-tv.png",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://live.artidijitalmedya.com/artidijital_powertv/powertv/playlist.m3u8",
           "type": "HLS"
         },
@@ -3339,7 +3372,7 @@
     },
     {
       "id": "ch_96_power_tv_hd",
-      "number": 97,
+      "number": 98,
       "name": "Power TV HD",
       "logoText": "POWER",
       "c1": "0xFFBE185D",
@@ -3349,7 +3382,7 @@
       "logoUrl": "https://i.ibb.co/JrXDQJy/power-tv.png",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://livetv.powerapp.com.tr/powerTV/powerhd.smil/chunklist_b2650000_sltur.m3u8",
           "type": "HLS"
         },
@@ -3377,7 +3410,7 @@
     },
     {
       "id": "ch_97_powert_rk_akustik",
-      "number": 98,
+      "number": 99,
       "name": "PowerTürk Akustik",
       "logoText": "POWER\nAKUST",
       "c1": "0xFF1F2937",
@@ -3387,7 +3420,7 @@
       "logoUrl": "https://i.ibb.co/XFY7dCW/powerturk-akustik.png",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://listen.powerapp.com.tr/pturkakustik/akustik.smil/playlist.m3u8",
           "type": "HLS"
         },
@@ -3405,7 +3438,7 @@
     },
     {
       "id": "ch_98_powert_rk_slow",
-      "number": 99,
+      "number": 100,
       "name": "PowerTürk Slow",
       "logoText": "POWER\nSLOW",
       "c1": "0xFFB45309",
@@ -3415,7 +3448,7 @@
       "logoUrl": "https://i.ibb.co/R4pcKqK/powerturk-slow.png",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://listen.powerapp.com.tr/pturkslow/slow.smil/playlist.m3u8",
           "type": "HLS"
         },
@@ -3433,7 +3466,7 @@
     },
     {
       "id": "ch_99_powert_rk_taptaze",
-      "number": 100,
+      "number": 101,
       "name": "PowerTürk Taptaze",
       "logoText": "POWER\nTAPTA",
       "c1": "0xFFB91C1C",
@@ -3443,13 +3476,13 @@
       "logoUrl": "https://i.ibb.co/F5K5xs9/powerturk-taptaze.png",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
-          "url": "https://livetv.powerapp.com.tr/pturktaptaze/taptaze.smil/playlist.m3u8",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
+          "url": "https://listen.powerapp.com.tr/pturktaptaze/taptaze.smil/playlist.m3u8",
           "type": "HLS"
         },
         {
-          "label": "Standart Akış",
-          "url": "https://listen.powerapp.com.tr/pturktaptaze/taptaze.smil/playlist.m3u8",
+          "label": "Yedek Akış 2",
+          "url": "https://livetv.powerapp.com.tr/pturktaptaze/taptaze.smil/playlist.m3u8",
           "type": "HLS"
         },
         {
@@ -3471,7 +3504,7 @@
     },
     {
       "id": "ch_100_powert_rk_tv_hd",
-      "number": 101,
+      "number": 102,
       "name": "PowerTürk TV HD",
       "logoText": "POWERT",
       "c1": "0xFF1E3A8A",
@@ -3481,13 +3514,13 @@
       "logoUrl": "https://i.ibb.co/xXcBD2C/powerturk.png",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
-          "url": "https://live.artidijitalmedya.com/artidijital_powerturktv/powerturktv/playlist.m3u8",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
+          "url": "https://livetv.powerapp.com.tr/powerturkTV/powerturkhd.smil/playlists.m3u8",
           "type": "HLS"
         },
         {
-          "label": "FHD 1080p (En Yüksek Bitrate)",
-          "url": "https://livetv.powerapp.com.tr/powerturkTV/powerturkhd.smil/playlists.m3u8",
+          "label": "Yedek Akış 2",
+          "url": "https://live.artidijitalmedya.com/artidijital_powerturktv/powerturktv/playlist.m3u8",
           "type": "HLS"
         },
         {
@@ -3504,7 +3537,7 @@
     },
     {
       "id": "ch_101_slow_karadeniz_tv",
-      "number": 102,
+      "number": 103,
       "name": "Slow Karadeniz TV",
       "logoText": "SLOW\nKARAD",
       "c1": "0xFF047857",
@@ -3514,13 +3547,13 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
-          "url": "https://yayin.slowkaradeniztv.com:3390/hybrid/play.m3u8",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
+          "url": "https://yayin.slowkaradeniztv.com:3390/multi_web/play.m3u8",
           "type": "HLS"
         },
         {
-          "label": "Standart Akış",
-          "url": "https://yayin.slowkaradeniztv.com:3390/multi_web/play.m3u8",
+          "label": "Yedek Akış 2",
+          "url": "https://yayin.slowkaradeniztv.com:3390/hybrid/play.m3u8",
           "type": "HLS"
         },
         {
@@ -3537,7 +3570,7 @@
     },
     {
       "id": "ch_102_tatl_ses_tv",
-      "number": 103,
+      "number": 104,
       "name": "Tatlıses TV",
       "logoText": "TATLIS",
       "c1": "0xFF6B21A8",
@@ -3547,7 +3580,7 @@
       "logoUrl": "https://i.ibb.co/yRy9zwt/tatlises-tv.png",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://live.artidijitalmedya.com/artidijital_tatlisestv/tatlisestv/chunks.m3u8",
           "type": "HLS"
         },
@@ -3565,7 +3598,7 @@
     },
     {
       "id": "ch_103_trt_m_zik",
-      "number": 104,
+      "number": 105,
       "name": "TRT Müzik",
       "logoText": "TRT\nMÜZIK",
       "c1": "0xFFC2410C",
@@ -3575,7 +3608,7 @@
       "logoUrl": "https://i.imgur.com/fIVFCEd.png",
       "sources": [
         {
-          "label": "HD 720p",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://tv-trtmuzik.medya.trt.com.tr/master.m3u8",
           "type": "HLS"
         },
@@ -3608,7 +3641,7 @@
     },
     {
       "id": "ch_104_babytv_t_rkiye",
-      "number": 105,
+      "number": 106,
       "name": "BabyTV Türkiye",
       "logoText": "BABYTV",
       "c1": "0xFF0E7490",
@@ -3618,7 +3651,7 @@
       "logoUrl": "https://i.imgur.com/4BDJ5FT.png",
       "sources": [
         {
-          "label": "FHD 1080p (En Yüksek Bitrate)",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://saran-live.ercdn.net/babytv/index.m3u8",
           "type": "HLS"
         },
@@ -3636,7 +3669,7 @@
     },
     {
       "id": "ch_105_disney_junior",
-      "number": 106,
+      "number": 107,
       "name": "Disney Junior",
       "logoText": "DISNE\nJUNIO",
       "c1": "0xFFBE185D",
@@ -3646,7 +3679,7 @@
       "logoUrl": "https://www.dsmart.com.tr/api/v1/public/images/kanallar/disneyjr.png",
       "sources": [
         {
-          "label": "FHD 1080p (En Yüksek Bitrate)",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://saran-live.ercdn.net/disneyjunior/index.m3u8",
           "type": "HLS"
         },
@@ -3664,7 +3697,7 @@
     },
     {
       "id": "ch_106_minika_go",
-      "number": 107,
+      "number": 108,
       "name": "Minika Go",
       "logoText": "MINIK\nGO",
       "c1": "0xFF1F2937",
@@ -3674,8 +3707,13 @@
       "logoUrl": "https://i.imgur.com/qIoipDq.png",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
-          "url": "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/minikago/minikago_720p.m3u8",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
+          "url": "http://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/minikago/minikago.m3u8",
+          "type": "HLS"
+        },
+        {
+          "label": "Yedek Akış 2",
+          "url": "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/minikago/minikago.m3u8",
           "type": "HLS"
         },
         {
@@ -3684,8 +3722,8 @@
           "type": "HLS"
         },
         {
-          "label": "Alternatif Akış 3",
-          "url": "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/minikago/minikago.m3u8",
+          "label": "Yedek Akış 4",
+          "url": "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/minikago/minikago_720p.m3u8",
           "type": "HLS"
         },
         {
@@ -3697,17 +3735,12 @@
           "label": "SD 480p Yedek Akış",
           "url": "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/minikago/minikago_480p.m3u8",
           "type": "HLS"
-        },
-        {
-          "label": "FHD 1080p Akış",
-          "url": "http://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/minikago/minikago_1080p.m3u8",
-          "type": "HLS"
         }
       ]
     },
     {
       "id": "ch_107_minika__ocuk",
-      "number": 108,
+      "number": 109,
       "name": "Minika Çocuk",
       "logoText": "MINIK\nÇOCUK",
       "c1": "0xFFB45309",
@@ -3717,8 +3750,13 @@
       "logoUrl": "https://i.imgur.com/VCywMTv.png",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
-          "url": "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/minikago_cocuk/minikago_cocuk_720p.m3u8",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
+          "url": "http://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/minikago_cocuk/minikago_cocuk.m3u8",
+          "type": "HLS"
+        },
+        {
+          "label": "Yedek Akış 2",
+          "url": "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/minikago_cocuk/minikago_cocuk.m3u8",
           "type": "HLS"
         },
         {
@@ -3727,8 +3765,8 @@
           "type": "HLS"
         },
         {
-          "label": "Alternatif Akış 3",
-          "url": "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/minikago_cocuk/minikago_cocuk.m3u8",
+          "label": "Yedek Akış 4",
+          "url": "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/minikago_cocuk/minikago_cocuk_720p.m3u8",
           "type": "HLS"
         },
         {
@@ -3740,17 +3778,12 @@
           "label": "SD 480p Yedek Akış",
           "url": "https://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/minikago_cocuk/minikago_cocuk_480p.m3u8",
           "type": "HLS"
-        },
-        {
-          "label": "FHD 1080p Akış",
-          "url": "http://rnttwmjcin.turknet.ercdn.net/lcpmvefbyo/minikago_cocuk/minikago_cocuk_1080p.m3u8",
-          "type": "HLS"
         }
       ]
     },
     {
       "id": "ch_108_trt_diyanet__ocuk",
-      "number": 109,
+      "number": 110,
       "name": "TRT Diyanet Çocuk",
       "logoText": "TRT\nDIYAN",
       "c1": "0xFFB91C1C",
@@ -3760,13 +3793,13 @@
       "logoUrl": "https://i.imgur.com/8PmXz9t.png",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
-          "url": "https://tv-trtdiyanetcocuk.medya.trt.com.tr/master_1080.m3u8",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
+          "url": "https://tv-trtdiyanetcocuk.medya.trt.com.tr/master.m3u8",
           "type": "HLS"
         },
         {
-          "label": "HD 720p",
-          "url": "https://tv-trtdiyanetcocuk.medya.trt.com.tr/master.m3u8",
+          "label": "Yedek Akış 2",
+          "url": "https://tv-trtdiyanetcocuk.medya.trt.com.tr/master_1080.m3u8",
           "type": "HLS"
         },
         {
@@ -3788,7 +3821,7 @@
     },
     {
       "id": "ch_109_trt_eba_i_lkokul",
-      "number": 110,
+      "number": 111,
       "name": "TRT EBA İlkokul",
       "logoText": "TRT\nEBA",
       "c1": "0xFF1E3A8A",
@@ -3798,7 +3831,7 @@
       "logoUrl": "https://i.imgur.com/wDvZfk8.png",
       "sources": [
         {
-          "label": "HD 720p",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://tv-e-okul00.medya.trt.com.tr/master.m3u8",
           "type": "HLS"
         },
@@ -3821,7 +3854,7 @@
     },
     {
       "id": "ch_110_trt_eba_lise",
-      "number": 111,
+      "number": 112,
       "name": "TRT EBA Lise",
       "logoText": "TRT\nEBA",
       "c1": "0xFF047857",
@@ -3831,7 +3864,7 @@
       "logoUrl": "https://i.imgur.com/IebUZx1.png",
       "sources": [
         {
-          "label": "HD 720p",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://tv-e-okul02.medya.trt.com.tr/master.m3u8",
           "type": "HLS"
         },
@@ -3854,7 +3887,7 @@
     },
     {
       "id": "ch_111_trt_eba_ortaokul",
-      "number": 112,
+      "number": 113,
       "name": "TRT EBA Ortaokul",
       "logoText": "TRT\nEBA",
       "c1": "0xFF6B21A8",
@@ -3864,7 +3897,7 @@
       "logoUrl": "https://i.imgur.com/yfPTvRx.png",
       "sources": [
         {
-          "label": "HD 720p",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://tv-e-okul01.medya.trt.com.tr/master.m3u8",
           "type": "HLS"
         },
@@ -3887,7 +3920,7 @@
     },
     {
       "id": "ch_112_trt_gen_",
-      "number": 113,
+      "number": 114,
       "name": "TRT Genç",
       "logoText": "TRT\nGENÇ",
       "c1": "0xFFC2410C",
@@ -3897,13 +3930,13 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
-          "url": "https://tv-trtgenc.medya.trt.com.tr/master_1080.m3u8",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
+          "url": "https://tv-trtgenc.medya.trt.com.tr/master.m3u8",
           "type": "HLS"
         },
         {
-          "label": "FHD 1080p (En Yüksek Bitrate)",
-          "url": "https://tv-trtgenc.medya.trt.com.tr/master.m3u8",
+          "label": "Yedek Akış 2",
+          "url": "https://tv-trtgenc.medya.trt.com.tr/master_1080.m3u8",
           "type": "HLS"
         },
         {
@@ -3920,7 +3953,7 @@
     },
     {
       "id": "ch_113_trt__ocuk",
-      "number": 114,
+      "number": 115,
       "name": "TRT Çocuk",
       "logoText": "TRT\nÇOCUK",
       "c1": "0xFF0E7490",
@@ -3930,13 +3963,13 @@
       "logoUrl": "https://i.imgur.com/QLFmD6d.png",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
-          "url": "https://tv-trtcocuk.medya.trt.com.tr/master_1080.m3u8",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
+          "url": "https://tv-trtcocuk.medya.trt.com.tr/master.m3u8",
           "type": "HLS"
         },
         {
-          "label": "HD 720p",
-          "url": "https://tv-trtcocuk.medya.trt.com.tr/master.m3u8",
+          "label": "Yedek Akış 2",
+          "url": "https://tv-trtcocuk.medya.trt.com.tr/master_1080.m3u8",
           "type": "HLS"
         },
         {
@@ -3953,7 +3986,7 @@
     },
     {
       "id": "ch_114_brt_1_hd_k_br_s",
-      "number": 115,
+      "number": 116,
       "name": "BRT 1 HD Kıbrıs",
       "logoText": "BRT\n1",
       "c1": "0xFFBE185D",
@@ -3963,7 +3996,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://edge.kuzeykibrissmart.tv/brt1hd/bant1/playlist.m3u8",
           "type": "HLS"
         },
@@ -3981,7 +4014,7 @@
     },
     {
       "id": "ch_115_brt_2_hd_k_br_s",
-      "number": 116,
+      "number": 117,
       "name": "BRT 2 HD Kıbrıs",
       "logoText": "BRT\n2",
       "c1": "0xFF1F2937",
@@ -3991,7 +4024,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://edge.kuzeykibrissmart.tv/brt2hd/bant1/playlist.m3u8",
           "type": "HLS"
         },
@@ -4009,7 +4042,7 @@
     },
     {
       "id": "ch_116_kanal_t_k_br_s",
-      "number": 117,
+      "number": 118,
       "name": "Kanal T Kıbrıs",
       "logoText": "KANAL\nT",
       "c1": "0xFFB45309",
@@ -4019,7 +4052,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://edge.kuzeykibrissmart.tv/kanalt/bant1/playlist.m3u8",
           "type": "HLS"
         },
@@ -4037,7 +4070,7 @@
     },
     {
       "id": "ch_117_ktv_k_br_s_tv",
-      "number": 118,
+      "number": 119,
       "name": "KTV Kıbrıs TV",
       "logoText": "KTV\nKIBRI",
       "c1": "0xFFB91C1C",
@@ -4047,7 +4080,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://edge.kuzeykibrissmart.tv/kibristv/bant1/playlist.m3u8",
           "type": "HLS"
         },
@@ -4065,7 +4098,7 @@
     },
     {
       "id": "ch_118_k_br_s_ada_tv",
-      "number": 119,
+      "number": 120,
       "name": "Kıbrıs Ada TV",
       "logoText": "KIBRI\nADA",
       "c1": "0xFF1E3A8A",
@@ -4075,7 +4108,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://edge.kuzeykibrissmart.tv/adatv/bant1/playlist.m3u8",
           "type": "HLS"
         },
@@ -4093,7 +4126,7 @@
     },
     {
       "id": "ch_119_k_br_s_gen__tv",
-      "number": 120,
+      "number": 121,
       "name": "Kıbrıs Genç TV",
       "logoText": "KIBRI\nGENÇ",
       "c1": "0xFF047857",
@@ -4103,7 +4136,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://edge.kuzeykibrissmart.tv/kibrisgenctv/bant1/playlist.m3u8",
           "type": "HLS"
         },
@@ -4121,7 +4154,7 @@
     },
     {
       "id": "ch_120_sim_tv_k_br_s",
-      "number": 121,
+      "number": 122,
       "name": "Sim TV Kıbrıs",
       "logoText": "SIM\nKIBRI",
       "c1": "0xFF6B21A8",
@@ -4131,7 +4164,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://edge.kuzeykibrissmart.tv/simtv/bant1/playlist.m3u8",
           "type": "HLS"
         },
@@ -4149,7 +4182,7 @@
     },
     {
       "id": "ch_121_tv_2020_k_br_s",
-      "number": 122,
+      "number": 123,
       "name": "TV 2020 Kıbrıs",
       "logoText": "2020\nKIBRI",
       "c1": "0xFFC2410C",
@@ -4159,7 +4192,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://edge.kuzeykibrissmart.tv/tv2020/bant1/playlist.m3u8",
           "type": "HLS"
         },
@@ -4177,7 +4210,7 @@
     },
     {
       "id": "ch_122_al_zahra_t_rk_tv",
-      "number": 123,
+      "number": 124,
       "name": "Al Zahra Türk TV",
       "logoText": "AL\nZAHRA",
       "c1": "0xFF0E7490",
@@ -4187,7 +4220,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://live.al-zahratv.com/live/playlist.m3u8",
           "type": "HLS"
         },
@@ -4205,7 +4238,7 @@
     },
     {
       "id": "ch_123_diyanet_tv",
-      "number": 124,
+      "number": 125,
       "name": "Diyanet TV",
       "logoText": "DIYANE",
       "c1": "0xFFBE185D",
@@ -4215,7 +4248,7 @@
       "logoUrl": "https://i.ibb.co/k9phm3v/diyanettv.png",
       "sources": [
         {
-          "label": "FHD 1080p (En Yüksek Bitrate)",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://eustr73.mediatriple.net/videoonlylive/mtikoimxnztxlive/broadcast_5e3bf95a47e07.smil/playlist.m3u8",
           "type": "HLS"
         },
@@ -4233,7 +4266,7 @@
     },
     {
       "id": "ch_124_dost_tv",
-      "number": 125,
+      "number": 126,
       "name": "Dost TV",
       "logoText": "DOST",
       "c1": "0xFF1F2937",
@@ -4243,7 +4276,7 @@
       "logoUrl": "https://i.ibb.co/jwgqtSB/dosttv.png",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://dost.stream.emsal.im/tv/live.m3u8",
           "type": "HLS"
         },
@@ -4256,7 +4289,7 @@
     },
     {
       "id": "ch_125_gonca_tv",
-      "number": 126,
+      "number": 127,
       "name": "Gonca TV",
       "logoText": "GONCA",
       "c1": "0xFFB45309",
@@ -4266,7 +4299,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://edge.taksimbilisim.com/goncatv/bant1/playlist.m3u8",
           "type": "HLS"
         },
@@ -4284,7 +4317,7 @@
     },
     {
       "id": "ch_126_kanal_on4_tv",
-      "number": 127,
+      "number": 128,
       "name": "Kanal On4 TV",
       "logoText": "KANAL\nON4",
       "c1": "0xFFB91C1C",
@@ -4294,7 +4327,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://edge1.socialsmart.tv/on4/bant1/chunks.m3u8",
           "type": "HLS"
         },
@@ -4317,7 +4350,7 @@
     },
     {
       "id": "ch_127_kud_s_tv",
-      "number": 128,
+      "number": 129,
       "name": "Kudüs TV",
       "logoText": "KUDÜS",
       "c1": "0xFF1E3A8A",
@@ -4327,7 +4360,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://yayin30.haber100.com/live/kudustv/chunklist.m3u8",
           "type": "HLS"
         },
@@ -4340,7 +4373,7 @@
     },
     {
       "id": "ch_128_laleg_l_tv",
-      "number": 129,
+      "number": 130,
       "name": "Lalegül TV",
       "logoText": "LALEGÜ",
       "c1": "0xFF047857",
@@ -4350,7 +4383,7 @@
       "logoUrl": "https://i.ibb.co/wrL2khn/lalegul.png",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://lbl.netmedya.net/hls/lalegultv.m3u8",
           "type": "HLS"
         },
@@ -4363,7 +4396,7 @@
     },
     {
       "id": "ch_129_mukabele_tv",
-      "number": 130,
+      "number": 131,
       "name": "Mukabele TV",
       "logoText": "MUKABE",
       "c1": "0xFF6B21A8",
@@ -4373,7 +4406,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/mukabele-tv/playlist.m3u8",
           "type": "HLS"
         },
@@ -4396,7 +4429,7 @@
     },
     {
       "id": "ch_130_rehber_tv",
-      "number": 131,
+      "number": 132,
       "name": "Rehber TV",
       "logoText": "REHBER",
       "c1": "0xFFC2410C",
@@ -4406,7 +4439,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://cdn4.yayin.com.tr/rehbertv/tracks-v1a1/mono.m3u8",
           "type": "HLS"
         },
@@ -4424,7 +4457,7 @@
     },
     {
       "id": "ch_131_semerkand_tv",
-      "number": 132,
+      "number": 133,
       "name": "Semerkand TV",
       "logoText": "SEMERK",
       "c1": "0xFF0E7490",
@@ -4434,13 +4467,13 @@
       "logoUrl": "https://i.ibb.co/k8L3Mq1/semerkandtv.png",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
-          "url": "https://b01c02nl.mediatriple.net/videoonlylive/mtisvwurbfcyslive/broadcast_58d915bd40efc.smil/mt_0.m3u8",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
+          "url": "https://b01c02nl.mediatriple.net/videoonlylive/mtisvwurbfcyslive/broadcast_58d915bd40efc.smil/playlist.m3u8",
           "type": "HLS"
         },
         {
-          "label": "Standart Akış",
-          "url": "https://b01c02nl.mediatriple.net/videoonlylive/mtisvwurbfcyslive/broadcast_58d915bd40efc.smil/playlist.m3u8",
+          "label": "Yedek Akış 2",
+          "url": "https://b01c02nl.mediatriple.net/videoonlylive/mtisvwurbfcyslive/broadcast_58d915bd40efc.smil/mt_0.m3u8",
           "type": "HLS"
         },
         {
@@ -4462,7 +4495,7 @@
     },
     {
       "id": "ch_132_semerkand_tv_way",
-      "number": 133,
+      "number": 134,
       "name": "Semerkand TV Way",
       "logoText": "SEMER\nWAY",
       "c1": "0xFFBE185D",
@@ -4472,7 +4505,7 @@
       "logoUrl": "https://i.ibb.co/k8L3Mq1/semerkandtv.png",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://b01c02nl.mediatriple.net/videoonlylive/mtisvwurbfcyslive/broadcast_6409fdaa68111.smil/playlist.m3u8",
           "type": "HLS"
         },
@@ -4490,7 +4523,7 @@
     },
     {
       "id": "ch_133_vav_tv",
-      "number": 134,
+      "number": 135,
       "name": "Vav TV",
       "logoText": "VAV",
       "c1": "0xFF1F2937",
@@ -4500,13 +4533,13 @@
       "logoUrl": "https://i.ibb.co/bj1H8LCm/vavtv.png",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
-          "url": "https://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/kltr-sanat-tv/playlist/0.m3u8",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
+          "url": "https://trkvz-live.ercdn.net/vavtv/vavtv.m3u8",
           "type": "HLS"
         },
         {
-          "label": "FHD 1080p (En Yüksek Bitrate)",
-          "url": "https://trkvz-live.ercdn.net/vavtv/vavtv.m3u8",
+          "label": "Yedek Akış 2",
+          "url": "https://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/kltr-sanat-tv/playlist/0.m3u8",
           "type": "HLS"
         },
         {
@@ -4533,7 +4566,7 @@
     },
     {
       "id": "ch_134_aksu_tv_kahramanmara",
-      "number": 135,
+      "number": 136,
       "name": "Aksu TV Kahramanmaraş",
       "logoText": "AKSU\nKAHRA",
       "c1": "0xFFB45309",
@@ -4543,7 +4576,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://live.artidijitalmedya.com/artidijital_aksutv/aksutv/playlist.m3u8",
           "type": "HLS"
         },
@@ -4566,7 +4599,7 @@
     },
     {
       "id": "ch_135_alanya_posta_tv",
-      "number": 136,
+      "number": 137,
       "name": "Alanya Posta TV",
       "logoText": "ALANY\nPOSTA",
       "c1": "0xFFB91C1C",
@@ -4576,7 +4609,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "FHD 1080p (En Yüksek Bitrate)",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://api-tv3.yayin.com.tr/postatv/postatv/playlist.m3u8",
           "type": "HLS"
         },
@@ -4604,7 +4637,7 @@
     },
     {
       "id": "ch_136_alta__tv_ordu",
-      "number": 137,
+      "number": 138,
       "name": "Altaş TV Ordu",
       "logoText": "ALTAŞ\nORDU",
       "c1": "0xFF1E3A8A",
@@ -4614,7 +4647,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "FHD 1080p (En Yüksek Bitrate)",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://edge1.socialsmart.tv/altastv/bant1/playlist.m3u8",
           "type": "HLS"
         },
@@ -4637,7 +4670,7 @@
     },
     {
       "id": "ch_137_anadolu_net_tv",
-      "number": 138,
+      "number": 139,
       "name": "Anadolu Net TV",
       "logoText": "ANADO\nNET",
       "c1": "0xFF047857",
@@ -4647,7 +4680,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://live.artidijitalmedya.com/artidijital_anadolunet/anadolunet/playlist.m3u8",
           "type": "HLS"
         },
@@ -4670,7 +4703,7 @@
     },
     {
       "id": "ch_138_aras_tv",
-      "number": 139,
+      "number": 140,
       "name": "Aras TV",
       "logoText": "ARAS",
       "c1": "0xFF6B21A8",
@@ -4680,7 +4713,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://2.rtmp.org/tv217/yayin.stream/chunklist.m3u8",
           "type": "HLS"
         },
@@ -4708,7 +4741,7 @@
     },
     {
       "id": "ch_139_art_world_tv",
-      "number": 140,
+      "number": 141,
       "name": "Art World TV",
       "logoText": "ART\nWORLD",
       "c1": "0xFFC2410C",
@@ -4718,7 +4751,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://live.artidijitalmedya.com/artidijital_artworld/artworld/playlist.m3u8",
           "type": "HLS"
         },
@@ -4741,7 +4774,7 @@
     },
     {
       "id": "ch_140_bir_tv",
-      "number": 141,
+      "number": 142,
       "name": "Bir TV",
       "logoText": "BIR",
       "c1": "0xFF0E7490",
@@ -4751,13 +4784,13 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
-          "url": "https://edge.socialsmart.tv/birtv/bant1/chunks.m3u8",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
+          "url": "https://edge1.socialsmart.tv/birtv/bant1/chunks.m3u8",
           "type": "HLS"
         },
         {
-          "label": "Standart Akış",
-          "url": "https://edge1.socialsmart.tv/birtv/bant1/chunks.m3u8",
+          "label": "Yedek Akış 2",
+          "url": "https://edge.socialsmart.tv/birtv/bant1/chunks.m3u8",
           "type": "HLS"
         },
         {
@@ -4774,7 +4807,7 @@
     },
     {
       "id": "ch_141_bodrum_kent_tv",
-      "number": 142,
+      "number": 143,
       "name": "Bodrum Kent TV",
       "logoText": "BODRU\nKENT",
       "c1": "0xFFBE185D",
@@ -4784,7 +4817,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://edge1.socialsmart.tv/bodrumkenttv/bant1/chunks.m3u8",
           "type": "HLS"
         },
@@ -4807,7 +4840,7 @@
     },
     {
       "id": "ch_142_brtv_karab_k",
-      "number": 143,
+      "number": 144,
       "name": "BRTV Karabük",
       "logoText": "BRTV\nKARAB",
       "c1": "0xFF1F2937",
@@ -4817,7 +4850,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://live.artidijitalmedya.com/artidijital_brtv/brtv/playlist.m3u8",
           "type": "HLS"
         },
@@ -4840,7 +4873,7 @@
     },
     {
       "id": "ch_143_bursa_as_tv",
-      "number": 144,
+      "number": 145,
       "name": "Bursa AS TV",
       "logoText": "BURSA\nAS",
       "c1": "0xFFB45309",
@@ -4850,7 +4883,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://live.artidijitalmedya.com/artidijital_astv/astv/playlist.m3u8",
           "type": "HLS"
         },
@@ -4873,7 +4906,7 @@
     },
     {
       "id": "ch_144_bursa_line_tv",
-      "number": 145,
+      "number": 146,
       "name": "Bursa Line TV",
       "logoText": "BURSA\nLINE",
       "c1": "0xFFB91C1C",
@@ -4883,7 +4916,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://edge1.socialsmart.tv/linetv/bant1/chunks.m3u8",
           "type": "HLS"
         },
@@ -4906,7 +4939,7 @@
     },
     {
       "id": "ch_145_bursa_on6_tv",
-      "number": 146,
+      "number": 147,
       "name": "Bursa On6 TV",
       "logoText": "BURSA\nON6",
       "c1": "0xFF1E3A8A",
@@ -4916,7 +4949,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://live.artidijitalmedya.com/artidijital_kanal16/kanal16/playlist.m3u8",
           "type": "HLS"
         },
@@ -4939,7 +4972,7 @@
     },
     {
       "id": "ch_146_deha_tv_denizli",
-      "number": 147,
+      "number": 148,
       "name": "Deha TV Denizli",
       "logoText": "DEHA\nDENIZ",
       "c1": "0xFF047857",
@@ -4949,7 +4982,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://live.artidijitalmedya.com/artidijital_dehatv/dehatv/playlist.m3u8",
           "type": "HLS"
         },
@@ -4972,7 +5005,7 @@
     },
     {
       "id": "ch_147_deniz_postas__tv_kay",
-      "number": 148,
+      "number": 149,
       "name": "Deniz Postası TV Kayseri",
       "logoText": "DENIZ\nPOSTA",
       "c1": "0xFF6B21A8",
@@ -4982,13 +5015,13 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
-          "url": "https://live.artidijitalmedya.com/artidijital_denizpostasi/denizpostasi/chunks.m3u8",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
+          "url": "https://live.artidijitalmedya.com/artidijital_denizpostasi/denizpostasi/playlist.m3u8",
           "type": "HLS"
         },
         {
-          "label": "Standart Akış",
-          "url": "https://live.artidijitalmedya.com/artidijital_denizpostasi/denizpostasi/playlist.m3u8",
+          "label": "Yedek Akış 2",
+          "url": "https://live.artidijitalmedya.com/artidijital_denizpostasi/denizpostasi/chunks.m3u8",
           "type": "HLS"
         },
         {
@@ -5010,7 +5043,7 @@
     },
     {
       "id": "ch_148_derin_tv",
-      "number": 149,
+      "number": 150,
       "name": "Derin TV",
       "logoText": "DERIN",
       "c1": "0xFFC2410C",
@@ -5020,7 +5053,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://cdn4.yayin.com.tr/derintv/index.m3u8",
           "type": "HLS"
         },
@@ -5038,7 +5071,7 @@
     },
     {
       "id": "ch_149_dim_tv_alanya",
-      "number": 150,
+      "number": 151,
       "name": "Dim TV Alanya",
       "logoText": "DIM\nALANY",
       "c1": "0xFF0E7490",
@@ -5048,7 +5081,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://live.artidijitalmedya.com/artidijital_dimtv/dimtv/chunks.m3u8",
           "type": "HLS"
         },
@@ -5066,7 +5099,7 @@
     },
     {
       "id": "ch_150_edirne_tv",
-      "number": 151,
+      "number": 152,
       "name": "Edirne TV",
       "logoText": "EDIRNE",
       "c1": "0xFFBE185D",
@@ -5076,7 +5109,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://yayin.edirnetv.com:8088/hls/etvcanliyayin.m3u8",
           "type": "HLS"
         },
@@ -5089,7 +5122,7 @@
     },
     {
       "id": "ch_151_er_tv_malatya",
-      "number": 152,
+      "number": 153,
       "name": "Er TV Malatya",
       "logoText": "ER\nMALAT",
       "c1": "0xFF1F2937",
@@ -5099,7 +5132,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://live.artidijitalmedya.com/artidijital_ertv_new/ertv/playlist.m3u8",
           "type": "HLS"
         },
@@ -5122,7 +5155,7 @@
     },
     {
       "id": "ch_152_erciyes_tv_kayseri",
-      "number": 153,
+      "number": 154,
       "name": "Erciyes TV Kayseri",
       "logoText": "ERCIY\nKAYSE",
       "c1": "0xFFB45309",
@@ -5132,7 +5165,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://live.artidijitalmedya.com/artidijital_erciyestv/erciyestv/playlist.m3u8",
           "type": "HLS"
         },
@@ -5155,7 +5188,7 @@
     },
     {
       "id": "ch_153_erci__tv_van",
-      "number": 154,
+      "number": 155,
       "name": "Erciş TV Van",
       "logoText": "ERCIŞ\nVAN",
       "c1": "0xFFB91C1C",
@@ -5165,7 +5198,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://cdn1-ercistv.yayin.com.tr/ercistv/amlst:ercistv/chunklist.m3u8",
           "type": "HLS"
         },
@@ -5178,7 +5211,7 @@
     },
     {
       "id": "ch_154_es_tv_eski_ehir",
-      "number": 155,
+      "number": 156,
       "name": "ES TV Eskişehir",
       "logoText": "ES\nESKIŞ",
       "c1": "0xFF1E3A8A",
@@ -5188,7 +5221,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://live.artidijitalmedya.com/artidijital_estv/estv/playlist.m3u8",
           "type": "HLS"
         },
@@ -5211,7 +5244,7 @@
     },
     {
       "id": "ch_155_etv_kayseri",
-      "number": 156,
+      "number": 157,
       "name": "ETV Kayseri",
       "logoText": "ETV\nKAYSE",
       "c1": "0xFF047857",
@@ -5221,7 +5254,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://live.artidijitalmedya.com/artidijital_etv/etv/playlist.m3u8",
           "type": "HLS"
         },
@@ -5244,7 +5277,7 @@
     },
     {
       "id": "ch_156_etv_manisa",
-      "number": 157,
+      "number": 158,
       "name": "ETV Manisa",
       "logoText": "ETV\nMANIS",
       "c1": "0xFF6B21A8",
@@ -5254,7 +5287,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://edge1.socialsmart.tv/manisaetv/bant1/playlist.m3u8",
           "type": "HLS"
         },
@@ -5277,7 +5310,7 @@
     },
     {
       "id": "ch_157_fortuna_tv",
-      "number": 158,
+      "number": 159,
       "name": "Fortuna TV",
       "logoText": "FORTUN",
       "c1": "0xFFC2410C",
@@ -5287,7 +5320,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://edge1.socialsmart.tv/ftvturk/bant1/playlist.m3u8",
           "type": "HLS"
         },
@@ -5310,7 +5343,7 @@
     },
     {
       "id": "ch_158_frt_tv_fethiye",
-      "number": 159,
+      "number": 160,
       "name": "FRT TV Fethiye",
       "logoText": "FRT\nFETHI",
       "c1": "0xFF0E7490",
@@ -5320,7 +5353,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://edge1.socialsmart.tv/frttv/bant1/chunks.m3u8",
           "type": "HLS"
         },
@@ -5343,7 +5376,7 @@
     },
     {
       "id": "ch_159_grt_gaziantep_tv",
-      "number": 160,
+      "number": 161,
       "name": "GRT Gaziantep TV",
       "logoText": "GRT\nGAZIA",
       "c1": "0xFFBE185D",
@@ -5353,7 +5386,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://live.artidijitalmedya.com/artidijital_grt/grt/chunks.m3u8",
           "type": "HLS"
         },
@@ -5371,7 +5404,7 @@
     },
     {
       "id": "ch_160_gurbet_24_tv",
-      "number": 161,
+      "number": 162,
       "name": "Gurbet 24 TV",
       "logoText": "GURBE\n24",
       "c1": "0xFF1F2937",
@@ -5381,7 +5414,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "http://cdn-gurbet24.yayin.com.tr/gurbet24/gurbet24/playlist.m3u8",
           "type": "HLS"
         },
@@ -5409,7 +5442,7 @@
     },
     {
       "id": "ch_161_g_neydo_u_tv__anl_ur",
-      "number": 162,
+      "number": 163,
       "name": "Güneydoğu TV Şanlıurfa",
       "logoText": "GÜNEY\nŞANLI",
       "c1": "0xFFB45309",
@@ -5419,7 +5452,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://edge1.socialsmart.tv/gtv/bant1/playlist.m3u8",
           "type": "HLS"
         },
@@ -5442,7 +5475,7 @@
     },
     {
       "id": "ch_162_haber_61_trabzon",
-      "number": 163,
+      "number": 164,
       "name": "Haber 61 Trabzon",
       "logoText": "HABER\n61",
       "c1": "0xFFB91C1C",
@@ -5452,7 +5485,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "http://win8.yayin.com.tr/haber61tv/smil:haber61tv.smil/playlist.m3u8",
           "type": "HLS"
         },
@@ -5485,7 +5518,7 @@
     },
     {
       "id": "ch_163_hunat_tv_kayseri",
-      "number": 164,
+      "number": 165,
       "name": "Hunat TV Kayseri",
       "logoText": "HUNAT\nKAYSE",
       "c1": "0xFF1E3A8A",
@@ -5495,7 +5528,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://live.artidijitalmedya.com/artidijital_hunattv/hunattv/playlist.m3u8",
           "type": "HLS"
         },
@@ -5518,7 +5551,7 @@
     },
     {
       "id": "ch_164_i_kra___diyar_tv",
-      "number": 165,
+      "number": 166,
       "name": "İkra / Diyar TV",
       "logoText": "İKRA\n/",
       "c1": "0xFF047857",
@@ -5528,7 +5561,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://live.artidijitalmedya.com/artidijital_diyartv/diyartv/chunks.m3u8",
           "type": "HLS"
         },
@@ -5546,7 +5579,7 @@
     },
     {
       "id": "ch_165_i_zmir_time_35_tv",
-      "number": 166,
+      "number": 167,
       "name": "İzmir Time 35 TV",
       "logoText": "İZMIR\nTIME",
       "c1": "0xFF6B21A8",
@@ -5556,7 +5589,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://cdn-time35tv.yayin.com.tr/time35tv/time35tv/playlist.m3u8",
           "type": "HLS"
         },
@@ -5584,7 +5617,7 @@
     },
     {
       "id": "ch_166_i__el_tv_mersin",
-      "number": 167,
+      "number": 168,
       "name": "İçel TV Mersin",
       "logoText": "İÇEL\nMERSI",
       "c1": "0xFFC2410C",
@@ -5594,7 +5627,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://edge1.socialsmart.tv/iceltv/bant1/playlist.m3u8",
           "type": "HLS"
         },
@@ -5617,7 +5650,7 @@
     },
     {
       "id": "ch_167_kanal_12",
-      "number": 168,
+      "number": 169,
       "name": "Kanal 12",
       "logoText": "KANAL\n12",
       "c1": "0xFF0E7490",
@@ -5627,7 +5660,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://live.artidijitalmedya.com/artidijital_kanal12/kanal12/playlist.m3u8",
           "type": "HLS"
         },
@@ -5650,7 +5683,7 @@
     },
     {
       "id": "ch_168_kanal_13",
-      "number": 169,
+      "number": 170,
       "name": "Kanal 13",
       "logoText": "KANAL\n13",
       "c1": "0xFFBE185D",
@@ -5660,7 +5693,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://cdn4.yayin.com.tr/kanal13/index.m3u8",
           "type": "HLS"
         },
@@ -5678,7 +5711,7 @@
     },
     {
       "id": "ch_169_kanal_15_burdur",
-      "number": 170,
+      "number": 171,
       "name": "Kanal 15 Burdur",
       "logoText": "KANAL\n15",
       "c1": "0xFF1F2937",
@@ -5688,7 +5721,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://live.artidijitalmedya.com/artidijital_kanal15/kanal15/playlist.m3u8",
           "type": "HLS"
         },
@@ -5711,7 +5744,7 @@
     },
     {
       "id": "ch_170_kanal_19__orum",
-      "number": 171,
+      "number": 172,
       "name": "Kanal 19 Çorum",
       "logoText": "KANAL\n19",
       "c1": "0xFFB45309",
@@ -5721,7 +5754,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://live.euromediacenter.com/kanal19/tracks-v1a1/mono.m3u8",
           "type": "HLS"
         },
@@ -5734,7 +5767,7 @@
     },
     {
       "id": "ch_171_kanal_23_elaz__",
-      "number": 172,
+      "number": 173,
       "name": "Kanal 23 Elazığ",
       "logoText": "KANAL\n23",
       "c1": "0xFFB91C1C",
@@ -5744,7 +5777,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://live.artidijitalmedya.com/artidijital_kanal23/kanal23/playlist.m3u8",
           "type": "HLS"
         },
@@ -5767,7 +5800,7 @@
     },
     {
       "id": "ch_172_kanal_26_eski_ehir",
-      "number": 173,
+      "number": 174,
       "name": "Kanal 26 Eskişehir",
       "logoText": "KANAL\n26",
       "c1": "0xFF1E3A8A",
@@ -5777,7 +5810,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://live.artidijitalmedya.com/artidijital_kanal26/kanal26/playlist.m3u8",
           "type": "HLS"
         },
@@ -5800,7 +5833,7 @@
     },
     {
       "id": "ch_173_kanal_3_afyon",
-      "number": 174,
+      "number": 175,
       "name": "Kanal 3 Afyon",
       "logoText": "KANAL\n3",
       "c1": "0xFF047857",
@@ -5810,7 +5843,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://live.artidijitalmedya.com/artidijital_kanal3/kanal3/playlist.m3u8",
           "type": "HLS"
         },
@@ -5833,7 +5866,7 @@
     },
     {
       "id": "ch_174_kanal_32_isparta",
-      "number": 175,
+      "number": 176,
       "name": "Kanal 32 Isparta",
       "logoText": "KANAL\n32",
       "c1": "0xFF6B21A8",
@@ -5843,7 +5876,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://edge1.socialsmart.tv/kanal32/bant1/chunks.m3u8",
           "type": "HLS"
         },
@@ -5866,7 +5899,7 @@
     },
     {
       "id": "ch_175_kanal_33_mersin",
-      "number": 176,
+      "number": 177,
       "name": "Kanal 33 Mersin",
       "logoText": "KANAL\n33",
       "c1": "0xFFC2410C",
@@ -5876,7 +5909,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://edge1.socialsmart.tv/kanal33/bant1/playlist.m3u8",
           "type": "HLS"
         },
@@ -5899,7 +5932,7 @@
     },
     {
       "id": "ch_176_kanal_34_i_stanbul",
-      "number": 177,
+      "number": 178,
       "name": "Kanal 34 İstanbul",
       "logoText": "KANAL\n34",
       "c1": "0xFF0E7490",
@@ -5909,7 +5942,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://live.euromediacenter.com/kanal34/tracks-v1a1/mono.m3u8",
           "type": "HLS"
         },
@@ -5922,7 +5955,7 @@
     },
     {
       "id": "ch_177_kanal_53_rize",
-      "number": 178,
+      "number": 179,
       "name": "Kanal 53 Rize",
       "logoText": "KANAL\n53",
       "c1": "0xFFBE185D",
@@ -5932,7 +5965,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://kanal53.ozelip.com:3448/hybrid/play.m3u8",
           "type": "HLS"
         },
@@ -5955,7 +5988,7 @@
     },
     {
       "id": "ch_178_kanal_58_sivas",
-      "number": 179,
+      "number": 180,
       "name": "Kanal 58 Sivas",
       "logoText": "KANAL\n58",
       "c1": "0xFF1F2937",
@@ -5965,7 +5998,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://live.artidijitalmedya.com/artidijital_kanal58/kanal58/chunks.m3u8",
           "type": "HLS"
         },
@@ -5993,7 +6026,7 @@
     },
     {
       "id": "ch_179_kanal_f_rat_elaz__",
-      "number": 180,
+      "number": 181,
       "name": "Kanal Fırat Elazığ",
       "logoText": "KANAL\nFIRAT",
       "c1": "0xFFB45309",
@@ -6003,7 +6036,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://live.artidijitalmedya.com/artidijital_kanalfirat/kanalfirat/playlist.m3u8",
           "type": "HLS"
         },
@@ -6026,7 +6059,7 @@
     },
     {
       "id": "ch_180_kanal_plus",
-      "number": 181,
+      "number": 182,
       "name": "Kanal Plus",
       "logoText": "KANAL\nPLUS",
       "c1": "0xFFB91C1C",
@@ -6036,7 +6069,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://live.artidijitalmedya.com/artidijital_kanalplus/kanalplus/mpeg/playlist.m3u8",
           "type": "HLS"
         },
@@ -6059,7 +6092,7 @@
     },
     {
       "id": "ch_181_kanal_urfa",
-      "number": 182,
+      "number": 183,
       "name": "Kanal Urfa",
       "logoText": "KANAL\nURFA",
       "c1": "0xFF1E3A8A",
@@ -6069,7 +6102,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://edge1.socialsmart.tv/kanalurfa/bant1/playlist.m3u8",
           "type": "HLS"
         },
@@ -6097,7 +6130,7 @@
     },
     {
       "id": "ch_182_kanal_v_antalya",
-      "number": 183,
+      "number": 184,
       "name": "Kanal V Antalya",
       "logoText": "KANAL\nV",
       "c1": "0xFF047857",
@@ -6107,13 +6140,13 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
-          "url": "https://live.artidijitalmedya.com/artidijital_kanalv/kanalv/chunks.m3u8",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
+          "url": "https://live.artidijitalmedya.com/artidijital_kanalv/kanalv/playlist.m3u8",
           "type": "HLS"
         },
         {
-          "label": "Standart Akış",
-          "url": "https://live.artidijitalmedya.com/artidijital_kanalv/kanalv/playlist.m3u8",
+          "label": "Yedek Akış 2",
+          "url": "https://live.artidijitalmedya.com/artidijital_kanalv/kanalv/chunks.m3u8",
           "type": "HLS"
         },
         {
@@ -6135,7 +6168,7 @@
     },
     {
       "id": "ch_183_kanal_z_zonguldak",
-      "number": 184,
+      "number": 185,
       "name": "Kanal Z Zonguldak",
       "logoText": "KANAL\nZ",
       "c1": "0xFF6B21A8",
@@ -6145,7 +6178,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://live.artidijitalmedya.com/artidijital_kanalz/kanalz/playlist.m3u8",
           "type": "HLS"
         },
@@ -6168,7 +6201,7 @@
     },
     {
       "id": "ch_184_kardelen_tv_erzurum",
-      "number": 185,
+      "number": 186,
       "name": "Kardelen TV Erzurum",
       "logoText": "KARDE\nERZUR",
       "c1": "0xFFC2410C",
@@ -6178,7 +6211,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://edge1.socialsmart.tv/kardelentv/bant1/playlist.m3u8",
           "type": "HLS"
         },
@@ -6201,7 +6234,7 @@
     },
     {
       "id": "ch_185_kay_tv_kayseri",
-      "number": 186,
+      "number": 187,
       "name": "Kay TV Kayseri",
       "logoText": "KAY\nKAYSE",
       "c1": "0xFF0E7490",
@@ -6211,7 +6244,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://live.artidijitalmedya.com/artidijital_kaytv/kaytv/playlist.m3u8",
           "type": "HLS"
         },
@@ -6234,7 +6267,7 @@
     },
     {
       "id": "ch_186_kocaeli_tv",
-      "number": 187,
+      "number": 188,
       "name": "Kocaeli TV",
       "logoText": "KOCAEL",
       "c1": "0xFFBE185D",
@@ -6244,7 +6277,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://edge1.socialsmart.tv/kocaelitv/bant1/playlist.m3u8",
           "type": "HLS"
         },
@@ -6267,7 +6300,7 @@
     },
     {
       "id": "ch_187_kontv_konya",
-      "number": 188,
+      "number": 189,
       "name": "KonTV Konya",
       "logoText": "KONTV\nKONYA",
       "c1": "0xFF1F2937",
@@ -6277,7 +6310,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://canli.kontv.com.tr/live/kontv.m3u8",
           "type": "HLS"
         },
@@ -6290,7 +6323,7 @@
     },
     {
       "id": "ch_188_konya_olay_tv",
-      "number": 189,
+      "number": 190,
       "name": "Konya Olay TV",
       "logoText": "KONYA\nOLAY",
       "c1": "0xFFB45309",
@@ -6300,13 +6333,13 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
-          "url": "https://live.artidijitalmedya.com/artidijital_konyaolaytv/konyaolaytv/chunks.m3u8",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
+          "url": "https://live.artidijitalmedya.com/artidijital_konyaolaytv/konyaolaytv/playlist.m3u8",
           "type": "HLS"
         },
         {
-          "label": "Standart Akış",
-          "url": "https://live.artidijitalmedya.com/artidijital_konyaolaytv/konyaolaytv/playlist.m3u8",
+          "label": "Yedek Akış 2",
+          "url": "https://live.artidijitalmedya.com/artidijital_konyaolaytv/konyaolaytv/chunks.m3u8",
           "type": "HLS"
         },
         {
@@ -6327,34 +6360,6 @@
       ]
     },
     {
-      "id": "ch_koza_tv",
-      "number": 190,
-      "name": "KOZA TV",
-      "logoText": "KOZA\nTV",
-      "c1": "0xFFC2410C",
-      "c2": "0xFFF97316",
-      "cat": "Yerel",
-      "badge": "HD",
-      "logoUrl": "",
-      "sources": [
-        {
-          "label": "Canlı Akış",
-          "url": "http://176.65.153.35:6003/play/a019/index.m3u8",
-          "type": "HLS"
-        },
-        {
-          "label": "Yedek Akış (Playlist)",
-          "url": "http://176.65.153.35:6003/play/a019/playlist.m3u8",
-          "type": "HLS"
-        },
-        {
-          "label": "Yedek Akış (Master)",
-          "url": "http://176.65.153.35:6003/play/a019/master.m3u8",
-          "type": "HLS"
-        }
-      ]
-    },
-    {
       "id": "ch_189_ktv_konya",
       "number": 191,
       "name": "KTV Konya",
@@ -6366,7 +6371,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://cdn-ktvtv.yayin.com.tr/ktvtv/ktvtv/playlist.m3u8",
           "type": "HLS"
         },
@@ -6404,7 +6409,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://live.artidijitalmedya.com/artidijital_lifetv/lifetv/chunks.m3u8",
           "type": "HLS"
         },
@@ -6442,7 +6447,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://live.artidijitalmedya.com/artidijital_mavikaradeniz/mavikaradeniz/playlist.m3u8",
           "type": "HLS"
         },
@@ -6475,7 +6480,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://live.artidijitalmedya.com/artidijital_mercantv/mercantv/chunks.m3u8",
           "type": "HLS"
         },
@@ -6503,7 +6508,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://edge1.socialsmart.tv/metropoltv/smil/metropoltv/bant1/chunks.m3u8?app=supersatforum",
           "type": "HLS"
         },
@@ -6536,7 +6541,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://edge1.socialsmart.tv/muglaturk/bant1/chunks.m3u8",
           "type": "HLS"
         },
@@ -6569,7 +6574,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://live.artidijitalmedya.com/artidijital_olayturk/olayturk/playlist.m3u8",
           "type": "HLS"
         },
@@ -6602,7 +6607,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://cdn1-ordubeltv.yayin.com.tr/ordubeltv/ordubeltv/playlist.m3u8",
           "type": "HLS"
         },
@@ -6640,7 +6645,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://ruhatv.radyotelekom.com.tr:3515/live/ruhatvlive.m3u8",
           "type": "HLS"
         },
@@ -6663,7 +6668,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://live.euromediacenter.com/saglikchannel/tracks-v1a1/mono.m3u8",
           "type": "HLS"
         },
@@ -6686,7 +6691,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://live.artidijitalmedya.com/artidijital_sutv/sutv/playlist.m3u8",
           "type": "HLS"
         },
@@ -6719,7 +6724,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://live.artidijitalmedya.com/artidijital_sunrtv/sunrtv/playlist.m3u8",
           "type": "HLS"
         },
@@ -6752,7 +6757,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://live.artidijitalmedya.com/artidijital_tempotv/tempotv/playlist.m3u8",
           "type": "HLS"
         },
@@ -6785,7 +6790,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://live.artidijitalmedya.com/artidijital_tontv/tontv/playlist.m3u8",
           "type": "HLS"
         },
@@ -6818,13 +6823,13 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
-          "url": "https://live.artidijitalmedya.com/artidijital_tv41/tv41/chunks.m3u8",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
+          "url": "https://live.artidijitalmedya.com/artidijital_tv41/tv41/playlist.m3u8",
           "type": "HLS"
         },
         {
-          "label": "Standart Akış",
-          "url": "https://live.artidijitalmedya.com/artidijital_tv41/tv41/playlist.m3u8",
+          "label": "Yedek Akış 2",
+          "url": "https://live.artidijitalmedya.com/artidijital_tv41/tv41/chunks.m3u8",
           "type": "HLS"
         },
         {
@@ -6856,7 +6861,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://ajansplay.com:5443/LiveApp/streams/tv48.m3u8",
           "type": "HLS"
         },
@@ -6879,7 +6884,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://edge1.socialsmart.tv/tv52/bant1/playlist.m3u8",
           "type": "HLS"
         },
@@ -6912,7 +6917,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "http://mn-nl.mncdn.com/turkiyeklinikleri/smil:turkiyeklinikleri/chunklist_b3128000.m3u8",
           "type": "HLS"
         },
@@ -6935,7 +6940,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://live.artidijitalmedya.com/artidijital_urfanatiktv/urfanatiktv/playlist.m3u8",
           "type": "HLS"
         },
@@ -6968,7 +6973,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://cdn1-vangolutv.yayin.com.tr/vangolutv/amlst:vangolutv/playlist.m3u8",
           "type": "HLS"
         },
@@ -7006,13 +7011,13 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
-          "url": "https://live.artidijitalmedya.com/artidijital_vuslattv/vuslattv/chunks.m3u8",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
+          "url": "https://live.artidijitalmedya.com/artidijital_vuslattv/vuslattv/playlist.m3u8",
           "type": "HLS"
         },
         {
-          "label": "Standart Akış",
-          "url": "https://live.artidijitalmedya.com/artidijital_vuslattv/vuslattv/playlist.m3u8",
+          "label": "Yedek Akış 2",
+          "url": "https://live.artidijitalmedya.com/artidijital_vuslattv/vuslattv/chunks.m3u8",
           "type": "HLS"
         },
         {
@@ -7044,7 +7049,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://edge1.socialsmart.tv/caytv/bant1/playlist.m3u8",
           "type": "HLS"
         },
@@ -7077,7 +7082,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://edge.socialsmart.tv/belemturktv/bant1/chunks.m3u8",
           "type": "HLS"
         },
@@ -7110,7 +7115,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://live.euromediacenter.com/brukselturk/tracks-v1a1/mono.m3u8",
           "type": "HLS"
         },
@@ -7133,7 +7138,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "http://media.finest.tv/hls/live.m3u8",
           "type": "HLS"
         },
@@ -7156,7 +7161,7 @@
       "logoUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4d/FX_International_logo.svg/960px-FX_International_logo.svg.png",
       "sources": [
         {
-          "label": "FHD 1080p (En Yüksek Bitrate)",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://saran-live.ercdn.net/fx/index.m3u8",
           "type": "HLS"
         },
@@ -7184,7 +7189,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://live.euromediacenter.com/hurtv/tracks-v1a1/mono.m3u8",
           "type": "HLS"
         },
@@ -7207,7 +7212,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://i41.ozelip.com:3269/hybrid/play.m3u8",
           "type": "HLS"
         },
@@ -7240,7 +7245,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Standart Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://api-tv27.yayin.com.tr/kanalavrupa/index.m3u8",
           "type": "HLS"
         },
@@ -7278,7 +7283,7 @@
       "logoUrl": "https://i.imgur.com/yyhWOZs.png",
       "sources": [
         {
-          "label": "HD 720p",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://tv-trtarabi.medya.trt.com.tr/master.m3u8",
           "type": "HLS"
         },
@@ -7311,7 +7316,7 @@
       "logoUrl": "https://i.imgur.com/VhTwXu5.png",
       "sources": [
         {
-          "label": "HD 720p",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://tv-trtavaz.medya.trt.com.tr/master.m3u8",
           "type": "HLS"
         },
@@ -7349,7 +7354,7 @@
       "logoUrl": "https://i.imgur.com/6BpymfB.png",
       "sources": [
         {
-          "label": "HD 720p",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://tv-trtkurdi.medya.trt.com.tr/master.m3u8",
           "type": "HLS"
         },
@@ -7382,13 +7387,13 @@
       "logoUrl": "https://i.imgur.com/OSTOQNw.png",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
-          "url": "https://tv-trtturk.medya.trt.com.tr/master_1080.m3u8",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
+          "url": "https://tv-trtturk.medya.trt.com.tr/master.m3u8",
           "type": "HLS"
         },
         {
-          "label": "HD 720p",
-          "url": "https://tv-trtturk.medya.trt.com.tr/master.m3u8",
+          "label": "Yedek Akış 2",
+          "url": "https://tv-trtturk.medya.trt.com.tr/master_1080.m3u8",
           "type": "HLS"
         },
         {
@@ -7420,7 +7425,7 @@
       "logoUrl": "https://i.imgur.com/JEA2xpv.png",
       "sources": [
         {
-          "label": "FHD 1080p (En Yüksek Bitrate)",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://tv-trtworld.medya.trt.com.tr/master.m3u8",
           "type": "HLS"
         },
@@ -7463,7 +7468,7 @@
       "logoUrl": "https://www.anadolunettv.com/d/r/logo.png",
       "sources": [
         {
-          "label": "FHD 1080p",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://live.artidijitalmedya.com/artidijital_anadolunet/anadolunet/playlist.m3u8",
           "type": "HLS"
         },
@@ -7524,12 +7529,7 @@
       "logoUrl": "https://i.imgur.com/ESCf2dj.png",
       "sources": [
         {
-          "label": "Canlı Akış",
-          "url": "http://umperisn.mywire.org/index.php?id=1874&token=DeaTHLesS",
-          "type": "HLS"
-        },
-        {
-          "label": "Alternatif Akış 2",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://ciner.daioncdn.net/showtv/showtv.m3u8?app=showtv_web",
           "type": "HLS"
         },
@@ -7567,7 +7567,7 @@
       "logoUrl": "https://i.imgur.com/WIeZMKT.png",
       "sources": [
         {
-          "label": "FHD 1080p",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://cdn-uw2-prod.tsv2.amagi.tv/linear/amg01602-themahqfrance-vivekanald-samsungspain/playlist.m3u8",
           "type": "HLS"
         },
@@ -7595,8 +7595,8 @@
       "logoUrl": "https://i.postimg.cc/FKkHW8KK/tv4.png",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
-          "url": "https://turkmedya-live.ercdn.net/tv4/tv4_1080p.m3u8",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
+          "url": "https://turkmedya-live.ercdn.net/tv4/tv4.m3u8",
           "type": "HLS"
         },
         {
@@ -7605,8 +7605,8 @@
           "type": "HLS"
         },
         {
-          "label": "Yedek Akış",
-          "url": "https://turkmedya-live.ercdn.net/tv4/tv4.m3u8",
+          "label": "Yedek Akış 3",
+          "url": "https://turkmedya-live.ercdn.net/tv4/tv4_1080p.m3u8",
           "type": "HLS"
         },
         {
@@ -7628,7 +7628,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "HD Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://ip252.ozelip.com:1936/protv5/protv5/playlist.m3u8",
           "type": "HLS"
         },
@@ -7656,7 +7656,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "FHD 1080p",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://tv-trt3.live.trt.com.tr/master.m3u8",
           "type": "HLS"
         },
@@ -7689,13 +7689,13 @@
       "logoUrl": "https://i.ibb.co/9hCVNks/life-tv.png",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
-          "url": "https://live.artidijitalmedya.com/artidijital_lifetv/lifetv/chunks.m3u8",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
+          "url": "https://live.artidijitalmedya.com/artidijital_lifetv/lifetv/playlist.m3u8",
           "type": "HLS"
         },
         {
-          "label": "Canlı Akış",
-          "url": "https://live.artidijitalmedya.com/artidijital_lifetv/lifetv/playlist.m3u8",
+          "label": "Yedek Akış 2",
+          "url": "https://live.artidijitalmedya.com/artidijital_lifetv/lifetv/chunks.m3u8",
           "type": "HLS"
         },
         {
@@ -7727,7 +7727,7 @@
       "logoUrl": "https://i.ibb.co/DKHDfbr/wmtv.png",
       "sources": [
         {
-          "label": "Canlı Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://embedlp.b-cdn.net/womantv.m3u8",
           "type": "HLS"
         },
@@ -7750,7 +7750,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Canlı Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/aile-tv/playlist.m3u8",
           "type": "HLS"
         },
@@ -7783,7 +7783,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://yayin30.haber100.com/live/finansturk/playlist.m3u8",
           "type": "HLS"
         },
@@ -7811,7 +7811,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Canlı Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://edge1.socialsmart.tv/turkhaber/bant1/playlist.m3u8",
           "type": "HLS"
         },
@@ -7844,7 +7844,7 @@
       "logoUrl": "https://i.ibb.co/mHt7rQf/Tryerel.png",
       "sources": [
         {
-          "label": "Canlı Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://cdn-haber61tv.yayin.com.tr/haber61tv/haber61tv/playlist.m3u8",
           "type": "HLS"
         },
@@ -7887,7 +7887,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Canlı Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://duhnet.hipodrom.com/S2/HLS_LIVE/mislitaynp/playlist.m3u8",
           "type": "HLS"
         },
@@ -7915,7 +7915,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Canlı Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/ztktv/playlist.m3u8",
           "type": "HLS"
         },
@@ -7948,7 +7948,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Canlı Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "http://139.162.182.79/live/test/index.m3u8",
           "type": "HLS"
         },
@@ -7976,7 +7976,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Canlı Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/Tarih-tv/playlist.m3u8",
           "type": "HLS"
         },
@@ -8009,7 +8009,7 @@
       "logoUrl": "https://i.ibb.co/vHwMgx0/ciftci.png",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://live.artidijitalmedya.com/artidijital_ciftcitv/ciftcitv/playlist.m3u8",
           "type": "HLS"
         },
@@ -8042,7 +8042,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Canlı Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/kltr-sanat-tv/playlist.m3u8",
           "type": "HLS"
         },
@@ -8070,7 +8070,7 @@
       "logoUrl": "https://i.imgur.com/WxLHBwu.png",
       "sources": [
         {
-          "label": "HD 720p",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "http://206.212.244.63/639/index.m3u8",
           "type": "HLS"
         },
@@ -8098,7 +8098,7 @@
       "logoUrl": "https://i.imgur.com/4BDJ5FT.png",
       "sources": [
         {
-          "label": "FHD 1080p",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://saran-live.ercdn.net/babytv/index.m3u8",
           "type": "HLS"
         },
@@ -8126,7 +8126,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Canlı Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://zindikurmanci.zaroktv.com.tr/hls/stream.m3u8",
           "type": "HLS"
         },
@@ -8149,7 +8149,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Canlı Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/broadcast_57e4f8c600b6d.smil/playlist.m3u8",
           "type": "HLS"
         },
@@ -8182,7 +8182,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Canlı Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/chill-tv/playlist.m3u8",
           "type": "HLS"
         },
@@ -8215,7 +8215,7 @@
       "logoUrl": "https://i.ibb.co/Cm1kp8f/sat7turk.png",
       "sources": [
         {
-          "label": "Canlı Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://svs.itworkscdn.net/sat7turklive/sat7turk.smil/playlist.m3u8",
           "type": "HLS"
         },
@@ -8258,7 +8258,7 @@
       "logoUrl": "https://i.ibb.co/1qFR0jX/Kanalhayat.png",
       "sources": [
         {
-          "label": "Canlı Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://livecdn.use1-0004.jwplive.com/live/sites/WpgVdplm/media/icNwL50b/live.isml/live.m3u8",
           "type": "HLS"
         },
@@ -8291,7 +8291,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Canlı Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/kurani-kerim-tv/playlist.m3u8",
           "type": "HLS"
         },
@@ -8324,7 +8324,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Canlı Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/ilahiler-tv/playlist.m3u8",
           "type": "HLS"
         },
@@ -8357,7 +8357,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Canlı Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/islamtv/playlist.m3u8",
           "type": "HLS"
         },
@@ -8385,7 +8385,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Canlı Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/asr-i-saadet-tv/playlist.m3u8",
           "type": "HLS"
         },
@@ -8418,7 +8418,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Canlı Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://yayin30.haber100.com/live/mihraptv/chunklist_w2099091652.m3u8",
           "type": "HLS"
         },
@@ -8441,7 +8441,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Canlı Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://rtmp.ikratv.com/live/kanal1/v3/index.m3u8",
           "type": "HLS"
         },
@@ -8469,7 +8469,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Canlı Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://yayin1.haber100.com/kudustvapp/kudustv/chunklist_w1714163689.m3u8",
           "type": "HLS"
         },
@@ -8492,7 +8492,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Canlı Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://playlist.fasttvcdn.com/pl/rfrk9821hdy9dayo8wfyha/vaaz-tv/playlist.m3u8",
           "type": "HLS"
         },
@@ -8525,7 +8525,7 @@
       "logoUrl": "https://i.imgur.com/YWmkUWU.png",
       "sources": [
         {
-          "label": "Canlı Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://yayin1.canlitv.fun/live/kibrisadatv.stream/playlist.m3u8",
           "type": "HLS"
         },
@@ -8553,7 +8553,7 @@
       "logoUrl": "https://i.imgur.com/XaJ7fp6.png",
       "sources": [
         {
-          "label": "FHD 1080p",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://edge1.socialsmart.tv/altastv/bant1/playlist.m3u8",
           "type": "HLS"
         },
@@ -8586,7 +8586,7 @@
       "logoUrl": "https://i.imgur.com/JsDCyWG.png",
       "sources": [
         {
-          "label": "Canlı Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "http://1.rtmp.org/tv217/yayin.stream/playlist.m3u8",
           "type": "HLS"
         },
@@ -8614,7 +8614,7 @@
       "logoUrl": "https://i.imgur.com/bUwarR0.png",
       "sources": [
         {
-          "label": "FHD 1080p",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://cdn-alanyatv.yayin.com.tr/alanyatv/alanyatv/playlist.m3u8",
           "type": "HLS"
         },
@@ -8647,7 +8647,7 @@
       "logoUrl": "https://i.ibb.co/mHt7rQf/Tryerel.png",
       "sources": [
         {
-          "label": "Canlı Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://live.artidijitalmedya.com/artidijital_astv/astv/chunks.m3u8",
           "type": "HLS"
         },
@@ -8675,7 +8675,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Canlı Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://edge1.socialsmart.tv/linetv/bant1/playlist.m3u8",
           "type": "HLS"
         },
@@ -8708,7 +8708,7 @@
       "logoUrl": "https://i.ibb.co/mHt7rQf/Tryerel.png",
       "sources": [
         {
-          "label": "Canlı Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://live.artidijitalmedya.com/artidijital_estv/estv/chunks.m3u8",
           "type": "HLS"
         },
@@ -8736,7 +8736,7 @@
       "logoUrl": "https://i.ibb.co/mHt7rQf/Tryerel.png",
       "sources": [
         {
-          "label": "Canlı Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://b01c02nl.mediatriple.net/videoonlylive/mtdxkkitgbrckilive/broadcast_5ee244263fd6d.smil/playlist.m3u8",
           "type": "HLS"
         },
@@ -8769,7 +8769,7 @@
       "logoUrl": "https://i.imgur.com/8CtrYVb.png",
       "sources": [
         {
-          "label": "Canlı Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://edge1.socialsmart.tv/tv1/bant1/playlist.m3u8",
           "type": "HLS"
         },
@@ -8802,7 +8802,7 @@
       "logoUrl": "https://i.imgur.com/FQKPjsm.png",
       "sources": [
         {
-          "label": "Canlı Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://live.artidijitalmedya.com/artidijital_kentturktv/kentturktv/playlist.m3u8",
           "type": "HLS"
         },
@@ -8835,7 +8835,7 @@
       "logoUrl": "https://i.imgur.com/3CWV8bS.png",
       "sources": [
         {
-          "label": "Canlı Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://live.artidijitalmedya.com/artidijital_mercantv/mercantv/playlist.m3u8",
           "type": "HLS"
         },
@@ -8868,7 +8868,7 @@
       "logoUrl": "https://i.ibb.co/mHt7rQf/Tryerel.png",
       "sources": [
         {
-          "label": "Canlı Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://edge1.socialsmart.tv/metropoltv/smil/metropoltv/bant1/playlist.m3u8",
           "type": "HLS"
         },
@@ -8901,7 +8901,7 @@
       "logoUrl": "https://i.ibb.co/mHt7rQf/Tryerel.png",
       "sources": [
         {
-          "label": "Canlı Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://edge1.socialsmart.tv/muglaturk/bant1/playlist.m3u8",
           "type": "HLS"
         },
@@ -8934,7 +8934,7 @@
       "logoUrl": "https://i.ibb.co/mHt7rQf/Tryerel.png",
       "sources": [
         {
-          "label": "Canlı Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://edge1.socialsmart.tv/frttv/bant1/chunks.m3u8",
           "type": "HLS"
         },
@@ -8967,7 +8967,7 @@
       "logoUrl": "https://i.ibb.co/mHt7rQf/Tryerel.png",
       "sources": [
         {
-          "label": "Canlı Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://vod02.cdn.web.tv/cn/ov/cnovvu97lqw_,240,360,480,.mp4.urlset/playlist-f3-v1-a1.m3u8",
           "type": "HLS"
         },
@@ -8990,7 +8990,7 @@
       "logoUrl": "https://i.ibb.co/mHt7rQf/Tryerel.png",
       "sources": [
         {
-          "label": "Canlı Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://cdn1-ordubeltv.yayin.com.tr/ordubeltv/ordubeltv/playlist.m3u8",
           "type": "HLS"
         },
@@ -9028,7 +9028,7 @@
       "logoUrl": "https://i.ibb.co/mHt7rQf/Tryerel.png",
       "sources": [
         {
-          "label": "Canlı Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://live.artidijitalmedya.com/artidijital_diyartv/diyartv/playlist.m3u8",
           "type": "HLS"
         },
@@ -9061,7 +9061,7 @@
       "logoUrl": "https://i.ibb.co/mHt7rQf/Tryerel.png",
       "sources": [
         {
-          "label": "Canlı Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://live.artidijitalmedya.com/artidijital_brtv/brtv/chunks.m3u8",
           "type": "HLS"
         },
@@ -9089,7 +9089,7 @@
       "logoUrl": "https://i.ibb.co/mHt7rQf/Tryerel.png",
       "sources": [
         {
-          "label": "Canlı Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://live.artidijitalmedya.com/artidijital_sunrtv/sunrtv/chunks.m3u8",
           "type": "HLS"
         },
@@ -9117,7 +9117,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Canlı Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://live.artidijitalmedya.com/artidijital_dimtv/dimtv/playlist.m3u8",
           "type": "HLS"
         },
@@ -9150,7 +9150,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Canlı Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "http://canli.tvden.com.tr/hls/live.m3u8",
           "type": "HLS"
         },
@@ -9173,7 +9173,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Canlı Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://win29.yayin.com.tr/erzurumwebtv/erzurumwebtv/playlist.m3u8",
           "type": "HLS"
         },
@@ -9206,7 +9206,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://yayin.rizeturk.com:3777/hybrid/play.m3u8",
           "type": "HLS"
         },
@@ -9239,13 +9239,13 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
-          "url": "https://edge.socialsmart.tv/birtv/bant1/chunks.m3u8",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
+          "url": "https://edge1.socialsmart.tv/birtv/bant1/playlist.m3u8",
           "type": "HLS"
         },
         {
-          "label": "Canlı Akış",
-          "url": "https://edge1.socialsmart.tv/birtv/bant1/playlist.m3u8",
+          "label": "Yedek Akış 2",
+          "url": "https://edge.socialsmart.tv/birtv/bant1/chunks.m3u8",
           "type": "HLS"
         },
         {
@@ -9272,7 +9272,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Canlı Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://cdn4.yayin.com.tr/anadolum/tracks-v1a1/mono.m3u8",
           "type": "HLS"
         },
@@ -9300,7 +9300,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Canlı Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://cdn4.yayin.com.tr/serhattv/tracks-v1a1/mono.m3u8",
           "type": "HLS"
         },
@@ -9328,7 +9328,7 @@
       "logoUrl": "https://i.ibb.co/mHt7rQf/Tryerel.png",
       "sources": [
         {
-          "label": "Canlı Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "http://nrttn172.kesintisizyayin.com:29010/nrttn/nrttn/playlist.m3u8",
           "type": "HLS"
         },
@@ -9356,7 +9356,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "FHD 1080p",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://turkhls.persiana.live/hls/stream.m3u8",
           "type": "HLS"
         },
@@ -9379,7 +9379,7 @@
       "logoUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/69/CNN_T%C3%BCrk_logo.svg/960px-CNN_T%C3%BCrk_logo.svg.png",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://live.duhnet.tv//S2/HLS_LIVE/cnnturknp/track_2_550/playlist.m3u8?&live=true&app=com.cnnturk&st=htljvbPX2R8vvfAY-YUYEw&e=1791036999",
           "type": "HLS"
         },
@@ -9396,11 +9396,6 @@
         {
           "label": "Alternatif Akış 4",
           "url": "http://46.32.176.50/cnnturk/playlist.m3u8",
-          "type": "HLS"
-        },
-        {
-          "label": "Alternatif Akış 5",
-          "url": "http://umperisn.mywire.org/index.php?id=594252&token=DeaTHLesS",
           "type": "HLS"
         },
         {
@@ -9422,23 +9417,23 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
-          "url": "https://flashhaber-live.ercdn.net/flashhaber/flashhaber_1080p.m3u8",
-          "type": "HLS"
-        },
-        {
-          "label": "Adaptif Akış",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://flashhaber-live.ercdn.net/flashhaber/flashhaber.m3u8",
-          "type": "HLS"
-        },
-        {
-          "label": "HD 720p (Hızlı Yedek)",
-          "url": "https://flashhaber-live.ercdn.net/flashhaber/flashhaber_720p.m3u8",
           "type": "HLS"
         },
         {
           "label": "Alternatif Akış 4",
           "url": "https://b01c02nl.mediatriple.net/videoonlylive/mtyycglqauzjhlive/broadcast_67c053c48829f.smil/mt_0.m3u8",
+          "type": "HLS"
+        },
+        {
+          "label": "Yedek Akış 3",
+          "url": "https://flashhaber-live.ercdn.net/flashhaber/flashhaber_1080p.m3u8",
+          "type": "HLS"
+        },
+        {
+          "label": "HD 720p (Hızlı Yedek)",
+          "url": "https://flashhaber-live.ercdn.net/flashhaber/flashhaber_720p.m3u8",
           "type": "HLS"
         },
         {
@@ -9460,13 +9455,13 @@
       "logoUrl": "https://i.ibb.co/Ln92Dj2/Ekoltv.png",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
-          "url": "https://ekoltv-live.ercdn.net/ekolsport/ekolsport_1080p.m3u8",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
+          "url": "https://ekoltv-live.ercdn.net/ekolsport/ekolsport.m3u8",
           "type": "HLS"
         },
         {
-          "label": "Adaptif Akış",
-          "url": "https://ekoltv-live.ercdn.net/ekolsport/ekolsport.m3u8",
+          "label": "Yedek Akış 2",
+          "url": "https://ekoltv-live.ercdn.net/ekolsport/ekolsport_1080p.m3u8",
           "type": "HLS"
         },
         {
@@ -9493,7 +9488,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/broadcast_5c9e187770143.smil/chunklist_b400000.m3u8",
           "type": "HLS"
         },
@@ -9531,7 +9526,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/u_stream_5c9e2aa8acf44_1/chunklist.m3u8",
           "type": "HLS"
         },
@@ -9559,7 +9554,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/u_stream_5c9e198784bdc_1/chunklist.m3u8",
           "type": "HLS"
         },
@@ -9587,7 +9582,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://stream.yayintescil.com:3183/hybrid/play.m3u8",
           "type": "HLS"
         },
@@ -9620,7 +9615,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://ritimtv.ozelip.com:3632/hybrid/play.m3u8",
           "type": "HLS"
         },
@@ -9653,7 +9648,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://tv156.radyotelekom.com.tr:3996/hybrid/play.m3u8",
           "type": "HLS"
         },
@@ -9686,7 +9681,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://vrttv.ozelip.com:3278/hybrid/play.m3u8",
           "type": "HLS"
         },
@@ -9719,7 +9714,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://ip44.radyotelekomtv.com:3958/stream/play.m3u8",
           "type": "HLS"
         },
@@ -9752,7 +9747,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://dinle.slowkaradenizfm.com:9578/;",
           "type": "PROGRESSIVE"
         },
@@ -9785,7 +9780,7 @@
       "logoUrl": "",
       "sources": [
         {
-          "label": "Ana Yayın (FHD/HD)",
+          "label": "Ana Yayın (Adaptif FHD/HD)",
           "url": "https://dinle.cayfm.net:8010/;",
           "type": "PROGRESSIVE"
         },

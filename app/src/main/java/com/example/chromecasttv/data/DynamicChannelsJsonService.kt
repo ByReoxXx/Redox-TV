@@ -1,4 +1,8 @@
-@file:OptIn(androidx.tv.material3.ExperimentalTvMaterial3Api::class)
+@file:OptIn(
+    androidx.tv.material3.ExperimentalTvMaterial3Api::class,
+    androidx.compose.foundation.ExperimentalFoundationApi::class,
+    androidx.compose.ui.ExperimentalComposeUiApi::class
+)
 
 package com.example.chromecasttv
 
@@ -129,20 +133,38 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.provider.Settings
+import android.view.TextureView
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.lazy.grid.LazyGridState
+import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
+import androidx.media3.common.MimeTypes
+import androidx.media3.exoplayer.DefaultRenderersFactory
 import org.json.JSONArray
 import org.json.JSONObject
+import java.security.SecureRandom
+import java.security.cert.X509Certificate
+import javax.net.ssl.HttpsURLConnection
+import javax.net.ssl.SSLContext
+import javax.net.ssl.TrustManager
+import javax.net.ssl.X509TrustManager
 
 /**
- * GitHub Üzerinden Dinamik Kanal Listesi (`channels.json` ve `channels.m3u`) Yöneticisi.
+ * GitHub Üzerinden Dinamik Kanal Listesi (`channel/channels.json` ve `channel/channels.m3u`) Yöneticisi.
  */
 object DynamicChannelsJsonService {
     const val DEFAULT_GITHUB_JSON_URL = "https://raw.githubusercontent.com/redox-baris/Redox-TV/main/channel/channels.json"
     const val FALLBACK_GITHUB_JSON_URL = "https://raw.githubusercontent.com/redox-baris/Redox-TV/master/channel/channels.json"
     const val DEFAULT_GITHUB_M3U_URL = "https://raw.githubusercontent.com/redox-baris/Redox-TV/main/channel/channels.m3u"
     const val FALLBACK_GITHUB_M3U_URL = "https://raw.githubusercontent.com/redox-baris/Redox-TV/master/channel/channels.m3u"
-    private const val CACHED_JSON_FILENAME = "github_channels_cached.json"
-    private const val CACHED_REPO_M3U_FILENAME = "github_repo_channels_cached.m3u"
+    private const val CACHED_JSON_FILENAME = "github_channels_v16_cached.json"
+    private const val CACHED_REPO_M3U_FILENAME = "github_repo_channels_v16_cached.m3u"
     private const val ASSET_JSON_FILENAME = "channels.json"
 
     fun loadInstantChannels(context: Context): List<TvChannel> {
@@ -183,7 +205,7 @@ object DynamicChannelsJsonService {
                     connectTimeout = 7500
                     readTimeout = 10000
                     instanceFollowRedirects = true
-                    setRequestProperty("User-Agent", "RedoXTV/1.5.5 (Android TV; DynamicChannelsM3u)")
+                    setRequestProperty("User-Agent", "RedoXTV/1.6.0 (Android TV; DynamicChannelsM3u)")
                     setRequestProperty("Cache-Control", "no-cache")
                 }
                 if (conn.responseCode in 200..299) {
@@ -216,7 +238,7 @@ object DynamicChannelsJsonService {
                     connectTimeout = 7500
                     readTimeout = 10000
                     instanceFollowRedirects = true
-                    setRequestProperty("User-Agent", "RedoXTV/1.5.5 (Android TV; DynamicChannelsJson)")
+                    setRequestProperty("User-Agent", "RedoXTV/1.6.0 (Android TV; DynamicChannelsJson)")
                     setRequestProperty("Cache-Control", "no-cache")
                 }
                 if (conn.responseCode in 200..299) {

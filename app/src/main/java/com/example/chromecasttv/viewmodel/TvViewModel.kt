@@ -1,4 +1,8 @@
-@file:OptIn(androidx.tv.material3.ExperimentalTvMaterial3Api::class)
+@file:OptIn(
+    androidx.tv.material3.ExperimentalTvMaterial3Api::class,
+    androidx.compose.foundation.ExperimentalFoundationApi::class,
+    androidx.compose.ui.ExperimentalComposeUiApi::class
+)
 
 package com.example.chromecasttv
 
@@ -129,9 +133,27 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.provider.Settings
+import android.view.TextureView
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.lazy.grid.LazyGridState
+import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
+import androidx.media3.common.MimeTypes
+import androidx.media3.exoplayer.DefaultRenderersFactory
 import org.json.JSONArray
 import org.json.JSONObject
+import java.security.SecureRandom
+import java.security.cert.X509Certificate
+import javax.net.ssl.HttpsURLConnection
+import javax.net.ssl.SSLContext
+import javax.net.ssl.TrustManager
+import javax.net.ssl.X509TrustManager
 
 class TvViewModel(private val repository: TvRepository) : ViewModel() {
     private val initialBuiltIn = repository.getBuiltInChannels()
@@ -312,7 +334,7 @@ class TvViewModel(private val repository: TvRepository) : ViewModel() {
 
     override fun onCleared() {
         super.onCleared()
-        try { webServerSocket?.close() } catch (_: Exception) {}
+        try { webServerSocket?.close() } catch (_: Throwable) {}
     }
 
     fun onAppBackgrounded() {
@@ -350,7 +372,7 @@ class TvViewModel(private val repository: TvRepository) : ViewModel() {
             val ip = LocalTransferWebServer.getLocalWifiIpAddress()
             _localWebServerUrl.value = "http://$ip:8585"
             try {
-                try { webServerSocket?.close() } catch (_: Exception) {}
+                try { webServerSocket?.close() } catch (_: Throwable) {}
                 var boundServer: ServerSocket? = null
                 var boundPort = 8585
                 for (candidatePort in 8585..8595) {
@@ -361,7 +383,7 @@ class TvViewModel(private val repository: TvRepository) : ViewModel() {
                         boundServer = s
                         boundPort = candidatePort
                         break
-                    } catch (_: Exception) {}
+                    } catch (_: Throwable) {}
                 }
                 val server = boundServer ?: return@launch
                 webServerSocket = server
@@ -442,7 +464,7 @@ class TvViewModel(private val repository: TvRepository) : ViewModel() {
                             }
                         } catch (_: Exception) {
                         } finally {
-                            try { client.close() } catch (_: Exception) {}
+                            try { client.close() } catch (_: Throwable) {}
                         }
                     }
                 }
@@ -1031,7 +1053,7 @@ class TvViewModel(private val repository: TvRepository) : ViewModel() {
             _builtInChannels.value = builtInList
             _epgMap.value = combinedEpg
 
-            // [1] Arka planda GitHub üzerindeki dinamik `channels.json` ve `channels.m3u` dosyalarını kontrol et
+            // [1] Arka planda GitHub üzerindeki dinamik `channel/channels.json` ve `channel/channels.m3u` dosyalarını kontrol et
             // [2] Ardından ACIPTV Türk kanallarını ana listeye ve yedek akışlara birleştir
             launch(Dispatchers.IO) {
                 val remoteJsonChannels = repository.syncRemoteGitHubChannelsJson()
@@ -1089,7 +1111,10 @@ class TvViewModel(private val repository: TvRepository) : ViewModel() {
                 }
             }
 
-            if (_playlists.value.isNotEmpty()) {
+            if (_playlists.value.isEmpty()) {
+                _customM3uChannels.value = emptyList()
+                _isLoadingM3u.value = false
+            } else {
                 _isLoadingM3u.value = true
                 val customList = mutableListOf<TvChannel>()
                 var nextCustomNumber = 1
@@ -1120,7 +1145,7 @@ class TvViewModel(private val repository: TvRepository) : ViewModel() {
                             }
                             nextCustomNumber += parsed.size
                         }
-                    } catch (_: Exception) {}
+                    } catch (_: Throwable) {}
                 }
                 _customM3uChannels.value = customList
                 _epgMap.value = combinedEpg.toMap()

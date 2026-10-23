@@ -1,4 +1,8 @@
-@file:OptIn(androidx.tv.material3.ExperimentalTvMaterial3Api::class)
+@file:OptIn(
+    androidx.tv.material3.ExperimentalTvMaterial3Api::class,
+    androidx.compose.foundation.ExperimentalFoundationApi::class,
+    androidx.compose.ui.ExperimentalComposeUiApi::class
+)
 
 package com.example.chromecasttv
 
@@ -129,9 +133,27 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.provider.Settings
+import android.view.TextureView
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.lazy.grid.LazyGridState
+import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
+import androidx.media3.common.MimeTypes
+import androidx.media3.exoplayer.DefaultRenderersFactory
 import org.json.JSONArray
 import org.json.JSONObject
+import java.security.SecureRandom
+import java.security.cert.X509Certificate
+import javax.net.ssl.HttpsURLConnection
+import javax.net.ssl.SSLContext
+import javax.net.ssl.TrustManager
+import javax.net.ssl.X509TrustManager
 
 object M3uAndEpgParser {
     private val attrRegex = Regex("([a-zA-Z0-9_-]+)=\"([^\"]*)\"")
@@ -160,14 +182,16 @@ object M3uAndEpgParser {
         startingChannelNumber: Int = 1,
         isCustom: Boolean = true
     ): List<TvChannel> {
-        val channels = mutableListOf<TvChannel>()
-        val lines = rawM3u.lines()
+        if (rawM3u.isBlank()) return emptyList()
+        val channels = ArrayList<TvChannel>()
+        val nameKeyToIndex = HashMap<String, Int>()
 
         var currentTitle = ""
         var currentLogo = ""
         var currentGroup = "Özel Liste"
         var currentTvgId = ""
         var channelCounter = startingChannelNumber
+        val sourceHash = kotlin.math.abs(sourceName.hashCode())
 
         val palette = listOf(
             0xFF1E3A8AL to 0xFF3B82F6L,
@@ -178,67 +202,92 @@ object M3uAndEpgParser {
             0xFF155E75L to 0xFF06B6D4L
         )
 
-        for (rawLine in lines) {
-            val line = rawLine.trim()
-            if (line.isEmpty()) continue
+        try {
+            rawM3u.lineSequence().forEach { rawLine ->
+                if (channels.size >= 4000) return@forEach
+                val line = rawLine.trim()
+                if (line.isEmpty()) return@forEach
 
-            if (line.startsWith("#EXTINF:", ignoreCase = true)) {
-                val attrs = mutableMapOf<String, String>()
-                attrRegex.findAll(line).forEach { match ->
-                    attrs[match.groupValues[1].lowercase()] = match.groupValues[2]
-                }
-                currentTvgId = attrs["tvg-id"] ?: attrs["tvg-name"] ?: ""
-                currentLogo = attrs["tvg-logo"] ?: ""
-                currentGroup = normalizeCategory(attrs["group-title"] ?: sourceName)
+                if (line.startsWith("#EXTINF", ignoreCase = true)) {
+                    val attrs = HashMap<String, String>()
+                    attrRegex.findAll(line).forEach { match ->
+                        attrs[match.groupValues[1].lowercase(Locale.US)] = match.groupValues[2]
+                    }
+                    currentTvgId = attrs["tvg-id"] ?: attrs["tvg-name"] ?: ""
+                    currentLogo = attrs["tvg-logo"] ?: ""
+                    currentGroup = normalizeCategory(attrs["group-title"] ?: sourceName)
 
-                val commaIndex = line.lastIndexOf(',')
-                currentTitle = if (commaIndex != -1 && commaIndex + 1 < line.length) {
-                    line.substring(commaIndex + 1).trim()
-                } else {
-                    attrs["tvg-name"] ?: "Kanal $channelCounter"
-                }
-            } else if (!line.startsWith("#") && (
-                        line.startsWith("http://") ||
-                        line.startsWith("https://") ||
-                        line.startsWith("rtmp://") ||
-                        line.startsWith("rtsp://")
-                    )
-            ) {
-                val finalName = currentTitle.ifBlank { "Kanal $channelCounter" }
-                val badge = when {
-                    finalName.contains("4K", ignoreCase = true) || finalName.contains("UHD", ignoreCase = true) -> "4K"
-                    finalName.contains("FHD", ignoreCase = true) || finalName.contains("1080", ignoreCase = true) -> "FHD"
-                    else -> "HD"
-                }
-                val finalId = currentTvgId.ifBlank {
-                    "${sourceName}_${finalName.lowercase().replace(Regex("[^a-z0-9]"), "_")}_$channelCounter"
-                }
-                val (c1, c2) = palette[channelCounter % palette.size]
+                    val commaIndex = line.lastIndexOf(',')
+                    currentTitle = if (commaIndex != -1 && commaIndex + 1 < line.length) {
+                        line.substring(commaIndex + 1).trim()
+                    } else {
+                        attrs["tvg-name"] ?: "Kanal $channelCounter"
+                    }
+                } else if (!line.startsWith("#") && (
+                    line.startsWith("http://", ignoreCase = true) ||
+                    line.startsWith("https://", ignoreCase = true) ||
+                    line.startsWith("rtmp://", ignoreCase = true) ||
+                    line.startsWith("rtsp://", ignoreCase = true)
+                )) {
+                    val finalName = currentTitle.ifBlank { "Kanal $channelCounter" }
+                    val normKey = finalName.lowercase(Locale.getDefault()).replace(Regex("[^a-z0-9]"), "")
+                    val existingIdx = if (normKey.length >= 2) nameKeyToIndex[normKey] else null
 
-                channels.add(
-                    TvChannel(
-                        id = finalId,
-                        number = channelCounter++,
-                        name = finalName,
-                        shortLogoText = makeShortLogoText(finalName),
-                        brandPrimaryColor = c1,
-                        brandSecondaryColor = c2,
-                        category = currentGroup,
-                        logoUrl = currentLogo,
-                        sources = listOf(StreamSource("FHD 1080p", line, StreamType.HLS)),
-                        qualityBadge = badge,
-                        epgChannelId = currentTvgId.ifBlank { finalId },
-                        sourcePlaylistName = sourceName,
-                        isCustomM3u = isCustom
-                    )
-                )
+                    val stype = when {
+                        line.endsWith(";") -> StreamType.PROGRESSIVE
+                        line.contains(".mpd", ignoreCase = true) -> StreamType.DASH
+                        else -> StreamType.HLS
+                    }
 
-                currentTitle = ""
-                currentLogo = ""
-                currentGroup = "Özel Liste"
-                currentTvgId = ""
+                    if (existingIdx != null && existingIdx in channels.indices) {
+                        val existing = channels[existingIdx]
+                        if (existing.sources.none { it.url == line } && existing.sources.size < 8) {
+                            val nextSrcNum = existing.sources.size + 1
+                            val updatedSources = existing.sources + StreamSource("Alternatif Akış $nextSrcNum", line, stype)
+                            channels[existingIdx] = existing.copy(
+                                logoUrl = existing.logoUrl.ifBlank { currentLogo },
+                                sources = updatedSources
+                            )
+                        }
+                    } else {
+                        val badge = when {
+                            finalName.contains("4K", ignoreCase = true) || finalName.contains("UHD", ignoreCase = true) -> "4K"
+                            finalName.contains("FHD", ignoreCase = true) || finalName.contains("1080", ignoreCase = true) -> "FHD"
+                            else -> "HD"
+                        }
+                        // HER KANAL İÇİN %100 BENZERSİZ ID (LazyVerticalGrid duplicate key çökmesini tamamen önler!)
+                        val safeSlug = normKey.take(12).ifEmpty { "ch" }
+                        val uniqueId = "m3u_${sourceHash}_${channelCounter}_$safeSlug"
+                        val (c1, c2) = palette[channelCounter % palette.size]
+
+                        val newCh = TvChannel(
+                            id = uniqueId,
+                            number = channelCounter++,
+                            name = finalName,
+                            shortLogoText = makeShortLogoText(finalName),
+                            brandPrimaryColor = c1,
+                            brandSecondaryColor = c2,
+                            category = currentGroup,
+                            logoUrl = currentLogo,
+                            sources = listOf(StreamSource("Ana Yayın", line, stype)),
+                            qualityBadge = badge,
+                            epgChannelId = uniqueId,
+                            sourcePlaylistName = sourceName,
+                            isCustomM3u = isCustom
+                        )
+                        if (normKey.length >= 2) {
+                            nameKeyToIndex[normKey] = channels.size
+                        }
+                        channels.add(newCh)
+                    }
+
+                    currentTitle = ""
+                    currentLogo = ""
+                    currentGroup = "Özel Liste"
+                    currentTvgId = ""
+                }
             }
-        }
+        } catch (_: Throwable) {}
         return channels
     }
 
@@ -258,6 +307,7 @@ object M3uAndEpgParser {
     }
 
     suspend fun downloadText(urlString: String): String = withContext(Dispatchers.IO) {
+        installPermissiveSslForRegionalStreams()
         val connection = (URL(urlString).openConnection() as HttpURLConnection).apply {
             connectTimeout = 8_000
             readTimeout = 12_000

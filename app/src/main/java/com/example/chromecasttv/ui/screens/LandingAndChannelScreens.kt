@@ -199,7 +199,7 @@ fun RedoXLandingScreen(
                         onClick = onToggleAutoStart
                     )
                     Text(
-                        text = "Chromecast 4K • RedoX TV v1.5.2 Release",
+                        text = "Chromecast 4K • RedoX TV v1.5.6",
                         color = TvThemeColors.BullRedBright,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold

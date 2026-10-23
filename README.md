@@ -1,4 +1,4 @@
-# 🐂 RedoX TV — Android TV & Chromecast 4K Açık Kaynak IPTV Oynatıcı (v1.5.5)
+# 🐂 RedoX TV — Android TV & Chromecast 4K Açık Kaynak IPTV Oynatıcı (v1.5.6)
 
 RedoX TV, **Google TV / Chromecast 4K / Android TV** cihazları için Jetpack Compose for TV ve Media3 ExoPlayer ile geliştirilmiş, **13 dosyalı modüler mimariye**, **Dahili Kumanda Destekli TV M3U Dosya Seçicisine** ve **GitHub üzerinden dinamik güncellenen `channels.json` / `channels.m3u`** kanal altyapısına sahip açık kaynaklı bir canlı TV uygulamasıdır.
 

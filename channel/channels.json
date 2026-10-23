@@ -1,5 +1,5 @@
 {
-  "version": "1.5.5",
+  "version": "1.5.6",
   "updatedAt": "2026-10-23",
   "description": "RedoX TV Dinamik Kanal Listesi — Buradaki m3u8 linklerini veya kanalları düzenlediğinizde uygulama açılışta otomatik güncellenir.",
   "remoteUrl": "https://raw.githubusercontent.com/redox-baris/Redox-TV/main/channel/channels.json",

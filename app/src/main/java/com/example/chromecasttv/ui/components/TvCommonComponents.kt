@@ -125,6 +125,11 @@ import java.net.URLDecoder
 import java.text.SimpleDateFormat
 import java.util.*
 
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.provider.Settings
+import androidx.core.content.ContextCompat
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -1131,3 +1136,379 @@ fun TvInputField(
         }
     }
 }
+
+
+/**
+ * Chromecast 4K / Google TV Dahili Kumanda Destekli M3U Dosya Seçici ve Klasör Gezgini.
+ *
+ * Google TV / Android TV cihazlarında sistem dosya seçicisi (`DocumentsUI`) bulunmadığı için
+ * "Bunu yapabilecek uygulamanız yok" hatasını tamamen ortadan kaldırır ve uygulama içinden
+ * kumanda ile tüm klasörleri (`Download`, `Ana Dizin`, `Documents`, `USB Bellek`) gezmeyi sağlar.
+ */
+@Composable
+fun TvBuiltInM3uFilePickerDialog(
+    onScanM3uFiles: () -> List<File>,
+    onSelectFile: (File) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+    var permissionRefreshTrigger by remember { mutableIntStateOf(0) }
+
+    val hasAllFilesPermission = remember(permissionRefreshTrigger) {
+        if (Build.VERSION.SDK_INT >= 30) {
+            Environment.isExternalStorageManager()
+        } else {
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.READ_EXTERNAL_STORAGE
+            ) == PackageManager.PERMISSION_GRANTED
+        }
+    }
+
+    val runtimePermLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) {
+        permissionRefreshTrigger += 1
+    }
+
+    val allFilesSettingsLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) {
+        permissionRefreshTrigger += 1
+    }
+
+    fun requestStorageAccess() {
+        if (Build.VERSION.SDK_INT >= 30) {
+            try {
+                val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
+                    data = Uri.parse("package:${context.packageName}")
+                }
+                allFilesSettingsLauncher.launch(intent)
+            } catch (_: Exception) {
+                try {
+                    allFilesSettingsLauncher.launch(Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
+                } catch (_: Exception) {
+                    runtimePermLauncher.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
+                }
+            }
+        } else {
+            runtimePermLauncher.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        if (!hasAllFilesPermission && Build.VERSION.SDK_INT < 30) {
+            runtimePermLauncher.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
+        }
+    }
+
+    val defaultDownloadDir = remember {
+        val dl = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+        if (dl != null && dl.exists()) dl else File("/sdcard/Download")
+    }
+
+    // browseMode: 0 = Otomatik Bulunan M3U'lar, 1 = Klasör Gezgini
+    var browseMode by remember { mutableIntStateOf(0) }
+    var currentDir by remember { mutableStateOf(defaultDownloadDir) }
+
+    val discoveredM3uFiles = remember(permissionRefreshTrigger, browseMode) {
+        onScanM3uFiles()
+    }
+
+    val directoryEntries = remember(currentDir, permissionRefreshTrigger) {
+        try {
+            val list = currentDir.listFiles()?.toList().orEmpty()
+            list.filter { f ->
+                if (f.name.startsWith(".")) false
+                else if (f.isDirectory) true
+                else {
+                    val low = f.name.lowercase(Locale.US)
+                    low.endsWith(".m3u") || low.endsWith(".m3u8") || low.endsWith(".txt")
+                }
+            }.sortedWith(compareBy<File> { !it.isDirectory }.thenBy { it.name.lowercase(Locale.getDefault()) })
+        } catch (_: Exception) {
+            emptyList()
+        }
+    }
+
+    BackHandler {
+        onDismiss()
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.84f))
+            .clickable(enabled = false) {},
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            modifier = Modifier
+                .width(760.dp)
+                .heightIn(min = 420.dp, max = 560.dp)
+                .clip(RoundedCornerShape(20.dp))
+                .background(TvThemeColors.SurfaceCard)
+                .border(1.5.dp, TvThemeColors.BullRedPrimary.copy(alpha = 0.7f), RoundedCornerShape(20.dp))
+                .padding(22.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.FolderOpen,
+                        contentDescription = null,
+                        tint = TvThemeColors.BullRedBright,
+                        modifier = Modifier.size(26.dp)
+                    )
+                    Column {
+                        Text(
+                            text = "📂 RedoX TV Dahili M3U Dosya Seçici",
+                            color = TvThemeColors.TextPrimary,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                        Text(
+                            text = "Harici dosya yöneticisine gerek olmadan kumanda ile .m3u / .m3u8 seçin",
+                            color = TvThemeColors.TextSecondary,
+                            fontSize = 11.sp
+                        )
+                    }
+                }
+                TvCompactChipButton(
+                    text = "✕ Kapat",
+                    icon = Icons.Rounded.Clear,
+                    onClick = onDismiss
+                )
+            }
+
+            if (!hasAllFilesPermission) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(TvThemeColors.BullRedDark.copy(alpha = 0.45f))
+                        .border(1.dp, TvThemeColors.BullRedBright, RoundedCornerShape(12.dp))
+                        .padding(12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+                        Text(
+                            text = "🔓 Download Klasöründeki M3U Dosyalarını Görmek İçin İzin Gerekli",
+                            color = TvThemeColors.TextPrimary,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "Android TV güvenlik kısıtlaması nedeniyle 'Tüm Dosyalara Erişim' iznini bir kez açın.",
+                            color = TvThemeColors.TextSecondary,
+                            fontSize = 11.sp
+                        )
+                    }
+                    TvActionButton(
+                        text = "İzni Şimdi Aç",
+                        icon = Icons.Rounded.Verified,
+                        isPrimary = true,
+                        onClick = { requestStorageAccess() }
+                    )
+                }
+            }
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TvCompactChipButton(
+                    text = if (browseMode == 0) "✓ Bulunan M3U'lar (${discoveredM3uFiles.size})" else "Bulunan M3U'lar (${discoveredM3uFiles.size})",
+                    icon = Icons.Rounded.ManageSearch,
+                    onClick = { browseMode = 0 }
+                )
+                TvCompactChipButton(
+                    text = if (browseMode == 1 && currentDir.absolutePath.contains("Download")) "✓ Download Klasörü" else "Download Klasörü",
+                    icon = Icons.Rounded.CloudDownload,
+                    onClick = {
+                        browseMode = 1
+                        currentDir = defaultDownloadDir
+                    }
+                )
+                TvCompactChipButton(
+                    text = if (browseMode == 1 && currentDir.absolutePath == "/sdcard") "✓ Ana Dizin (/sdcard)" else "Ana Dizin (/sdcard)",
+                    icon = Icons.Rounded.Home,
+                    onClick = {
+                        browseMode = 1
+                        currentDir = Environment.getExternalStorageDirectory() ?: File("/sdcard")
+                    }
+                )
+                TvCompactChipButton(
+                    text = if (browseMode == 1 && currentDir.absolutePath == "/storage") "✓ USB / Depolama" else "USB / Depolama",
+                    icon = Icons.Rounded.Dns,
+                    onClick = {
+                        browseMode = 1
+                        currentDir = File("/storage")
+                    }
+                )
+                TvCompactChipButton(
+                    text = "Yenile",
+                    icon = Icons.Rounded.Refresh,
+                    onClick = { permissionRefreshTrigger += 1 }
+                )
+            }
+
+            if (browseMode == 0) {
+                if (discoveredM3uFiles.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(TvThemeColors.BackgroundDeep.copy(alpha = 0.6f))
+                            .padding(20.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = "Henüz otomatik bulunan .m3u / .m3u8 dosyası yok.",
+                                color = TvThemeColors.TextPrimary,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "İpucu: Üstteki 'Download Klasörü' veya 'Ana Dizin (/sdcard)' sekmesinden klasörleri gezebilir ya da telefonunuzdan QR Web Kumandası ile doğrudan M3U dosyası gönderebilirsiniz.",
+                                color = TvThemeColors.TextSecondary,
+                                fontSize = 12.sp,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxWidth().weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(discoveredM3uFiles, key = { it.absolutePath }) { file ->
+                            val kbSize = (file.length() / 1024L).coerceAtLeast(1L)
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(TvThemeColors.SurfaceElevated)
+                                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f).padding(end = 10.dp)) {
+                                    Text(
+                                        text = "🎵 ${file.name}",
+                                        color = TvThemeColors.TextPrimary,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Text(
+                                        text = "${file.parent ?: ""} • ${kbSize} KB",
+                                        color = TvThemeColors.TextSecondary,
+                                        fontSize = 11.sp,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                                TvCompactChipButton(
+                                    text = "✓ Bu M3U'yu Yükle",
+                                    icon = Icons.Rounded.CheckCircle,
+                                    onClick = {
+                                        onSelectFile(file)
+                                        onDismiss()
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Konum: ${currentDir.absolutePath}",
+                        color = TvThemeColors.AccentCyan,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f).padding(end = 8.dp)
+                    )
+                    val parentFile = currentDir.parentFile
+                    if (parentFile != null) {
+                        TvCompactChipButton(
+                            text = "⬆️ Üst Klasör (..)",
+                            icon = Icons.Rounded.FolderOpen,
+                            onClick = { currentDir = parentFile }
+                        )
+                    }
+                }
+                LazyColumn(
+                    modifier = Modifier.fillMaxWidth().weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    items(directoryEntries, key = { it.absolutePath }) { entry ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(TvThemeColors.SurfaceElevated)
+                                .padding(horizontal = 14.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f).padding(end = 10.dp)) {
+                                Text(
+                                    text = if (entry.isDirectory) "📁 ${entry.name}" else "🎵 ${entry.name}",
+                                    color = TvThemeColors.TextPrimary,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                if (!entry.isDirectory) {
+                                    val kb = (entry.length() / 1024L).coerceAtLeast(1L)
+                                    Text(
+                                        text = "$kb KB • M3U/Liste Dosyası",
+                                        color = TvThemeColors.TextSecondary,
+                                        fontSize = 11.sp
+                                    )
+                                }
+                            }
+                            if (entry.isDirectory) {
+                                TvCompactChipButton(
+                                    text = "Klasörü Aç",
+                                    icon = Icons.Rounded.FolderOpen,
+                                    onClick = { currentDir = entry }
+                                )
+                            } else {
+                                TvCompactChipButton(
+                                    text = "✓ Seç ve Yükle",
+                                    icon = Icons.Rounded.CheckCircle,
+                                    onClick = {
+                                        onSelectFile(entry)
+                                        onDismiss()
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+

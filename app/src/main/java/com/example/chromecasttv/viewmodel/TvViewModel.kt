@@ -125,6 +125,11 @@ import java.net.URLDecoder
 import java.text.SimpleDateFormat
 import java.util.*
 
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.provider.Settings
+import androidx.core.content.ContextCompat
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -926,6 +931,25 @@ class TvViewModel(private val repository: TvRepository) : ViewModel() {
             }
         }
     }
+
+    fun importLocalM3uFile(file: File) {
+        viewModelScope.launch {
+            _isLoadingM3u.value = true
+            val imported = repository.importM3uFromFile(file, file.name)
+            if (imported != null) {
+                val updated = _playlists.value + imported
+                _playlists.value = updated
+                repository.savePlaylists(updated)
+                _statusMessage.value = "✅ '${imported.name}' Özel M3U Kanalları menüsüne eklendi!"
+                reloadAllChannelsAndEpg()
+            } else {
+                _isLoadingM3u.value = false
+                _statusMessage.value = "⚠️ '${file.name}' içinde geçerli M3U/M3U8 yayın linki bulunamadı."
+            }
+        }
+    }
+
+    fun scanAllM3uFilesOnDevice(): List<File> = repository.scanDownloadFolderForM3uFiles()
 
     fun scanAndImportDownloadFolderM3u() {
         viewModelScope.launch {

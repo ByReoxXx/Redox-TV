@@ -125,6 +125,11 @@ import java.net.URLDecoder
 import java.text.SimpleDateFormat
 import java.util.*
 
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.provider.Settings
+import androidx.core.content.ContextCompat
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -388,13 +393,7 @@ fun RedoXTvRootScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
 
-    val filePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
-    ) { uri: Uri? ->
-        if (uri != null) {
-            viewModel.importLocalM3uUri(uri)
-        }
-    }
+    var showBuiltInFilePicker by remember { mutableStateOf(false) }
 
     if (state.activePlayingChannel != null) {
         RedoXPlayerScreen(
@@ -575,11 +574,7 @@ fun RedoXTvRootScreen(
                                     viewModel.addXtreamCodesAccount(name, srv, usr, pwd)
                                 },
                                 onPickLocalFile = {
-                                    try {
-                                        filePickerLauncher.launch(arrayOf("*/*"))
-                                    } catch (_: Exception) {
-                                        viewModel.scanAndImportDownloadFolderM3u()
-                                    }
+                                    showBuiltInFilePicker = true
                                 },
                                 onScanDownloadFolder = {
                                     viewModel.scanAndImportDownloadFolderM3u()
@@ -615,6 +610,14 @@ fun RedoXTvRootScreen(
                 channel = state.pendingPinChannel!!,
                 onVerifyPin = { pin -> viewModel.verifyPinAndPlay(pin) },
                 onDismiss = { viewModel.dismissPinDialog() }
+            )
+        }
+
+        if (showBuiltInFilePicker) {
+            TvBuiltInM3uFilePickerDialog(
+                onScanM3uFiles = { viewModel.scanAllM3uFilesOnDevice() },
+                onSelectFile = { file -> viewModel.importLocalM3uFile(file) },
+                onDismiss = { showBuiltInFilePicker = false }
             )
         }
 

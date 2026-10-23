@@ -217,6 +217,10 @@ object LocalTransferWebServer {
     """.trimIndent()
 }
 
+/**
+ * Gerçek ISO/IEC 18004 Version 2-L (25x25) Reed-Solomon QR Kod Üretici.
+ * Telefon kamerası tutulduğunda doğrudan http://<TV-IP>:8585 adresini okur!
+ */
 object IsoQrCodeV2Generator {
     fun encodeUrlTo25x25Matrix(url: String): Array<IntArray> {
         val size = 25
@@ -425,8 +429,3 @@ fun QrMatrixVisualBox(seedText: String) {
         }
     }
 }
-
-/**
- * İki Aşamalı Android TV Input Kutusu (TvInputField):
- * 1. Gezinme Modu (isEditing = false):
- *    - Normal bir TV butonu gibi davranır (.focusable()).

@@ -173,12 +173,11 @@ fun MultiViewPlayerCell(
     onFocused: () -> Unit,
     onZapSlot: (Int) -> Unit,
     onExpand: () -> Unit,
+    onToggleAudio: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     var isFocused by remember { mutableStateOf(false) }
-    // Chromecast 4K kumandasında CH+/CH- tuşu olmadığı için:
-    // Hücre üzerindeyken OK tuşuna basınca hücre içi kontrol menüsü (Tam Ekran / Kanal+ / Kanal- / Kaynak) açılır!
     var showSlotMenu by remember { mutableStateOf(false) }
     val slotFullBtnRequester = remember { FocusRequester() }
     val cellBoxRequester = remember { FocusRequester() }
@@ -300,6 +299,7 @@ fun MultiViewPlayerCell(
                 } else false
             }
             .clickable {
+                onFocused()
                 if (!showSlotMenu) {
                     showSlotMenu = true
                 } else {
@@ -346,16 +346,32 @@ fun MultiViewPlayerCell(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f)
             )
-            Text(
-                text = if (isAudioActive) "🔊 SES AÇIK" else "🔇 SESSİZ",
-                color = if (isAudioActive) TvThemeColors.AccentEmerald else TvThemeColors.TextSecondary,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(if (isAudioActive) TvThemeColors.AccentEmerald.copy(alpha = 0.28f) else Color.White.copy(alpha = 0.15f))
+                    .clickable { onToggleAudio() }
+                    .padding(horizontal = 8.dp, vertical = 4.dp)
+            ) {
+                Icon(
+                    imageVector = if (isAudioActive) Icons.Rounded.VolumeUp else Icons.Rounded.VolumeOff,
+                    contentDescription = "Ses Durumu",
+                    tint = if (isAudioActive) TvThemeColors.AccentEmerald else TvThemeColors.TextSecondary,
+                    modifier = Modifier.size(14.dp)
+                )
+                Spacer(Modifier.width(4.dp))
+                Text(
+                    text = if (isAudioActive) "SES AÇIK" else "SESSİZ",
+                    color = if (isAudioActive) TvThemeColors.AccentEmerald else TvThemeColors.TextSecondary,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1
+                )
+            }
         }
 
-        // Chromecast 4K Kumandası İçin Hücre İçi Hızlı Kontrol Çubuğu (OK tuşuna basınca aktifleşir)
+
         AnimatedVisibility(
             visible = showSlotMenu || isFocused,
             enter = fadeIn(tween(130)) + slideInVertically(tween(130), initialOffsetY = { it / 2 }),
@@ -375,13 +391,18 @@ fun MultiViewPlayerCell(
                 if (showSlotMenu) {
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         TvCompactChipButton(
+                            text = if (isAudioActive) "🔇 Sesi Sustur" else "🔊 Sesi Aç",
+                            icon = if (isAudioActive) Icons.Rounded.VolumeOff else Icons.Rounded.VolumeUp,
+                            onClick = { onToggleAudio() },
+                            modifier = Modifier.focusRequester(slotFullBtnRequester)
+                        )
+                        TvCompactChipButton(
                             text = "📺 Tam Ekran",
                             icon = Icons.Rounded.SmartDisplay,
                             onClick = {
                                 showSlotMenu = false
                                 onExpand()
-                            },
-                            modifier = Modifier.focusRequester(slotFullBtnRequester)
+                            }
                         )
                         TvCompactChipButton(
                             text = "⏭ Kanal+",

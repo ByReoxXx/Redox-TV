@@ -487,8 +487,15 @@ class TvRepository(private val appContext: Context) {
         return updated
     }
 
+    suspend fun syncRemoteGitHubRepoM3u(): String =
+        DynamicChannelsJsonService.fetchAndCacheRemoteRepoM3u(appContext)
+
     fun getBuiltInChannels(): List<TvChannel> {
-        val base = getStaticBuiltInChannels()
+        var base = getStaticBuiltInChannels()
+        val cachedRepoM3u = DynamicChannelsJsonService.loadCachedRepoM3u(appContext)
+        if (cachedRepoM3u.isNotBlank()) {
+            base = mergeTurkishM3uIntoBuiltIn(base, cachedRepoM3u)
+        }
         val cachedTrM3u = loadCachedAciptvTurkishM3u()
         return if (cachedTrM3u.isNotBlank()) {
             mergeTurkishM3uIntoBuiltIn(base, cachedTrM3u)

@@ -1007,13 +1007,22 @@ class TvViewModel(private val repository: TvRepository) : ViewModel() {
             _builtInChannels.value = builtInList
             _epgMap.value = combinedEpg
 
-            // [1] Arka planda GitHub üzerindeki dinamik `channels.json` dosyasını kontrol et ve güncelle
+            // [1] Arka planda GitHub üzerindeki dinamik `channels.json` ve `channels.m3u` dosyalarını kontrol et
             // [2] Ardından ACIPTV Türk kanallarını ana listeye ve yedek akışlara birleştir
             launch(Dispatchers.IO) {
                 val remoteJsonChannels = repository.syncRemoteGitHubChannelsJson()
-                if (!remoteJsonChannels.isNullOrEmpty()) {
-                    val jsonUpdatedList = ArrayList<TvChannel>(remoteJsonChannels.size)
-                    for (ch in remoteJsonChannels) {
+                val remoteRepoM3u = repository.syncRemoteGitHubRepoM3u()
+                val baseAfterGitHub = buildList {
+                    val base = remoteJsonChannels ?: repository.getStaticBuiltInChannels()
+                    if (remoteRepoM3u.isNotBlank()) {
+                        addAll(repository.mergeTurkishM3uIntoBuiltIn(base, remoteRepoM3u))
+                    } else {
+                        addAll(base)
+                    }
+                }
+                if (baseAfterGitHub.isNotEmpty()) {
+                    val jsonUpdatedList = ArrayList<TvChannel>(baseAfterGitHub.size)
+                    for (ch in baseAfterGitHub) {
                         val sched = repository.generateScheduleForChannelFast(ch, baseHourStart, currentHourOfDay, preformattedWindows)
                         combinedEpg[ch.epgChannelId] = sched
                         val cur = sched[1]
@@ -1034,7 +1043,7 @@ class TvViewModel(private val repository: TvRepository) : ViewModel() {
 
                 val remoteTrM3u = repository.fetchAndCacheAciptvTurkishM3u()
                 if (remoteTrM3u.isNotBlank()) {
-                    val mergedBase = repository.mergeTurkishM3uIntoBuiltIn(repository.getStaticBuiltInChannels(), remoteTrM3u)
+                    val mergedBase = repository.mergeTurkishM3uIntoBuiltIn(baseAfterGitHub.ifEmpty { repository.getStaticBuiltInChannels() }, remoteTrM3u)
                     val refreshedBuiltIn = ArrayList<TvChannel>(mergedBase.size)
                     for (ch in mergedBase) {
                         val sched = repository.generateScheduleForChannelFast(ch, baseHourStart, currentHourOfDay, preformattedWindows)

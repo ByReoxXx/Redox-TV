@@ -183,7 +183,7 @@ object DynamicChannelsJsonService {
                     connectTimeout = 7500
                     readTimeout = 10000
                     instanceFollowRedirects = true
-                    setRequestProperty("User-Agent", "RedoXTV/1.5.6 (Android TV; DynamicChannelsM3u)")
+                    setRequestProperty("User-Agent", "RedoXTV/1.5.5 (Android TV; DynamicChannelsM3u)")
                     setRequestProperty("Cache-Control", "no-cache")
                 }
                 if (conn.responseCode in 200..299) {
@@ -216,7 +216,7 @@ object DynamicChannelsJsonService {
                     connectTimeout = 7500
                     readTimeout = 10000
                     instanceFollowRedirects = true
-                    setRequestProperty("User-Agent", "RedoXTV/1.5.6 (Android TV; DynamicChannelsJson)")
+                    setRequestProperty("User-Agent", "RedoXTV/1.5.5 (Android TV; DynamicChannelsJson)")
                     setRequestProperty("Cache-Control", "no-cache")
                 }
                 if (conn.responseCode in 200..299) {

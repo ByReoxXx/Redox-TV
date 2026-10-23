@@ -623,7 +623,7 @@ fun TvSideNavigationRail(
                         maxLines = 1
                     )
                     Text(
-                        text = "v1.5.6 • 4K Edition",
+                        text = "Red Bull 4K Edition",
                         color = TvThemeColors.BullRedBright,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.SemiBold,

@@ -593,7 +593,7 @@ class TvRepository(private val appContext: Context) {
                 connectTimeout = 9000
                 readTimeout = 12000
                 instanceFollowRedirects = true
-                setRequestProperty("User-Agent", "RedoXTV/1.5.6 (Android TV; Chromecast 4K)")
+                setRequestProperty("User-Agent", "RedoXTV/1.4 (Android TV; Chromecast 4K)")
             }
             val sb = StringBuilder("#EXTM3U\n")
             var matchedCount = 0

@@ -1,8 +1,8 @@
-# 🐂 RedoX TV — Android TV, Chromecast 4K, Tablet & Mobil Açık Kaynak IPTV Oynatıcı (v1.6.0)
+# 🐂 RedoX TV — Android TV, Chromecast 4K, Tablet & Mobil Açık Kaynak IPTV Oynatıcı (v1.6.1)
 
 RedoX TV, **Google TV / Chromecast 4K / Android TV Box / Android Tablet ve Telefon** cihazları için Jetpack Compose ve Media3 ExoPlayer ile geliştirilmiş, **13 dosyalı modüler mimariye**, **Hem Kumanda (D-Pad) Hem Dokunmatik (Touch) Desteğine** ve **GitHub üzerinden dinamik güncellenen `channel/channels.json` & `channel/channels.m3u`** kanal altyapısına sahip açık kaynaklı bir canlı TV uygulamasıdır.
 
-## ⚡ v1.6.0 Yenilikleri ve Çözülen Sorunlar
+## ⚡ v1.6.1 Yenilikleri ve Çözülen Sorunlar
 - **Child Pencere (Dialog) D-Pad Kilidi:** `Dosyadan M3U Seç` ve `Ebeveyn Kilidi (PIN)` pencereleri gerçek Android `Dialog` alt penceresine alındı; kumanda odağı asla arka plana kaçmaz, her dosya/klasör satırı doğrudan OK veya dokunuşla seçilir.
 - **Özel M3U Klasörü Çökme Sorunu Giderildi:** Aynı `tvg-id` veya aynı isimli kanallara sahip M3U dosyalarında oluşan `LazyVerticalGrid` duplicate-key çökmesi tamamen engellendi; aynı isimli kanallar otomatik olarak alternatif akış (`Akış 1, 2, 3`) şeklinde birleştirilir.
 - **Kanaldan Çıkınca Son İzlenen Kanala Odaklanma:** Kanal izlerken Geri tuşuna basıldığında odak artık sol menüdeki *Canlı TV* sekmesine kaçmaz; doğrudan izlediğiniz kanalın listedeki kartına döner.

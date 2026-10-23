@@ -221,7 +221,7 @@ fun RedoXLandingScreen(
                         onClick = onToggleAutoStart
                     )
                     Text(
-                        text = "TV • Tablet • Mobil • RedoX TV v1.6.0",
+                        text = "TV • Tablet • Mobil • RedoX TV v1.6.1",
                         color = TvThemeColors.BullRedBright,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold
@@ -367,7 +367,7 @@ fun LandingActionCard(
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Alignment.Center,
+            verticalArrangement = Arrangement.Center,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(12.dp)

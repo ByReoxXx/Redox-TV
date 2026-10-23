@@ -1,5 +1,5 @@
 #EXTM3U
-# RedoX TV v1.6.0 Dinamik Kanal Listesi (channel/channels.m3u)
+# RedoX TV v1.6.1 Dinamik Kanal Listesi (channel/channels.m3u)
 # Bu dosyaya yeni #EXTINF satirlari ekleyebilir veya calismayan m3u8 linklerini duzenleyebilirsiniz.
 
 #EXTINF:-1 tvg-id="ch_1_360_tv" tvg-logo="https://i.imgur.com/agn47sQ.png" group-title="Ulusal",360 TV

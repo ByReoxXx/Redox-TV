@@ -1,1 +1,1 @@
-🐂 **RedoX TV** — Açık Kaynak Android TV, Google TV, Tablet & Mobil Canlı TV Oynatıcısı • [GitHub Deposu](https://github.com/redox-baris/Redox-TV) • [Son Sürüm APK İndir](https://github.com/redox-baris/Redox-TV/releases)
+🐂 **RedoX TV** — Açık Kaynak Android TV, Google TV, Tablet & Mobil Canlı TV Oynatıcısı • [GitHub Deposu](https://github.com/ByReoxXx/Redox-TV) • [Son Sürüm APK İndir](https://github.com/ByReoxXx/Redox-TV/releases)

@@ -827,7 +827,7 @@ fun TvSideNavigationRail(
                         maxLines = 1
                     )
                     Text(
-                        text = "v1.7.0 • TV & Tablet",
+                        text = "v1.7.2 • TV & Tablet",
                         color = TvThemeColors.BullRedBright,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.SemiBold,

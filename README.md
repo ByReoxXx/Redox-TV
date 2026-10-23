@@ -141,11 +141,11 @@ app/src/main/java/com/example/chromecasttv/
 ## 🚀 Kurulum ve Derleme
 
 ### Hazır APK İndirme
-Deponun **[Releases](https://github.com/redox-baris/Redox-TV/releases)** sayfasından en güncel imzalı `Release.apk` dosyasını indirip Android TV, Google TV (Chromecast 4K), TV Box, Tablet veya Telefonunuza doğrudan kurabilirsiniz.
+Deponun **[Releases](https://github.com/ByReoxXx/Redox-TV/releases)** sayfasından en güncel imzalı `Release.apk` dosyasını indirip Android TV, Google TV (Chromecast 4K), TV Box, Tablet veya Telefonunuza doğrudan kurabilirsiniz.
 
 ### Kaynak Koddan Derleme
 ```bash
-git clone https://github.com/redox-baris/Redox-TV.git
+git clone https://github.com/ByReoxXx/Redox-TV.git
 cd Redox-TV
 gradle assembleRelease
 ```
@@ -153,7 +153,7 @@ gradle assembleRelease
 ---
 
 ## 📚 Detaylı Dokümantasyon (Wiki)
-Kurulum adımları, kumanda kısayolları, M3U/Xtream/QR yükleme rehberi ve geliştirici notları için **[RedoX TV GitHub Wiki](https://github.com/redox-baris/Redox-TV/wiki)** sayfalarını ziyaret edebilirsiniz.
+Kurulum adımları, kumanda kısayolları, M3U/Xtream/QR yükleme rehberi ve geliştirici notları için **[RedoX TV Wiki (Depo İçi Kılavuz)](./wiki/Home.md)** veya **[GitHub Wiki Sekmesi](https://github.com/ByReoxXx/Redox-TV/wiki)** sayfalarını ziyaret edebilirsiniz.
 
 ---
 

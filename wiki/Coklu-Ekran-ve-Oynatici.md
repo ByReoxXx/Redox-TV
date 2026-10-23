@@ -26,3 +26,6 @@ Sol menüdeki **Favorilerim** sekmesinde favori kanallarınızın sırasını is
 
 * **Kanal Kilitleme:** Vitrin barındaki **Kilitle** butonuna bastığınızda kanal 4 haneli PIN koduyla (varsayılan: `0000`) kilitlenir. PIN kodunu **M3U & Dosya Yükle** ekranından değiştirebilirsiniz.
 * **Kanal Gizleme ve Geri Yükleme:** İstemediğiniz kanalları vitrin barından veya oynatıcı içinden **Gizle** butonuyla listeden kaldırabilir, dilediğiniz zaman **Geri Yükle** butonuyla tekrar görünür yapabilirsiniz.
+
+---
+⬅️ **[Wiki Ana Sayfasına Dön](https://github.com/ByReoxXx/Redox-TV/blob/main/wiki/Home.md)**

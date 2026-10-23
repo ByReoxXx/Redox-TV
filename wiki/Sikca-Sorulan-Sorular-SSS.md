@@ -14,3 +14,6 @@ Oynatıcı 2.5 saniye içinde yanıt alamazsa veya hata alırsa otomatik olarak 
 
 ### 5. Favorilerimi ve eklediğim M3U listelerini başka bir cihaza nasıl taşırım?
 **M3U & Dosya Yükle** ekranının altındaki **`💾 Yedek Al (Download)`** butonuna basarak veya telefonunuzdan QR Web arayüzüne girip **`Yedeği Telefona İndir`** butonuna tıklayarak `redox_tv_backup.txt` dosyasını alabilir ve yeni cihazınıza tek tıkla geri yükleyebilirsiniz.
+
+---
+⬅️ **[Wiki Ana Sayfasına Dön](https://github.com/ByReoxXx/Redox-TV/blob/main/wiki/Home.md)**

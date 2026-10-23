@@ -229,7 +229,7 @@ fun RedoXLandingScreen(
                         onClick = onToggleAutoStart
                     )
                     Text(
-                        text = "TV • Tablet • Mobil • RedoX TV v1.7.0",
+                        text = "TV • Tablet • Mobil • RedoX TV v1.7.2",
                         color = TvThemeColors.BullRedBright,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold

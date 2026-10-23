@@ -31,3 +31,6 @@ Google TV / Chromecast 4K cihazlarında sistem dosya seçicisi bulunmasa bile Re
 
 - **M3U URL Sekmesi:** Liste adını ve `http://...` / `https://...` uzantılı M3U adresinizi girip **M3U URL Kaydet ve Kanalları Yükle** butonuna basın.
 - **Xtream Codes Sekmesi:** Sağlayıcınızın verdiği `Sunucu URL`, `Kullanıcı Adı` ve `Şifre` bilgilerini girip **Xtream Hesabını Bağla** butonuna basın.
+
+---
+⬅️ **[Wiki Ana Sayfasına Dön](https://github.com/ByReoxXx/Redox-TV/blob/main/wiki/Home.md)**

@@ -4,29 +4,36 @@
 
 ---
 
+## 🔗 Hızlı Bağlantılar
+- **GitHub Ana Deposu:** [https://github.com/ByReoxXx/Redox-TV](https://github.com/ByReoxXx/Redox-TV)
+- **Son Sürüm APK İndir (Releases):** [https://github.com/ByReoxXx/Redox-TV/releases](https://github.com/ByReoxXx/Redox-TV/releases)
+- **Hata Bildirimi & Öneriler (Issues):** [https://github.com/ByReoxXx/Redox-TV/issues](https://github.com/ByReoxXx/Redox-TV/issues)
+
+---
+
 ## 📚 Wiki İçindekiler
 
-1. **[🚀 Kurulum Rehberi](Kurulum-Rehberi)**
-   - Android TV / Chromecast 4K / TV Box kurulumu (Downloader, USB ve ADB yöntemleri)
+1. **[🚀 Kurulum Rehberi](https://github.com/ByReoxXx/Redox-TV/blob/main/wiki/Kurulum-Rehberi.md)**
+   - Android TV / Chromecast 4K / TV Box kurulumu (Downloader, SFTTV ve USB yöntemleri)
    - Android Tablet ve Telefon kurulumu
    - Depolama ve dosya erişim izinlerinin açılması
-2. **[🎮 Kumanda (D-Pad) ve Dokunmatik Kontroller](Kumanda-ve-Dokunmatik-Kontroller)**
+2. **[🎮 Kumanda (D-Pad) ve Dokunmatik Kontroller](https://github.com/ByReoxXx/Redox-TV/blob/main/wiki/Kumanda-ve-Dokunmatik-Kontroller.md)**
    - Chromecast 4K kumandası (rakamsız ve `CH+/CH-` tuşsuz kumandalar) için tam rehber
    - Ekran üstü sanal numaratör (`0-9`) kullanımı
    - Tablet ve telefon dokunmatik hareketleri
-3. **[📱 M3U, Xtream Codes ve QR Web Yükleme Rehberi](M3U-Xtream-ve-QR-Yukleme)**
+3. **[📱 M3U, Xtream Codes ve QR Web Yükleme Rehberi](https://github.com/ByReoxXx/Redox-TV/blob/main/wiki/M3U-Xtream-ve-QR-Yukleme.md)**
    - Telefondan QR kod ile kablosuz M3U/Xtream/Yedek gönderimi (`:8585`)
    - Dahili TV Dosya Gezgini ile `Download` ve USB bellekten `.m3u` seçimi
    - Yedek alma ve geri yükleme (`redox_tv_backup.txt`)
-4. **[📺 Akıllı Oynatıcı, Otomatik Yedek Geçişi ve 2x2 Çoklu Ekran](Coklu-Ekran-ve-Oynatici)**
+4. **[📺 Akıllı Oynatıcı, Otomatik Yedek Geçişi ve 2x2 Çoklu Ekran](https://github.com/ByReoxXx/Redox-TV/blob/main/wiki/Coklu-Ekran-ve-Oynatici.md)**
    - Çoklu yayın kaynağı (Multi-Source) ve Auto-Failover nasıl çalışır?
    - 4'lü Çoklu Ekran (2x2 Multi-View) ve PiP (Resim İçinde Resim) kullanımı
    - Favori sıralama (Tut & Taşı) ve PIN korumalı Ebeveyn Kilidi
-5. **[🛠️ Teknik Mimari ve Geliştirici Rehberi](Teknik-Mimari-ve-Gelistirici-Rehberi)**
+5. **[🛠️ Teknik Mimari ve Geliştirici Rehberi](https://github.com/ByReoxXx/Redox-TV/blob/main/wiki/Teknik-Mimari-ve-Gelistirici-Rehberi.md)**
    - 13 dosyalı katmanlı Kotlin & Jetpack Compose mimarisi
    - AES-256-CBC şifreli kanal altyapısı (`channel/channels.enc`)
    - Media3 ExoPlayer, `TextureView` ve `DecoderFallback` optimizasyonları
-6. **[❓ Sıkça Sorulan Sorular ve Sorun Giderme (SSS)](Sikca-Sorulan-Sorular-SSS)**
+6. **[❓ Sıkça Sorulan Sorular ve Sorun Giderme (SSS)](https://github.com/ByReoxXx/Redox-TV/blob/main/wiki/Sikca-Sorulan-Sorular-SSS.md)**
    - Yayın açılmama, siyah ekran, dosya seçici izni ve kumanda ipuçları
 
 ---
@@ -40,4 +47,4 @@
 | **Chromecast 4K Kumanda Uyumu** | `CH+/CH-` veya `0-9` tuşu olmayan kumandalar için sanal numaratör ve hücre içi kontrol menüleri |
 | **QR Web Kumandası (`:8585`)** | Telefondan QR kod okutarak kablosuz M3U dosyası, URL, Xtream hesabı ve yedek gönderimi |
 | **4'lü Çoklu Ekran (2x2)** | `TextureView` ve `DecoderFallback` destekli, aynı anda 4 canlı kanalı izleme modu |
-| **AES-256 Şifreli Kanal Paketi** | GitHub üzerinden dinamik güncellenen `channel/channels.enc` şifreli kanal veritabanı |
+| **AES-256 Şifreli Kanal Paketi** | `https://raw.githubusercontent.com/ByReoxXx/Redox-TV/main/channel/channels.enc` üzerinden dinamik güncellenen şifreli kanal veritabanı |

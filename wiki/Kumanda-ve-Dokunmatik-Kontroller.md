@@ -40,3 +40,6 @@ Chromecast 4K kumandasında `CH+/CH-` tuşu bulunmadığı için Çoklu Ekran ik
      - **`⏭ Kanal+` / `⏮ Kanal-`**: Sadece o küçük ekranın kanalını değiştirir.
      - **`🔄 Akış Değiştir`**: O ekranın yedek yayın kaynağını değiştirir.
      - **`✕` veya `Geri Tuşu`**: Hücre menüsünü kapatıp tekrar 4 ekran arasında gezinme moduna döner.
+
+---
+⬅️ **[Wiki Ana Sayfasına Dön](https://github.com/ByReoxXx/Redox-TV/blob/main/wiki/Home.md)**

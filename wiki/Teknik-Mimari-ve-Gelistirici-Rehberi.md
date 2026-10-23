@@ -29,6 +29,7 @@ RedoX TV; **Kotlin 2.0**, **Jetpack Compose** ve **AndroidX Media3 ExoPlayer** k
 ## 2. AES-256-CBC Şifreli Kanal Veritabanı (`channel/channels.enc`)
 
 Açık kaynak depoda yayın linklerinin düz metin olarak görünmemesi için kanal veritabanı `AES-256-CBC` (`PKCS5Padding`) ile şifrelenir:
+* **Dinamik Senkronizasyon Adresi:** `https://raw.githubusercontent.com/ByReoxXx/Redox-TV/main/channel/channels.enc`
 * **Anahtar Türetme:** `SHA-256(UTF8(passphrase))` -> 256-bit AES anahtarı.
 * **Format:** `REDOX_ENC_V1:` + `Base64(16_Byte_Random_IV + AES_CBC_Ciphertext)`.
 * **Çift Format Desteği:** Şifrelenen veri ister JSON (`{"channels": [...]}`) ister standart M3U (`#EXTM3U`) olsun `DynamicChannelsJsonService.parseDecryptedChannels()` tarafından otomatik tanınır ve çözümlenir.
@@ -40,3 +41,6 @@ Açık kaynak depoda yayın linklerinin düz metin olarak görünmemesi için ka
 1. **Anında Açılış (`0 ms` Cold Start):** `TvViewModel` başlangıçta `assets/channels.enc` veya yerel önbelleği senkronize okuyup `SharingStarted.Eagerly` ile ilk karede hazırlar; EPG saat pencereleri döngü dışında tek seferde hesaplanır.
 2. **GPU Hızlandırmalı Hafif Animasyonlar:** Odaklanma efektlerinde yeniden yerleşim (relayout) tetiklemeyen `Modifier.graphicsLayer { scaleX; scaleY }` kullanılır; arka planda sürekli çalışan sonsuz animasyon döngüleri bulunmaz.
 3. **2x2 Çoklu Ekran Donanım Kodek Koruması:** Android TV Box'larda aynı anda 4 adet 1080p `SurfaceView` açıldığında oluşan donanım dekoder sınırını aşmak için `multiview_player_view.xml` içinde `app:surface_type="texture_view"`, `DefaultRenderersFactory.setEnableDecoderFallback(true)` ve `854x480` / `1.25 Mbps` çoklu ekran akış sınırı uygulanır.
+
+---
+⬅️ **[Wiki Ana Sayfasına Dön](https://github.com/ByReoxXx/Redox-TV/blob/main/wiki/Home.md)**

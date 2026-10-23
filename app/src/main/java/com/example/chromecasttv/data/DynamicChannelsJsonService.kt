@@ -174,8 +174,8 @@ import javax.net.ssl.X509TrustManager
  * - Şifrelenen içerik ister `.m3u` (`#EXTM3U`) ister `.json` formatında olsun otomatik tanınır!
  */
 object DynamicChannelsJsonService {
-    const val DEFAULT_GITHUB_ENC_URL = "https://raw.githubusercontent.com/redox-baris/Redox-TV/main/channel/channels.enc"
-    const val FALLBACK_GITHUB_ENC_URL = "https://raw.githubusercontent.com/redox-baris/Redox-TV/master/channel/channels.enc"
+    const val DEFAULT_GITHUB_ENC_URL = "https://raw.githubusercontent.com/ByReoxXx/Redox-TV/main/channel/channels.enc"
+    const val FALLBACK_GITHUB_ENC_URL = "https://raw.githubusercontent.com/ByReoxXx/Redox-TV/master/channel/channels.enc"
     private const val CACHED_ENC_FILENAME = "github_channels_v17_cached.enc"
     private const val ASSET_ENC_FILENAME = "channels.enc"
     private const val DEFAULT_AES_SECRET = "RedoX_TV_2026_Secret_Key_4K"
@@ -252,7 +252,7 @@ object DynamicChannelsJsonService {
                     connectTimeout = 7500
                     readTimeout = 10000
                     instanceFollowRedirects = true
-                    setRequestProperty("User-Agent", "RedoXTV/1.7.0 (Android TV; EncryptedChannelSync)")
+                    setRequestProperty("User-Agent", "RedoXTV/1.7.2 (Android TV; EncryptedChannelSync)")
                     setRequestProperty("Cache-Control", "no-cache")
                 }
                 if (conn.responseCode in 200..299) {

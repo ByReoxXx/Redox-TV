@@ -549,7 +549,7 @@ fun MultiViewSplitScreen(
         }
     }
 
-    var activeAudioSlot by remember { mutableIntStateOf(0) }
+    var activeAudioSlot by remember { mutableStateOf<Int?>(0) }
     val slotRequesters = remember { List(4) { FocusRequester() } }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -562,24 +562,24 @@ fun MultiViewSplitScreen(
                 .padding(bottom = 6.dp)
         ) {
             Text(
-                text = "Seçili ekranın sesi otomatik açılır • Yön Tuşları (◄/►/▲/▼): 4 Ekran Arası Geçiş • OK/Dokun: Tam Ekran • CH+/CH-: Kanal Değiştir",
+                text = "🔊 Ses için ekrana dokunun veya butonları kullanın • OK: Ekran Kontrol Menüsü • Tam Ekran / Kanal Değiştir",
                 color = TvThemeColors.TextSecondary,
                 fontSize = 11.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f).padding(end = 8.dp)
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                TvCompactChipButton(
-                    text = "⏮ Seçili Kanal-",
-                    icon = Icons.Rounded.SwapHoriz,
-                    onClick = { onChangeSlotChannel(activeAudioSlot, -1) }
-                )
-                TvCompactChipButton(
-                    text = "Seçili Kanal+ ⏭",
-                    icon = Icons.Rounded.SwapHoriz,
-                    onClick = { onChangeSlotChannel(activeAudioSlot, +1) }
-                )
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                repeat(slotCount) { sIdx ->
+                    val isAudio = activeAudioSlot == sIdx
+                    TvCompactChipButton(
+                        text = "${sIdx + 1}. Ekran ${if (isAudio) "🔊" else "🔇"}",
+                        icon = if (isAudio) Icons.Rounded.VolumeUp else Icons.Rounded.VolumeOff,
+                        onClick = {
+                            activeAudioSlot = if (activeAudioSlot == sIdx) null else sIdx
+                        }
+                    )
+                }
                 TvCompactChipButton(
                     text = if (state.isMultiViewFourGrid) "Görünüm: 4'lü (2x2)" else "Görünüm: 2'li Yan Yana",
                     icon = Icons.Rounded.GridView,
@@ -605,6 +605,7 @@ fun MultiViewSplitScreen(
                         onFocused = { activeAudioSlot = 0 },
                         onZapSlot = { d -> onChangeSlotChannel(0, d) },
                         onExpand = { onExpandSlotToFull(slots[0]) },
+                        onToggleAudio = { activeAudioSlot = if (activeAudioSlot == 0) null else 0 },
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxHeight()
@@ -622,6 +623,7 @@ fun MultiViewSplitScreen(
                         onFocused = { activeAudioSlot = 1 },
                         onZapSlot = { d -> onChangeSlotChannel(1, d) },
                         onExpand = { onExpandSlotToFull(slots[1]) },
+                        onToggleAudio = { activeAudioSlot = if (activeAudioSlot == 1) null else 1 },
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxHeight()
@@ -644,6 +646,7 @@ fun MultiViewSplitScreen(
                         onFocused = { activeAudioSlot = 2 },
                         onZapSlot = { d -> onChangeSlotChannel(2, d) },
                         onExpand = { onExpandSlotToFull(slots[2]) },
+                        onToggleAudio = { activeAudioSlot = if (activeAudioSlot == 2) null else 2 },
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxHeight()
@@ -661,6 +664,7 @@ fun MultiViewSplitScreen(
                         onFocused = { activeAudioSlot = 3 },
                         onZapSlot = { d -> onChangeSlotChannel(3, d) },
                         onExpand = { onExpandSlotToFull(slots[3]) },
+                        onToggleAudio = { activeAudioSlot = if (activeAudioSlot == 3) null else 3 },
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxHeight()
@@ -685,6 +689,7 @@ fun MultiViewSplitScreen(
                     onFocused = { activeAudioSlot = 0 },
                     onZapSlot = { d -> onChangeSlotChannel(0, d) },
                     onExpand = { onExpandSlotToFull(slots[0]) },
+                    onToggleAudio = { activeAudioSlot = if (activeAudioSlot == 0) null else 0 },
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxHeight()
@@ -699,6 +704,7 @@ fun MultiViewSplitScreen(
                     onFocused = { activeAudioSlot = 1 },
                     onZapSlot = { d -> onChangeSlotChannel(1, d) },
                     onExpand = { onExpandSlotToFull(slots[1]) },
+                    onToggleAudio = { activeAudioSlot = if (activeAudioSlot == 1) null else 1 },
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxHeight()

@@ -125,11 +125,6 @@ import java.net.URLDecoder
 import java.text.SimpleDateFormat
 import java.util.*
 
-import android.Manifest
-import android.content.Intent
-import android.content.pm.PackageManager
-import android.provider.Settings
-import androidx.core.content.ContextCompat
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -412,82 +407,24 @@ class TvRepository(private val appContext: Context) {
         }
     }
 
-
-    suspend fun importM3uFromFile(sourceFile: File, customName: String = ""): M3uPlaylistSource? = withContext(Dispatchers.IO) {
-        try {
-            if (!sourceFile.exists() || !sourceFile.isFile) return@withContext null
-            val rawText = sourceFile.readText()
-            if (!rawText.contains("#EXTINF", ignoreCase = true) && !rawText.contains("http", ignoreCase = true)) {
-                return@withContext null
-            }
-            val playlistDir = File(appContext.filesDir, "imported_playlists")
-            playlistDir.mkdirs()
-            val fileId = UUID.randomUUID().toString()
-            val targetFile = File(playlistDir, "$fileId.m3u")
-            targetFile.writeText(rawText)
-
-            val displayName = customName.ifBlank { sourceFile.name }
-            M3uPlaylistSource(
-                id = fileId,
-                name = displayName,
-                locationOrUrl = targetFile.absolutePath,
-                isLocalFile = true
-            )
-        } catch (_: Exception) {
-            null
-        }
-    }
-
     fun scanDownloadFolderForM3uFiles(): List<File> {
         val result = mutableListOf<File>()
-        val seenPaths = HashSet<String>()
+        try {
+            val dirs = listOfNotNull(
+                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+                File("/sdcard/Download"),
+                File("/storage/emulated/0/Download"),
+                appContext.getExternalFilesDir(null)
+            ).distinctBy { it.absolutePath }
 
-        fun collectFromDir(dir: File?, depth: Int = 0) {
-            if (dir == null || depth > 2) return
-            try {
-                if (!dir.exists() || !dir.isDirectory || !dir.canRead()) return
-                val children = dir.listFiles() ?: return
-                for (f in children) {
-                    if (f.isFile) {
-                        val lower = f.name.lowercase(Locale.US)
-                        if (lower.endsWith(".m3u") || lower.endsWith(".m3u8")) {
-                            val abs = f.absolutePath
-                            if (seenPaths.add(abs)) {
-                                result.add(f)
-                            }
+            for (dir in dirs) {
+                if (dir.exists() && dir.isDirectory) {
+                    dir.listFiles()?.forEach { file ->
+                        if (file.isFile && (file.name.endsWith(".m3u", ignoreCase = true) || file.name.endsWith(".m3u8", ignoreCase = true))) {
+                            result.add(file)
                         }
-                    } else if (f.isDirectory && depth < 1 && !f.name.startsWith(".") && f.name != "Android") {
-                        collectFromDir(f, depth + 1)
                     }
                 }
-            } catch (_: Exception) {}
-        }
-
-        try {
-            val candidateDirs = buildList {
-                add(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS))
-                add(File("/sdcard/Download"))
-                add(File("/sdcard/Downloads"))
-                add(File("/storage/emulated/0/Download"))
-                add(File("/storage/emulated/0/Downloads"))
-                add(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS))
-                add(File("/sdcard/Documents"))
-                add(File("/storage/emulated/0/Documents"))
-                add(Environment.getExternalStorageDirectory())
-                add(File("/sdcard"))
-                add(File("/storage/emulated/0"))
-                add(appContext.getExternalFilesDir(null))
-                try {
-                    File("/storage").listFiles()?.forEach { usbDir ->
-                        if (usbDir.isDirectory && usbDir.name != "self" && usbDir.name != "emulated") {
-                            add(usbDir)
-                            add(File(usbDir, "Download"))
-                        }
-                    }
-                } catch (_: Exception) {}
-            }
-            for (dir in candidateDirs) {
-                collectFromDir(dir, 0)
             }
         } catch (_: Exception) {}
         return result

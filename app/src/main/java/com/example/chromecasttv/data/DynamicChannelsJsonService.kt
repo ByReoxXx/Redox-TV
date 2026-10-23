@@ -125,22 +125,24 @@ import java.net.URLDecoder
 import java.text.SimpleDateFormat
 import java.util.*
 
-import android.Manifest
-import android.content.Intent
-import android.content.pm.PackageManager
-import android.provider.Settings
-import androidx.core.content.ContextCompat
 import org.json.JSONArray
 import org.json.JSONObject
 
 /**
  * GitHub Üzerinden Dinamik Kanal Listesi (`channels.json` ve `channels.m3u`) Yöneticisi.
+ *
+ * - İlk açılışta (veya internet yokken) APK içindeki `assets/channels.json` ya da
+ *   cihaz önbelleğindeki `github_channels_cached.json` dosyasını <10 ms içinde okur.
+ * - Uygulama her açıldığında arka planda GitHub deposundaki güncel `channels.json`
+ *   ve `channels.m3u` dosyalarını çeker. Böylece GitHub üzerinden çalışmayan bir kanal
+ *   silindiğinde, yeni kanal eklendiğinde veya `.m3u8` linki değiştirildiğinde APK
+ *   güncellemeye gerek kalmadan tüm kullanıcılarda kanal listesi otomatik güncellenir.
  */
 object DynamicChannelsJsonService {
-    const val DEFAULT_GITHUB_JSON_URL = "https://raw.githubusercontent.com/redox-baris/Redox-TV/main/channel/channels.json"
-    const val FALLBACK_GITHUB_JSON_URL = "https://raw.githubusercontent.com/redox-baris/Redox-TV/master/channel/channels.json"
-    const val DEFAULT_GITHUB_M3U_URL = "https://raw.githubusercontent.com/redox-baris/Redox-TV/main/channel/channels.m3u"
-    const val FALLBACK_GITHUB_M3U_URL = "https://raw.githubusercontent.com/redox-baris/Redox-TV/master/channel/channels.m3u"
+    const val DEFAULT_GITHUB_JSON_URL = "https://raw.githubusercontent.com/redox-baris/Redox-TV/main/channels.json"
+    const val FALLBACK_GITHUB_JSON_URL = "https://raw.githubusercontent.com/redox-baris/Redox-TV/master/channels.json"
+    const val DEFAULT_GITHUB_M3U_URL = "https://raw.githubusercontent.com/redox-baris/Redox-TV/main/channels.m3u"
+    const val FALLBACK_GITHUB_M3U_URL = "https://raw.githubusercontent.com/redox-baris/Redox-TV/master/channels.m3u"
     private const val CACHED_JSON_FILENAME = "github_channels_cached.json"
     private const val CACHED_REPO_M3U_FILENAME = "github_repo_channels_cached.m3u"
     private const val ASSET_JSON_FILENAME = "channels.json"
@@ -183,7 +185,7 @@ object DynamicChannelsJsonService {
                     connectTimeout = 7500
                     readTimeout = 10000
                     instanceFollowRedirects = true
-                    setRequestProperty("User-Agent", "RedoXTV/1.5.5 (Android TV; DynamicChannelsM3u)")
+                    setRequestProperty("User-Agent", "RedoXTV/1.5.3 (Android TV; DynamicChannelsM3u)")
                     setRequestProperty("Cache-Control", "no-cache")
                 }
                 if (conn.responseCode in 200..299) {
@@ -216,7 +218,7 @@ object DynamicChannelsJsonService {
                     connectTimeout = 7500
                     readTimeout = 10000
                     instanceFollowRedirects = true
-                    setRequestProperty("User-Agent", "RedoXTV/1.5.5 (Android TV; DynamicChannelsJson)")
+                    setRequestProperty("User-Agent", "RedoXTV/1.5.3 (Android TV; DynamicChannelsJson)")
                     setRequestProperty("Cache-Control", "no-cache")
                 }
                 if (conn.responseCode in 200..299) {
